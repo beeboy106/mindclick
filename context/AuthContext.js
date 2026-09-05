@@ -50,10 +50,21 @@ export function AuthProvider({ children }) {
   };
 
   // เข้าสู่ระบบแบบจำลอง (Demo Google Account)
-  const signInWithDemo = async () => {
-    const demoGoogleUser = {
-      id: "user_google_demo",
-      name: "ณัฐวุฒิ พงศาวสีกุล",
+  const signInWithDemo = async (customUser) => {
+    let demoId = "user_demo_" + Math.floor(1000 + Math.random() * 9000);
+    try {
+      const stored = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.id) demoId = parsed.id;
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    const demoGoogleUser = customUser || {
+      id: demoId,
+      name: "ณัฐวุฒิ (ผู้ใช้ทดสอบ)",
       email: "6710210106@psu.ac.th",
       image: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
       provider: "google",
