@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "FriendQ",
-    "slug": "friendq-mobile",
+    "name": "Mindclick",
+    "slug": "mindclick",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -9,12 +9,21 @@
       "resizeMode": "contain",
       "backgroundColor": "#f7f8fc"
     },
-    "scheme": "friendq",
+    "scheme": "mindclick",
+    "android": {
+      "package": "com.mindclick.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#f7f8fc"
+      }
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mindclick.app"
     },
     "plugins": [
-      "expo-asset"
+      "expo-asset",
+      "expo-dev-client",
+      "@react-native-google-signin/google-signin"
     ]
   }
 }

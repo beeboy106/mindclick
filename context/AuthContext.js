@@ -3,6 +3,16 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as WebBrowser from "expo-web-browser";
 import { Platform } from "react-native";
 
+let GoogleSignin = null;
+if (Platform.OS !== "web") {
+  try {
+    const gSigninModule = require("@react-native-google-signin/google-signin");
+    GoogleSignin = gSigninModule.GoogleSignin;
+  } catch (e) {
+    // รันบน Expo Go หรือสภาพแวดล้อมที่ยังไม่ได้คอมไพล์เนทีฟ
+  }
+}
+
 try {
   if (Platform.OS !== "web") {
     WebBrowser.maybeCompleteAuthSession();
@@ -44,6 +54,19 @@ export function AuthProvider({ children }) {
     loadStoredSession();
   }, []);
 
+  // กำหนดค่า GoogleSignin บน Native เมื่อเริ่มต้นแอป
+  useEffect(() => {
+    if (Platform.OS !== "web" && GoogleSignin) {
+      try {
+        GoogleSignin.configure({
+          webClientId: GOOGLE_CONFIG.webClientId,
+        });
+      } catch (e) {
+        console.warn("GoogleSignin configure error:", e);
+      }
+    }
+  }, []);
+
   // บันทึก Session ลง AsyncStorage
   const saveUserSession = async (userData) => {
     try {
@@ -57,7 +80,7 @@ export function AuthProvider({ children }) {
 
   // เข้าสู่ระบบแบบจำลอง (Demo Google Account)
   const signInWithDemo = async (customUser) => {
-    let demoId = "user_demo_" + Math.floor(1000 + Math.random() * 9000);
+    let demoId = "118198207968490232896";
     try {
       const stored = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
       if (stored) {
@@ -70,8 +93,8 @@ export function AuthProvider({ children }) {
 
     const demoGoogleUser = customUser || {
       id: demoId,
-      name: "ณัฐวุฒิ (ผู้ใช้ทดสอบ)",
-      email: "6710210106@psu.ac.th",
+      name: "ณัฐวุฒิ พงศาวสีกุล",
+      email: "beemnum2548@gmail.com",
       image: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
       provider: "google",
     };
@@ -87,8 +110,34 @@ export function AuthProvider({ children }) {
       !GOOGLE_CONFIG.webClientId.includes("YOUR_WEB_CLIENT_ID");
 
     if (isConfigured) {
+      // 1. บน Native (Android/iOS Development Build) - ใช้ Google Play Services โดยตรง
+      if (Platform.OS !== "web" && GoogleSignin) {
+        try {
+          await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+          const response = await GoogleSignin.signIn();
+          const gUser = response.data?.user || response.user || response;
+          if (gUser && (gUser.email || gUser.name)) {
+            const loggedInUser = {
+              id: gUser.id || "google_" + Date.now(),
+              name: gUser.name || "Google User",
+              email: gUser.email || "",
+              image: gUser.photo || null,
+              provider: "google",
+            };
+            await saveUserSession(loggedInUser);
+            return;
+          }
+        } catch (nativeErr) {
+          console.warn("Native GoogleSignin error:", nativeErr);
+          // หากผู้ใช้กดยกเลิก
+          if (nativeErr.code === "SIGN_IN_CANCELLED" || nativeErr.code === "12501") {
+            return;
+          }
+        }
+      }
+
+      // 2. บน Web (หรือโหมดทดสอบ) - ใช้ Pop-up OAuth ดักจับ Token จาก Hash
       try {
-        // ใช้ Redirect URI ที่ลงทะเบียนไว้ใน Google Cloud Console (URIs 5: snack-runtime)
         let redirectUrl = "https://snack-runtime.eascdn.net/v2/54/index.html";
         if (Platform.OS === "web" && typeof window !== "undefined") {
           redirectUrl = window.location.origin + window.location.pathname;
@@ -155,7 +204,7 @@ export function AuthProvider({ children }) {
             }, 120000);
           });
         } else {
-          // บน Native / Expo Go
+          // Fallback สำหรับ Native หากไม่ได้ใช้ GoogleSignin
           const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
           if (result.type === "success" && result.url) {
             const params = new URLSearchParams(result.url.split("#")[1] || "");
@@ -192,6 +241,13 @@ export function AuthProvider({ children }) {
   // ออกจากระบบ
   const signOut = async () => {
     try {
+      if (Platform.OS !== "web" && GoogleSignin) {
+        try {
+          await GoogleSignin.signOut();
+        } catch (e) {
+          // ignore
+        }
+      }
       await AsyncStorage.removeItem(AUTH_STORAGE_KEY);
       setUser(null);
     } catch (e) {
