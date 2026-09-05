@@ -1,9 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as WebBrowser from "expo-web-browser";
-import * as Google from "expo-auth-session/providers/google";
+import * as AuthSession from "expo-auth-session";
 
-// Complete any pending auth session (required for web & deep linking)
 WebBrowser.maybeCompleteAuthSession();
 
 const AUTH_STORAGE_KEY = "@friendq_auth_session";
@@ -17,6 +16,12 @@ export const GOOGLE_CONFIG = {
   iosClientId: "YOUR_IOS_CLIENT_ID.apps.googleusercontent.com",
 };
 
+const discovery = {
+  authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+  tokenEndpoint: "https://oauth2.googleapis.com/token",
+  revocationEndpoint: "https://oauth2.googleapis.com/revoke",
+};
+
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
@@ -24,12 +29,17 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
 
-  // Hook สำหรับ Google Auth Request ผ่าน Expo Auth Session
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId: GOOGLE_CONFIG.webClientId,
-    androidClientId: GOOGLE_CONFIG.androidClientId,
-    iosClientId: GOOGLE_CONFIG.iosClientId,
-  });
+  // Hook สำหรับ Auth Request ผ่าน Expo Auth Session โดยตรง (ไม่ใช้ subpath /providers/google เพื่อรองรับ Snack Expo 100%)
+  const [request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId: GOOGLE_CONFIG.webClientId,
+      scopes: ["profile", "email"],
+      redirectUri: AuthSession.makeRedirectUri({
+        scheme: "friendq",
+      }),
+    },
+    discovery
+  );
 
   // โหลด Session จาก AsyncStorage ตอนเริ่มต้นแอป
   useEffect(() => {
@@ -55,7 +65,6 @@ export function AuthProvider({ children }) {
         const { authentication } = response;
         if (authentication?.accessToken) {
           try {
-            // ดึงข้อมูล User Profile จาก Google UserInfo API
             const userInfoResponse = await fetch(
               "https://www.googleapis.com/userinfo/v2/me",
               {
@@ -103,13 +112,11 @@ export function AuthProvider({ children }) {
   const signInWithGoogle = async () => {
     setAuthError(null);
 
-    // ตรวจสอบว่าได้กำหนด Client ID จริงหรือยัง
     const isConfigured =
       GOOGLE_CONFIG.webClientId &&
       !GOOGLE_CONFIG.webClientId.includes("YOUR_WEB_CLIENT_ID");
 
     if (isConfigured && request) {
-      // เรียกหน้าต่างล็อกอิน Google OAuth จริง
       await promptAsync();
     } else {
       // โหมดจำลองสำหรับรันบน Snack Expo ได้ทันที 100% โดยไม่ต้องมี Client ID
