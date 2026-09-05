@@ -37,6 +37,7 @@ export default function ProfileScreen({ navigation }) {
     resetQuizData,
   } = useData();
 
+  const [displayName, setDisplayName] = useState(profile?.name || user?.name || "");
   const [gender, setGender] = useState(profile.gender || "prefer_not_to_say");
   const [bio, setBio] = useState(profile.bio || "");
   const [avatarUri, setAvatarUri] = useState(profile.image || user?.image || null);
@@ -49,6 +50,7 @@ export default function ProfileScreen({ navigation }) {
 
   // ซิงค์ฟิลด์ข้อมูลโปรไฟล์เมื่อสลับบัญชีผู้ใช้
   useEffect(() => {
+    setDisplayName(profile?.name || user?.name || "");
     setGender(profile?.gender || "prefer_not_to_say");
     setBio(profile?.bio || "");
     setAvatarUri(profile?.image || user?.image || null);
@@ -131,10 +133,11 @@ export default function ProfileScreen({ navigation }) {
   const handleSave = async () => {
     setIsSaving(true);
     await updateProfile({
+      name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
       gender,
       bio,
       socialLinks,
-      image: avatarUri,
+      image: avatarUri || profile?.image || user?.image || null,
     });
     setIsSaving(false);
     Alert.alert("สำเร็จ", "บันทึกข้อมูลโปรไฟล์เรียบร้อยแล้ว");
@@ -172,8 +175,11 @@ export default function ProfileScreen({ navigation }) {
         {/* User Card */}
         <View style={styles.userCard}>
           <View style={styles.avatarWrapper}>
-            {avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.avatar} />
+            {(avatarUri || profile?.image || user?.image) ? (
+              <Image
+                source={{ uri: avatarUri || profile?.image || user?.image }}
+                style={styles.avatar}
+              />
             ) : (
               <View style={styles.avatarDefault}>
                 <Ionicons name="person" size={54} color={colors.white} />
@@ -188,10 +194,16 @@ export default function ProfileScreen({ navigation }) {
           </View>
 
           <View style={styles.userNameRow}>
-            <Text style={styles.userName}>{user?.name || "ผู้ใช้งาน"}</Text>
+            <TextInput
+              style={styles.userNameInput}
+              value={displayName}
+              onChangeText={setDisplayName}
+              placeholder="ใส่ชื่อของคุณ"
+              placeholderTextColor={colors.mutedForeground}
+            />
             <Ionicons name="pencil" size={14} color={colors.mutedForeground} />
           </View>
-          <Text style={styles.userEmail}>{user?.email || "อีเมล Google"}</Text>
+          <Text style={styles.userEmail}>{user?.email || profile?.email || "อีเมล Google"}</Text>
 
           <View style={styles.publicProfileLink}>
             <Ionicons name="open-outline" size={14} color={colors.primary} />
@@ -492,6 +504,17 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "900",
     color: colors.ink,
+  },
+  userNameInput: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: colors.ink,
+    textAlign: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    minWidth: 140,
   },
   userEmail: {
     fontSize: 13,
