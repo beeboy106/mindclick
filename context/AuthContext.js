@@ -82,10 +82,10 @@ export function AuthProvider({ children }) {
 
     if (isConfigured) {
       try {
-        // บน Web ให้ redirect กลับมาที่โดเมนปัจจุบัน (เช่น https://snack.expo.dev) โดยตรง ไม่ผ่าน auth.expo.io proxy
+        // บน Web ให้ redirect กลับมาที่ URL เต็มของหน้าเว็บปัจจุบัน
         let redirectUrl = "https://auth.expo.io/@anonymous/friendq-mobile";
         if (Platform.OS === "web" && typeof window !== "undefined") {
-          redirectUrl = window.location.origin;
+          redirectUrl = window.location.origin + window.location.pathname;
         }
 
         const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
