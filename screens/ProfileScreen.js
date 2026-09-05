@@ -14,17 +14,17 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, shadows } from "../lib/theme";
+import { colors } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 import { useData } from "../context/DataContext";
 import Header from "../components/Header";
 import GalleryViewer from "../components/GalleryViewer";
 
 const genderOptions = [
-  { value: "male", label: "ชาย", icon: "male-outline" },
-  { value: "female", label: "หญิง", icon: "female-outline" },
-  { value: "other", label: "อื่นๆ", icon: "transgender-outline" },
-  { value: "prefer_not_to_say", label: "ไม่ระบุ", icon: "help-outline" },
+  { value: "male", label: "ชาย", icon: "male" },
+  { value: "female", label: "หญิง", icon: "female" },
+  { value: "other", label: "อื่นๆ", icon: "transgender" },
+  { value: "prefer_not_to_say", label: "ไม่ระบุ", icon: "help-circle-outline" },
 ];
 
 export default function ProfileScreen({ navigation }) {
@@ -50,17 +50,19 @@ export default function ProfileScreen({ navigation }) {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
 
-  // เลือกรูปโปรไฟล์ผ่าน expo-image-picker
+  const profileReady = Boolean(
+    profile?.bio ||
+      (profile?.gender && profile.gender !== "prefer_not_to_say") ||
+      Object.values(profile?.socialLinks || {}).some(Boolean)
+  );
+
   const handlePickAvatar = async () => {
     try {
       const permissionResult =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (!permissionResult.granted) {
-        Alert.alert(
-          "ต้องการสิทธิ์เข้าถึงรูปภาพ",
-          "กรุณาอนุญาตให้แอปเข้าถึงคลังรูปภาพเพื่อเปลี่ยนรูปโปรไฟล์"
-        );
+        Alert.alert("ต้องการสิทธิ์", "กรุณาอนุญาตให้เข้าถึงคลังรูปภาพ");
         return;
       }
 
@@ -71,19 +73,17 @@ export default function ProfileScreen({ navigation }) {
         quality: 0.8,
       });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
+      if (!result.canceled && result.assets?.length > 0) {
         const pickedUri = result.assets[0].uri;
         setAvatarUri(pickedUri);
         await updateProfile({ image: pickedUri });
         Alert.alert("สำเร็จ", "เปลี่ยนรูปโปรไฟล์เรียบร้อยแล้ว");
       }
     } catch (e) {
-      console.error("Error picking avatar:", e);
-      Alert.alert("ข้อผิดพลาด", "ไม่สามารถเลือกรูปภาพได้");
+      console.error(e);
     }
   };
 
-  // เพิ่มรูปลง Gallery ผ่าน expo-image-picker
   const handleAddGalleryPhoto = async () => {
     try {
       if (profile.galleryImages.length >= 9) {
@@ -95,10 +95,7 @@ export default function ProfileScreen({ navigation }) {
         await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (!permissionResult.granted) {
-        Alert.alert(
-          "ต้องการสิทธิ์เข้าถึงรูปภาพ",
-          "กรุณาอนุญาตให้แอปเข้าถึงคลังรูปภาพเพื่อเพิ่มรูปในอัลบั้ม"
-        );
+        Alert.alert("ต้องการสิทธิ์", "กรุณาอนุญาตให้เข้าถึงคลังรูปภาพ");
         return;
       }
 
@@ -109,83 +106,30 @@ export default function ProfileScreen({ navigation }) {
         quality: 0.8,
       });
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
+      if (!result.canceled && result.assets?.length > 0) {
         const pickedUri = result.assets[0].uri;
-        const res = await addGalleryImage(pickedUri);
-        if (!res.success) {
-          Alert.alert("ข้อผิดพลาด", res.error);
-        }
+        await addGalleryImage(pickedUri);
       }
     } catch (e) {
-      console.error("Error adding gallery photo:", e);
-      Alert.alert("ข้อผิดพลาด", "ไม่สามารถเพิ่มรูปภาพได้");
+      console.error(e);
     }
   };
 
-  // ลบรูป Gallery
-  const handleRemoveGalleryPhoto = (imageId) => {
-    Alert.alert("ลบรูปภาพ?", "คุณต้องการลบรูปนี้ออกจากอัลบั้มใช่หรือไม่", [
-      { text: "ยกเลิก", style: "cancel" },
-      {
-        text: "ลบ",
-        style: "destructive",
-        onPress: () => removeGalleryImage(imageId),
-      },
-    ]);
-  };
-
-  // บันทึกการเปลี่ยนแปลงโปรไฟล์
-  const handleSaveProfile = async () => {
+  const handleSave = async () => {
     setIsSaving(true);
-    const success = await updateProfile({
+    await updateProfile({
       gender,
       bio,
       socialLinks,
       image: avatarUri,
     });
     setIsSaving(false);
-
-    if (success) {
-      Alert.alert("สำเร็จ", "บันทึกข้อมูลโปรไฟล์เรียบร้อยแล้ว");
-    } else {
-      Alert.alert("ข้อผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้");
-    }
-  };
-
-  // รีเซ็ตควิซ
-  const handleResetQuiz = () => {
-    Alert.alert(
-      "รีเซ็ตคำตอบควิซ?",
-      "คุณต้องการล้างคำตอบควิซทั้งหมดเพื่อเริ่มทำใหม่ใช่หรือไม่",
-      [
-        { text: "ยกเลิก", style: "cancel" },
-        {
-          text: "รีเซ็ต",
-          style: "destructive",
-          onPress: async () => {
-            await resetQuizData();
-            Alert.alert("สำเร็จ", "ล้างคำตอบควิซเรียบร้อยแล้ว");
-          },
-        },
-      ]
-    );
-  };
-
-  // ออกจากระบบ
-  const handleSignOut = () => {
-    Alert.alert("ออกจากระบบ?", "คุณต้องการออกจากระบบ FriendQ ใช่หรือไม่", [
-      { text: "ยกเลิก", style: "cancel" },
-      {
-        text: "ออกจากระบบ",
-        style: "destructive",
-        onPress: signOut,
-      },
-    ]);
+    Alert.alert("สำเร็จ", "บันทึกข้อมูลโปรไฟล์เรียบร้อยแล้ว");
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.card} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
       <Header />
 
       <ScrollView
@@ -193,44 +137,62 @@ export default function ProfileScreen({ navigation }) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Header Card */}
-        <View style={styles.profileCard}>
-          <View style={styles.avatarSection}>
-            <View style={styles.avatarContainer}>
-              {avatarUri ? (
-                <Image source={{ uri: avatarUri }} style={styles.avatar} />
-              ) : (
-                <View style={[styles.avatar, styles.avatarFallback]}>
-                  <Text style={styles.avatarInitial}>
-                    {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
-                  </Text>
-                </View>
-              )}
-              <TouchableOpacity
-                style={styles.cameraBtn}
-                activeOpacity={0.8}
-                onPress={handlePickAvatar}
-              >
-                <Ionicons name="camera" size={16} color={colors.white} />
-              </TouchableOpacity>
-            </View>
+        {/* Title Section (Matching Image 3) */}
+        <View style={styles.titleSection}>
+          <Text style={styles.eyebrow}>YOUR PROFILE</Text>
+          <Text style={styles.headline}>เล่าให้คนที่ใช่รู้จักคุณ</Text>
+          <View style={styles.titleDivider} />
+        </View>
 
-            <View style={styles.userMeta}>
-              <Text style={styles.profileName}>{user?.name || "ผู้ใช้งาน"}</Text>
-              <Text style={styles.profileEmail}>
-                {user?.email || "Google Account"}
-              </Text>
-              <View style={styles.authBadge}>
-                <Ionicons name="logo-google" size={12} color={colors.ink} />
-                <Text style={styles.authBadgeText}>Google Account</Text>
+        {/* Pink Alert Banner (Shown if profile not filled yet) */}
+        {!profileReady && (
+          <View style={styles.warningBanner}>
+            <Text style={styles.warningTitle}>
+              กรุณากรอกข้อมูลโปรไฟล์ก่อนตอบคำถาม
+            </Text>
+            <Text style={styles.warningSub}>
+              อัปโหลดรูปโปรไฟล์ และใส่ข้อมูลอย่างน้อย 1 อย่าง (เพศ, แนะนำตัว หรือช่องทางติดต่อ)
+            </Text>
+          </View>
+        )}
+
+        {/* User Card */}
+        <View style={styles.userCard}>
+          <View style={styles.avatarWrapper}>
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarDefault}>
+                <Ionicons name="person" size={54} color={colors.white} />
               </View>
-            </View>
+            )}
+            <TouchableOpacity
+              style={styles.editAvatarBtn}
+              onPress={handlePickAvatar}
+            >
+              <Ionicons name="pencil" size={14} color={colors.white} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.userNameRow}>
+            <Text style={styles.userName}>{user?.name || "ผู้ใช้งาน"}</Text>
+            <Ionicons name="pencil" size={14} color={colors.mutedForeground} />
+          </View>
+          <Text style={styles.userEmail}>{user?.email || "อีเมล Google"}</Text>
+
+          <View style={styles.publicProfileLink}>
+            <Ionicons name="open-outline" size={14} color={colors.primary} />
+            <Text style={styles.publicProfileText}>ดูโปรไฟล์สาธารณะ</Text>
           </View>
         </View>
 
-        {/* Form: Gender */}
-        <View style={styles.section}>
-          <Text style={styles.fieldLabel}>เพศ</Text>
+        {/* Form: Gender (Matching Image 3) */}
+        <View style={styles.formCard}>
+          <View style={styles.sectionHeaderRow}>
+            <Ionicons name="person-outline" size={16} color={colors.primary} />
+            <Text style={styles.sectionTitle}>เพศ</Text>
+          </View>
+
           <View style={styles.genderRow}>
             {genderOptions.map((opt) => {
               const isSelected = gender === opt.value;
@@ -238,21 +200,21 @@ export default function ProfileScreen({ navigation }) {
                 <TouchableOpacity
                   key={opt.value}
                   style={[
-                    styles.genderChip,
-                    isSelected ? styles.genderChipSelected : null,
+                    styles.genderPill,
+                    isSelected ? styles.genderPillActive : null,
                   ]}
                   activeOpacity={0.8}
                   onPress={() => setGender(opt.value)}
                 >
                   <Ionicons
                     name={opt.icon}
-                    size={16}
-                    color={isSelected ? colors.white : colors.ink}
+                    size={14}
+                    color={isSelected ? colors.primary : colors.mutedForeground}
                   />
                   <Text
                     style={[
-                      styles.genderChipText,
-                      isSelected ? styles.genderChipTextSelected : null,
+                      styles.genderPillText,
+                      isSelected ? styles.genderPillTextActive : null,
                     ]}
                   >
                     {opt.label}
@@ -263,91 +225,90 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Form: Bio */}
-        <View style={styles.section}>
-          <View style={styles.labelRow}>
-            <Text style={styles.fieldLabel}>เกี่ยวกับคุณ (Bio)</Text>
-            <Text style={styles.charCount}>{bio.length}/200</Text>
+        {/* Form: Bio (Matching Image 3) */}
+        <View style={styles.formCard}>
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionTitle}>แนะนำตัว ({bio.length}/200)</Text>
           </View>
+
           <TextInput
             style={styles.bioInput}
             multiline
             numberOfLines={4}
             maxLength={200}
-            placeholder="เล่าสิ่งที่คุณชอบ สไตล์ของคุณ หรือกิจกรรมยามว่าง..."
+            placeholder="เขียนแนะนำตัวสั้นๆ ให้คนอื่นรู้จักคุณมากขึ้น..."
             placeholderTextColor={colors.mutedForeground}
             value={bio}
             onChangeText={setBio}
           />
         </View>
 
-        {/* Form: Social Media Links */}
-        <View style={styles.section}>
-          <Text style={styles.fieldLabel}>ช่องทางติดต่อ (Social Media)</Text>
-          <View style={styles.socialInputsList}>
-            <View style={styles.socialInputBox}>
-              <Ionicons name="logo-instagram" size={18} color={colors.ink} />
+        {/* Form: Social Links (Matching Image 3) */}
+        <View style={styles.formCard}>
+          <View style={styles.sectionHeaderRow}>
+            <Ionicons name="link-outline" size={16} color={colors.coral} />
+            <Text style={styles.sectionTitle}>ช่องทางติดต่อ</Text>
+          </View>
+
+          <View style={styles.socialList}>
+            <View style={styles.socialField}>
+              <Ionicons name="logo-instagram" size={18} color="#e1306c" />
               <TextInput
                 style={styles.socialInput}
-                placeholder="Instagram username"
+                placeholder="Instagram profile link หรือ username"
                 placeholderTextColor={colors.mutedForeground}
                 value={socialLinks.instagram}
-                onChangeText={(text) =>
-                  setSocialLinks({ ...socialLinks, instagram: text })
-                }
+                onChangeText={(t) => setSocialLinks({ ...socialLinks, instagram: t })}
                 autoCapitalize="none"
               />
             </View>
 
-            <View style={styles.socialInputBox}>
-              <Ionicons name="logo-facebook" size={18} color={colors.ink} />
+            <View style={styles.socialField}>
+              <Ionicons name="logo-facebook" size={18} color="#1877f2" />
               <TextInput
                 style={styles.socialInput}
-                placeholder="Facebook name / username"
+                placeholder="Facebook profile link หรือ username"
                 placeholderTextColor={colors.mutedForeground}
                 value={socialLinks.facebook}
-                onChangeText={(text) =>
-                  setSocialLinks({ ...socialLinks, facebook: text })
-                }
+                onChangeText={(t) => setSocialLinks({ ...socialLinks, facebook: t })}
               />
             </View>
 
-            <View style={styles.socialInputBox}>
-              <Ionicons name="chatbubble-ellipses-outline" size={18} color={colors.ink} />
+            <View style={styles.socialField}>
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color="#06c755" />
               <TextInput
                 style={styles.socialInput}
                 placeholder="Line ID"
                 placeholderTextColor={colors.mutedForeground}
                 value={socialLinks.line}
-                onChangeText={(text) =>
-                  setSocialLinks({ ...socialLinks, line: text })
-                }
+                onChangeText={(t) => setSocialLinks({ ...socialLinks, line: t })}
                 autoCapitalize="none"
               />
             </View>
 
-            <View style={styles.socialInputBox}>
+            <View style={styles.socialField}>
               <Ionicons name="logo-tiktok" size={18} color={colors.ink} />
               <TextInput
                 style={styles.socialInput}
                 placeholder="TikTok @username"
                 placeholderTextColor={colors.mutedForeground}
                 value={socialLinks.tiktok}
-                onChangeText={(text) =>
-                  setSocialLinks({ ...socialLinks, tiktok: text })
-                }
+                onChangeText={(t) => setSocialLinks({ ...socialLinks, tiktok: t })}
                 autoCapitalize="none"
               />
             </View>
           </View>
         </View>
 
-        {/* Gallery Section */}
-        <View style={styles.section}>
-          <View style={styles.labelRow}>
-            <Text style={styles.fieldLabel}>อัลบั้มรูปภาพ</Text>
-            <Text style={styles.charCount}>
-              {profile.galleryImages.length}/9 รูป
+        {/* Form: Gallery Photos (Matching Image 3) */}
+        <View style={styles.formCard}>
+          <View style={styles.galleryHeader}>
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons name="images-outline" size={16} color={colors.coral} />
+              <Text style={styles.sectionTitle}>รูปภาพ / วิดีโอ</Text>
+            </View>
+            <Text style={styles.fileCountText}>
+              {profile.galleryImages.length}/9 ไฟล์
             </Text>
           </View>
 
@@ -357,28 +318,27 @@ export default function ProfileScreen({ navigation }) {
                 <TouchableOpacity
                   activeOpacity={0.85}
                   onPress={() => setSelectedPhoto(img.url)}
-                  style={styles.galleryThumbClick}
+                  style={{ width: "100%", height: "100%" }}
                 >
                   <Image source={{ uri: img.url }} style={styles.galleryThumb} />
                 </TouchableOpacity>
-
                 <TouchableOpacity
-                  style={styles.deletePhotoBtn}
-                  onPress={() => handleRemoveGalleryPhoto(img.id)}
+                  style={styles.removePhotoBtn}
+                  onPress={() => removeGalleryImage(img.id)}
                 >
-                  <Ionicons name="close" size={14} color={colors.white} />
+                  <Ionicons name="close" size={12} color={colors.white} />
                 </TouchableOpacity>
               </View>
             ))}
 
             {profile.galleryImages.length < 9 && (
               <TouchableOpacity
-                style={styles.addPhotoBtn}
+                style={styles.addThumbBtn}
                 activeOpacity={0.8}
                 onPress={handleAddGalleryPhoto}
               >
                 <Ionicons name="add" size={28} color={colors.primary} />
-                <Text style={styles.addPhotoText}>เพิ่มรูป</Text>
+                <Text style={styles.addThumbText}>เพิ่มรูป</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -388,42 +348,27 @@ export default function ProfileScreen({ navigation }) {
         <TouchableOpacity
           style={styles.saveBtn}
           activeOpacity={0.85}
-          onPress={handleSaveProfile}
+          onPress={handleSave}
           disabled={isSaving}
         >
           {isSaving ? (
             <ActivityIndicator color={colors.white} />
           ) : (
-            <>
-              <Ionicons name="save-outline" size={18} color={colors.white} />
-              <Text style={styles.saveBtnText}>บันทึกข้อมูลโปรไฟล์</Text>
-            </>
+            <Text style={styles.saveBtnText}>บันทึกโปรไฟล์</Text>
           )}
         </TouchableOpacity>
 
-        {/* Danger Actions */}
-        <View style={styles.dangerSection}>
-          <TouchableOpacity
-            style={styles.resetBtn}
-            activeOpacity={0.8}
-            onPress={handleResetQuiz}
-          >
-            <Ionicons name="refresh-outline" size={18} color={colors.ink} />
-            <Text style={styles.resetBtnText}>รีเซ็ตคำตอบควิซทั้งหมด</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.signOutBtn}
-            activeOpacity={0.8}
-            onPress={handleSignOut}
-          >
-            <Ionicons name="log-out-outline" size={18} color={colors.destructive} />
-            <Text style={styles.signOutBtnText}>ออกจากระบบ</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Sign Out Button */}
+        <TouchableOpacity
+          style={styles.signOutBtn}
+          activeOpacity={0.8}
+          onPress={signOut}
+        >
+          <Ionicons name="log-out-outline" size={16} color={colors.destructive} />
+          <Text style={styles.signOutText}>ออกจากระบบ</Text>
+        </TouchableOpacity>
       </ScrollView>
 
-      {/* Fullscreen Photo Viewer */}
       <GalleryViewer
         visible={Boolean(selectedPhoto)}
         imageUrl={selectedPhoto}
@@ -436,7 +381,7 @@ export default function ProfileScreen({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "#fafbfc",
   },
   container: {
     flex: 1,
@@ -445,255 +390,274 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 50,
   },
-  profileCard: {
-    backgroundColor: colors.card,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    padding: 20,
-    marginBottom: 24,
-    ...shadows.neo,
+  titleSection: {
+    marginBottom: 16,
   },
-  avatarSection: {
-    flexDirection: "row",
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: colors.mutedForeground,
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  headline: {
+    fontSize: 32,
+    fontWeight: "900",
+    color: colors.ink,
+    letterSpacing: -0.5,
+  },
+  titleDivider: {
+    height: 1,
+    backgroundColor: "#e5e7eb",
+    marginTop: 14,
+  },
+  warningBanner: {
+    backgroundColor: "#fef2f2",
+    borderLeftWidth: 4,
+    borderLeftColor: "#ef4444",
+    padding: 14,
+    borderRadius: 6,
+    marginBottom: 20,
+  },
+  warningTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#b91c1c",
+    marginBottom: 4,
+  },
+  warningSub: {
+    fontSize: 12,
+    color: "#7f1d1d",
+    lineHeight: 18,
+  },
+  userCard: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 8,
+    padding: 24,
     alignItems: "center",
+    marginBottom: 16,
   },
-  avatarContainer: {
+  avatarWrapper: {
     position: "relative",
-    marginRight: 16,
+    marginBottom: 14,
   },
   avatar: {
-    width: 76,
-    height: 76,
-    borderWidth: 2,
-    borderColor: colors.darkBorder,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
   },
-  avatarFallback: {
-    backgroundColor: colors.primary,
+  avatarDefault: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: "#3b82f6",
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarInitial: {
-    color: colors.white,
-    fontSize: 32,
-    fontWeight: "900",
-  },
-  cameraBtn: {
+  editAvatarBtn: {
     position: "absolute",
-    bottom: -4,
-    right: -4,
+    bottom: 2,
+    right: 2,
     width: 28,
     height: 28,
+    borderRadius: 14,
     backgroundColor: colors.ink,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: colors.white,
   },
-  userMeta: {
-    flex: 1,
+  userNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 4,
   },
-  profileName: {
+  userName: {
     fontSize: 20,
     fontWeight: "900",
     color: colors.ink,
-    marginBottom: 2,
   },
-  profileEmail: {
+  userEmail: {
     fontSize: 13,
     color: colors.mutedForeground,
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  authBadge: {
+  publicProfileLink: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
-    backgroundColor: colors.muted,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: colors.border,
     gap: 4,
   },
-  authBadgeText: {
-    fontSize: 11,
+  publicProfileText: {
+    fontSize: 13,
     fontWeight: "700",
-    color: colors.ink,
+    color: colors.primary,
   },
-  section: {
-    marginBottom: 22,
+  formCard: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
   },
-  fieldLabel: {
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 12,
+  },
+  sectionTitle: {
     fontSize: 14,
     fontWeight: "800",
     color: colors.ink,
-    marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  charCount: {
-    fontSize: 12,
-    color: colors.mutedForeground,
-    fontWeight: "700",
   },
   genderRow: {
     flexDirection: "row",
     gap: 8,
   },
-  genderChip: {
+  genderPill: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    height: 42,
-    backgroundColor: colors.card,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
+    height: 40,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#f8fafc",
     gap: 4,
   },
-  genderChipSelected: {
-    backgroundColor: colors.ink,
+  genderPillActive: {
+    borderColor: colors.primary,
+    backgroundColor: "#eff6ff",
   },
-  genderChipText: {
-    fontSize: 13,
+  genderPillText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.mutedForeground,
+  },
+  genderPillTextActive: {
+    color: colors.primary,
     fontWeight: "800",
-    color: colors.ink,
-  },
-  genderChipTextSelected: {
-    color: colors.white,
   },
   bioInput: {
-    backgroundColor: colors.card,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    padding: 14,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 6,
+    padding: 12,
     fontSize: 14,
     color: colors.ink,
-    minHeight: 90,
+    minHeight: 85,
     textAlignVertical: "top",
-    ...shadows.neo,
   },
-  socialInputsList: {
+  socialList: {
     gap: 10,
   },
-  socialInputBox: {
+  socialField: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.card,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    paddingHorizontal: 14,
-    height: 48,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    height: 44,
     gap: 10,
   },
   socialInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     color: colors.ink,
-    fontWeight: "600",
+  },
+  galleryHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  fileCountText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.mutedForeground,
   },
   galleryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
   },
   galleryThumbWrapper: {
     width: "31%",
     aspectRatio: 1,
     position: "relative",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-  },
-  galleryThumbClick: {
-    width: "100%",
-    height: "100%",
+    borderRadius: 6,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
   galleryThumb: {
     width: "100%",
     height: "100%",
   },
-  deletePhotoBtn: {
+  removePhotoBtn: {
     position: "absolute",
     top: 4,
     right: 4,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.destructive,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "center",
     alignItems: "center",
   },
-  addPhotoBtn: {
+  addThumbBtn: {
     width: "31%",
     aspectRatio: 1,
-    backgroundColor: colors.card,
+    borderRadius: 6,
     borderWidth: 1.5,
     borderStyle: "dashed",
     borderColor: colors.primary,
+    backgroundColor: "#f8fafc",
     justifyContent: "center",
     alignItems: "center",
-    gap: 4,
   },
-  addPhotoText: {
-    fontSize: 12,
+  addThumbText: {
+    fontSize: 11,
     fontWeight: "800",
     color: colors.primary,
+    marginTop: 2,
   },
   saveBtn: {
     backgroundColor: colors.primary,
-    flexDirection: "row",
-    alignItems: "center",
+    height: 48,
+    borderRadius: 8,
     justifyContent: "center",
-    height: 52,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    gap: 8,
-    marginTop: 10,
-    ...shadows.neo,
+    alignItems: "center",
+    marginTop: 8,
+    marginBottom: 14,
   },
   saveBtnText: {
     color: colors.white,
-    fontSize: 16,
-    fontWeight: "800",
-  },
-  dangerSection: {
-    marginTop: 26,
-    borderTopWidth: 1.5,
-    borderTopColor: colors.border,
-    paddingTop: 18,
-    gap: 12,
-  },
-  resetBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    height: 46,
-    backgroundColor: colors.card,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    gap: 8,
-  },
-  resetBtnText: {
-    color: colors.ink,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "800",
   },
   signOutBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    height: 46,
-    backgroundColor: "#fff0f0",
-    borderWidth: 1.5,
-    borderColor: colors.destructive,
-    gap: 8,
+    height: 44,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#fee2e2",
+    backgroundColor: "#fff5f5",
+    gap: 6,
   },
-  signOutBtnText: {
+  signOutText: {
     color: colors.destructive,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "700",
   },
 });

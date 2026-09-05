@@ -1,28 +1,45 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
-import { colors, shadows } from "../lib/theme";
+import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
+import { colors } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 
-export default function Header({ title, rightComponent }) {
+export default function Header({ rightComponent, onProfilePress }) {
   const { user } = useAuth();
 
   return (
     <View style={styles.container}>
-      <View style={styles.left}>
-        <View style={styles.logoBadge}>
-          <Text style={styles.logoBadgeText}>Q</Text>
+      {/* Brand Logo */}
+      <View style={styles.logoRow}>
+        <Text style={styles.brandTitle}>FriendQ</Text>
+        <View style={styles.limeQBadge}>
+          <Text style={styles.limeQText}>Q</Text>
         </View>
-        <Text style={styles.brandTitle}>Friend<Text style={styles.brandAccent}>Q</Text></Text>
       </View>
 
+      {/* User Info / Right Component */}
       <View style={styles.right}>
         {rightComponent ? (
           rightComponent
-        ) : (
-          user?.image && (
-            <Image source={{ uri: user.image }} style={styles.avatar} />
-          )
-        )}
+        ) : user ? (
+          <TouchableOpacity
+            style={styles.userProfileBtn}
+            activeOpacity={0.8}
+            onPress={onProfilePress}
+          >
+            {user.image ? (
+              <Image source={{ uri: user.image }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarInitial}>
+                  {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+                </Text>
+              </View>
+            )}
+            <Text style={styles.userNameText} numberOfLines={1}>
+              {user.name || "ผู้ใช้งาน"}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     </View>
   );
@@ -36,47 +53,70 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     backgroundColor: colors.card,
-    borderBottomWidth: 1.5,
-    borderBottomColor: colors.darkBorder,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
   },
-  left: {
+  logoRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-  },
-  logoBadge: {
-    width: 28,
-    height: 28,
-    backgroundColor: colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    ...shadows.neo,
-  },
-  logoBadgeText: {
-    color: colors.white,
-    fontWeight: "900",
-    fontSize: 16,
+    gap: 6,
   },
   brandTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "900",
     color: colors.ink,
     letterSpacing: -0.5,
   },
-  brandAccent: {
-    color: colors.coral,
+  limeQBadge: {
+    width: 24,
+    height: 24,
+    backgroundColor: "#bbf44a", // FriendQ Lime
+    borderRadius: 4,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  limeQText: {
+    color: colors.ink,
+    fontWeight: "900",
+    fontSize: 14,
   },
   right: {
     flexDirection: "row",
     alignItems: "center",
   },
-  avatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
+  userProfileBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#f8fafc",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  avatarImage: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+  avatarFallback: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarInitial: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  userNameText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.ink,
+    maxWidth: 130,
   },
 });

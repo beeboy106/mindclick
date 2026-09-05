@@ -9,7 +9,7 @@ import {
   StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, shadows } from "../lib/theme";
+import { colors } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 
 export default function SignInScreen() {
@@ -29,62 +29,47 @@ export default function SignInScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+
+      {/* Top Header */}
+      <View style={styles.topHeader}>
+        <View style={styles.logoRow}>
+          <Text style={styles.brandTitle}>FriendQ</Text>
+          <View style={styles.limeQBadge}>
+            <Text style={styles.limeQText}>Q</Text>
+          </View>
+        </View>
+      </View>
+
       <View style={styles.container}>
-        {/* Brand Header */}
-        <View style={styles.brandSection}>
-          <View style={styles.logoBadge}>
-            <Text style={styles.logoBadgeText}>Q</Text>
-          </View>
-          <Text style={styles.appName}>
-            Friend<Text style={styles.appAccent}>Q</Text>
-          </Text>
-          <Text style={styles.tagline}>
-            ค้นพบคนที่คิด รู้สึก และใช้ชีวิตในแบบที่เข้ากันได้กับคุณ
-          </Text>
-        </View>
+        <View style={styles.contentBox}>
+          {/* Eyebrow */}
+          <Text style={styles.eyebrow}>MEET THROUGH QUESTIONS</Text>
 
-        {/* Highlight Card */}
-        <View style={styles.highlightCard}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardLabel}>COMPATIBILITY QUIZ</Text>
-            <Ionicons name="sparkles" size={18} color={colors.ink} />
-          </View>
-          <Text style={styles.cardTitle}>
-            ตอบคำถาม 4 มิติ{"\n"}เพื่อค้นหาเพื่อนที่รู้ใจ
+          {/* Headline */}
+          <Text style={styles.headline}>
+            เจอเพื่อนที่คลิก{"\n"}จากคำตอบที่ใช่
           </Text>
-          <View style={styles.categoryRow}>
-            <View style={[styles.miniBadge, { backgroundColor: colors.lime }]}>
-              <Text style={styles.miniBadgeText}>🌟 ไลฟ์สไตล์</Text>
-            </View>
-            <View style={[styles.miniBadge, { backgroundColor: colors.primary }]}>
-              <Text style={[styles.miniBadgeText, { color: colors.white }]}>
-                🎭 บุคลิกภาพ
-              </Text>
-            </View>
-            <View style={[styles.miniBadge, { backgroundColor: colors.coral }]}>
-              <Text style={[styles.miniBadgeText, { color: colors.white }]}>
-                💕 ปฏิสัมพันธ์
-              </Text>
-            </View>
-            <View style={[styles.miniBadge, { backgroundColor: colors.ink }]}>
-              <Text style={[styles.miniBadgeText, { color: colors.white }]}>
-                👥 การเข้าสังคม
-              </Text>
-            </View>
-          </View>
-        </View>
 
-        {/* Error message if any */}
-        {authError && (
-          <View style={styles.errorBox}>
-            <Ionicons name="alert-circle" size={18} color={colors.destructive} />
-            <Text style={styles.errorText}>{authError}</Text>
-          </View>
-        )}
+          {/* Decorative Lime Underline */}
+          <View style={styles.limeLine} />
 
-        {/* Google Sign-In Action */}
-        <View style={styles.actionSection}>
+          {/* Subtitle */}
+          <Text style={styles.subtitle}>
+            ตอบคำถามสั้นๆ แล้วค้นหาคนที่มีไลฟ์สไตล์และมุมมองใกล้กับคุณ
+          </Text>
+
+          <View style={styles.divider} />
+
+          {/* Error notice if any */}
+          {authError && (
+            <View style={styles.errorBox}>
+              <Ionicons name="alert-circle" size={18} color={colors.destructive} />
+              <Text style={styles.errorText}>{authError}</Text>
+            </View>
+          )}
+
+          {/* Google Sign-In Button */}
           <TouchableOpacity
             style={styles.googleButton}
             activeOpacity={0.85}
@@ -92,21 +77,34 @@ export default function SignInScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color={colors.white} />
+              <ActivityIndicator color={colors.primary} />
             ) : (
               <>
-                <View style={styles.googleIconContainer}>
-                  <Ionicons name="logo-google" size={20} color={colors.ink} />
+                <View style={styles.googleLeft}>
+                  {/* Google G logo simulation */}
+                  <View style={styles.googleIconCircle}>
+                    <Text style={styles.googleG}>G</Text>
+                  </View>
+                  <Text style={styles.googleButtonText}>
+                    เข้าสู่ระบบด้วย Google
+                  </Text>
                 </View>
-                <Text style={styles.googleButtonText}>เข้าสู่ระบบด้วย Google</Text>
-                <Ionicons name="arrow-forward" size={18} color={colors.white} />
+                <Ionicons name="arrow-forward" size={18} color={colors.ink} />
               </>
             )}
           </TouchableOpacity>
 
+          {/* Disclaimer Footer */}
           <Text style={styles.disclaimerText}>
-            เมื่อดำเนินการต่อ คุณยอมรับข้อกำหนดการใช้งาน{"\n"}และนโยบายความเป็นส่วนตัวของ FriendQ
+            เมื่อดำเนินการต่อ คุณยอมรับ{" "}
+            <Text style={styles.linkText}>ข้อกำหนดการใช้งาน</Text> และ{" "}
+            <Text style={styles.linkText}>นโยบายความเป็นส่วนตัว</Text>
           </Text>
+        </View>
+
+        {/* Bottom-right decorative Q mark */}
+        <View style={styles.floatingQBadge}>
+          <Text style={styles.floatingQText}>Q</Text>
         </View>
       </View>
     </SafeAreaView>
@@ -116,101 +114,92 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.white,
   },
-  container: {
-    flex: 1,
+  topHeader: {
     paddingHorizontal: 24,
-    justifyContent: "space-between",
-    paddingVertical: 32,
-  },
-  brandSection: {
-    alignItems: "center",
-    marginTop: 20,
-  },
-  logoBadge: {
-    width: 60,
-    height: 60,
-    backgroundColor: colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: colors.darkBorder,
-    marginBottom: 16,
-    ...shadows.neo,
-  },
-  logoBadgeText: {
-    color: colors.white,
-    fontWeight: "900",
-    fontSize: 34,
-  },
-  appName: {
-    fontSize: 36,
-    fontWeight: "900",
-    color: colors.ink,
-    letterSpacing: -1,
-  },
-  appAccent: {
-    color: colors.coral,
-  },
-  tagline: {
-    fontSize: 15,
-    color: colors.mutedForeground,
-    textAlign: "center",
-    marginTop: 8,
-    lineHeight: 22,
-    maxWidth: 280,
-  },
-  highlightCard: {
-    backgroundColor: colors.card,
-    borderWidth: 2,
-    borderColor: colors.darkBorder,
-    padding: 20,
-    ...shadows.neo,
-  },
-  cardHeader: {
+    paddingVertical: 16,
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    justifyContent: "space-between",
   },
-  cardLabel: {
-    fontSize: 11,
-    fontWeight: "900",
-    color: colors.primary,
-    letterSpacing: 1,
+  logoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
-  cardTitle: {
+  brandTitle: {
     fontSize: 22,
     fontWeight: "900",
     color: colors.ink,
-    lineHeight: 30,
-    marginBottom: 16,
+    letterSpacing: -0.5,
   },
-  categoryRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
+  limeQBadge: {
+    width: 24,
+    height: 24,
+    backgroundColor: "#bbf44a",
+    borderRadius: 4,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  miniBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
+  limeQText: {
+    color: colors.ink,
+    fontWeight: "900",
+    fontSize: 14,
   },
-  miniBadgeText: {
+  container: {
+    flex: 1,
+    paddingHorizontal: 28,
+    justifyContent: "center",
+    position: "relative",
+  },
+  contentBox: {
+    width: "100%",
+    maxWidth: 420,
+    alignSelf: "center",
+  },
+  eyebrow: {
     fontSize: 12,
     fontWeight: "800",
+    color: colors.mutedForeground,
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  headline: {
+    fontSize: 38,
+    fontWeight: "900",
     color: colors.ink,
+    lineHeight: 48,
+    letterSpacing: -1,
+  },
+  limeLine: {
+    width: 44,
+    height: 4,
+    backgroundColor: "#bbf44a",
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  subtitle: {
+    fontSize: 15,
+    color: colors.mutedForeground,
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#17171c",
+    marginBottom: 24,
   },
   errorBox: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     backgroundColor: "#ffebeb",
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: colors.destructive,
     padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
   },
   errorText: {
     fontSize: 13,
@@ -218,37 +207,66 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     flex: 1,
   },
-  actionSection: {
-    gap: 16,
-  },
   googleButton: {
-    backgroundColor: colors.ink,
-    borderWidth: 2,
-    borderColor: colors.darkBorder,
-    height: 56,
+    backgroundColor: colors.white,
+    borderWidth: 1.5,
+    borderColor: colors.ink,
+    borderRadius: 8,
+    height: 52,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 18,
-    ...shadows.neo,
+    paddingHorizontal: 16,
+    marginBottom: 20,
   },
-  googleIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.white,
+  googleLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  googleIconCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "#ea4335",
     justifyContent: "center",
     alignItems: "center",
   },
-  googleButtonText: {
-    fontSize: 16,
-    fontWeight: "800",
+  googleG: {
     color: colors.white,
+    fontWeight: "900",
+    fontSize: 13,
+  },
+  googleButtonText: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: colors.ink,
   },
   disclaimerText: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.mutedForeground,
-    textAlign: "center",
     lineHeight: 18,
+    textAlign: "center",
+  },
+  linkText: {
+    textDecorationLine: "underline",
+    fontWeight: "700",
+    color: colors.ink,
+  },
+  floatingQBadge: {
+    position: "absolute",
+    bottom: 24,
+    right: 24,
+    width: 48,
+    height: 48,
+    backgroundColor: colors.primary,
+    borderRadius: 6,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  floatingQText: {
+    color: colors.white,
+    fontSize: 28,
+    fontWeight: "900",
   },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, shadows } from "../lib/theme";
+import { colors } from "../lib/theme";
 import { useData } from "../context/DataContext";
 import Header from "../components/Header";
 
@@ -39,7 +39,7 @@ export default function FavoritesScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.card} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
       <Header />
 
       <ScrollView
@@ -47,19 +47,17 @@ export default function FavoritesScreen({ navigation }) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header Section */}
+        {/* Header Section (Matching Image 4) */}
         <View style={styles.headerSection}>
-          <Text style={styles.eyebrow}>SAVED PROFILES</Text>
+          <Text style={styles.eyebrow}>SAVED PEOPLE</Text>
           <View style={styles.titleRow}>
             <Text style={styles.title}>รายการโปรด</Text>
-            <Text style={styles.countBadge}>{favoriteUsers.length} คน</Text>
+            <Text style={styles.countText}>{favoriteUsers.length} คน</Text>
           </View>
-          <Text style={styles.subtitle}>
-            รายชื่อคนที่คุณบันทึกไว้เพื่อกลับมาดูหรือติดต่ออีกครั้ง
-          </Text>
+          <View style={styles.divider} />
         </View>
 
-        {/* Favorite Users List */}
+        {/* Favorites List or Empty State */}
         {favoriteUsers.length > 0 ? (
           <View style={styles.listContainer}>
             {favoriteUsers.map((user) => (
@@ -78,7 +76,7 @@ export default function FavoritesScreen({ navigation }) {
                         style={styles.avatarImage}
                       />
                     ) : (
-                      <View style={[styles.avatarImage, styles.avatarFallback]}>
+                      <View style={styles.avatarFallback}>
                         <Text style={styles.avatarInitial}>
                           {user.name.charAt(0).toUpperCase()}
                         </Text>
@@ -95,7 +93,7 @@ export default function FavoritesScreen({ navigation }) {
                         {user.bio}
                       </Text>
                     ) : null}
-                    <View style={styles.viewProfileBtn}>
+                    <View style={styles.viewProfileRow}>
                       <Text style={styles.viewProfileText}>ดูโปรไฟล์</Text>
                       <Ionicons
                         name="arrow-forward"
@@ -113,7 +111,7 @@ export default function FavoritesScreen({ navigation }) {
                 >
                   <Ionicons
                     name="trash-outline"
-                    size={20}
+                    size={18}
                     color={colors.destructive}
                   />
                 </TouchableOpacity>
@@ -121,21 +119,20 @@ export default function FavoritesScreen({ navigation }) {
             ))}
           </View>
         ) : (
-          <View style={styles.emptyCard}>
-            <View style={styles.emptyIconCircle}>
-              <Ionicons name="heart-dislike-outline" size={36} color={colors.coral} />
-            </View>
+          /* Empty State Box (Matching Image 4) */
+          <View style={styles.emptyDashedBox}>
+            <Ionicons name="heart-outline" size={44} color="#ff5c5c" />
             <Text style={styles.emptyTitle}>ยังไม่มีรายการโปรด</Text>
             <Text style={styles.emptySubtitle}>
-              คุณสามารถกดปุ่มหัวใจในหน้ารายละเอียดแมตช์ เพื่อเก็บโปรไฟล์คนที่สนใจไว้ที่นี่
+              เก็บคนที่คุณอยากกลับมาดูอีกครั้งได้จากหน้ารายละเอียดแมตช์
             </Text>
+
             <TouchableOpacity
-              style={styles.emptyActionBtn}
+              style={styles.blueBtn}
               activeOpacity={0.85}
               onPress={() => navigation.navigate("ResultsTab")}
             >
-              <Ionicons name="people" size={16} color={colors.white} />
-              <Text style={styles.emptyActionBtnText}>ไปดูแมตช์ของคุณ</Text>
+              <Text style={styles.blueBtnText}>ไปดูแมตช์</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -147,7 +144,7 @@ export default function FavoritesScreen({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "#fafbfc",
   },
   container: {
     flex: 1,
@@ -157,15 +154,12 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   headerSection: {
-    borderBottomWidth: 1.5,
-    borderBottomColor: colors.darkBorder,
-    paddingBottom: 16,
     marginBottom: 20,
   },
   eyebrow: {
     fontSize: 11,
-    fontWeight: "900",
-    color: colors.primary,
+    fontWeight: "800",
+    color: colors.mutedForeground,
     letterSpacing: 1,
     marginBottom: 4,
   },
@@ -175,31 +169,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: "900",
     color: colors.ink,
   },
-  countBadge: {
-    fontSize: 18,
-    fontWeight: "900",
+  countText: {
+    fontSize: 16,
+    fontWeight: "800",
     color: colors.mutedForeground,
-    fontFamily: "monospace",
   },
-  subtitle: {
-    fontSize: 14,
-    color: colors.mutedForeground,
-    marginTop: 6,
+  divider: {
+    height: 1,
+    backgroundColor: "#e5e7eb",
+    marginTop: 14,
   },
   listContainer: {
     gap: 12,
   },
   userCard: {
-    backgroundColor: colors.card,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 8,
     flexDirection: "row",
     alignItems: "center",
-    ...shadows.neo,
   },
   cardMain: {
     flex: 1,
@@ -211,36 +204,38 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
   avatarImage: {
-    width: 60,
-    height: 60,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
   },
   avatarFallback: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     backgroundColor: colors.primary,
     justifyContent: "center",
     alignItems: "center",
   },
   avatarInitial: {
     color: colors.white,
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "900",
   },
   userInfo: {
     flex: 1,
   },
   userName: {
-    fontSize: 17,
-    fontWeight: "900",
+    fontSize: 16,
+    fontWeight: "800",
     color: colors.ink,
     marginBottom: 2,
   },
   userBio: {
     fontSize: 12,
     color: colors.mutedForeground,
-    marginBottom: 6,
+    marginBottom: 4,
   },
-  viewProfileBtn: {
+  viewProfileRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
@@ -251,54 +246,43 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   removeBtn: {
-    padding: 16,
-    justifyContent: "center",
-    alignItems: "center",
+    padding: 14,
   },
-  emptyCard: {
-    backgroundColor: colors.card,
+  emptyDashedBox: {
+    backgroundColor: colors.white,
     borderWidth: 1.5,
     borderStyle: "dashed",
-    borderColor: colors.darkBorder,
-    padding: 30,
+    borderColor: "#d1d5db",
+    borderRadius: 8,
+    paddingVertical: 44,
+    paddingHorizontal: 20,
     alignItems: "center",
-    marginTop: 20,
-  },
-  emptyIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#ffebeb",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
+    marginTop: 10,
   },
   emptyTitle: {
     fontSize: 22,
     fontWeight: "900",
     color: colors.ink,
-    marginBottom: 8,
+    marginTop: 16,
+    marginBottom: 6,
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.mutedForeground,
     textAlign: "center",
-    lineHeight: 22,
+    lineHeight: 20,
+    maxWidth: 320,
     marginBottom: 24,
   },
-  emptyActionBtn: {
+  blueBtn: {
     backgroundColor: colors.primary,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
   },
-  emptyActionBtnText: {
+  blueBtnText: {
     color: colors.white,
     fontWeight: "800",
-    fontSize: 15,
+    fontSize: 14,
   },
 });

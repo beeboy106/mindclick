@@ -9,12 +9,19 @@ import {
   StatusBar,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, categoryColors, shadows } from "../lib/theme";
+import { colors } from "../lib/theme";
 import { categories } from "../data/questions";
 import { useAuth } from "../context/AuthContext";
 import { useData } from "../context/DataContext";
 import Header from "../components/Header";
 import MatchCard from "../components/MatchCard";
+
+const categoryTheme = {
+  lifestyle: { number: "01", bg: "#c7f65a", text: "#17171c" },
+  personality: { number: "02", bg: "#3457ff", text: "#ffffff" },
+  interaction: { number: "03", bg: "#ff5c5c", text: "#ffffff" },
+  social: { number: "04", bg: "#17171c", text: "#ffffff" },
+};
 
 export default function HomeScreen({ navigation }) {
   const { user } = useAuth();
@@ -22,7 +29,6 @@ export default function HomeScreen({ navigation }) {
 
   const completed = quizResponse.completedCategories || [];
   const matches = getMatchList();
-  const topMatches = matches.slice(0, 2);
 
   const firstName = user?.name ? user.name.split(" ")[0] : "คุณ";
   const profileReady = Boolean(
@@ -40,8 +46,8 @@ export default function HomeScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.card} />
-      <Header />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+      <Header onProfilePress={() => navigation.navigate("ProfileTab")} />
 
       <ScrollView
         style={styles.container}
@@ -58,29 +64,19 @@ export default function HomeScreen({ navigation }) {
 
           <View style={styles.heroActions}>
             <TouchableOpacity
-              style={styles.primaryBtn}
+              style={styles.blueBtn}
               activeOpacity={0.85}
               onPress={() => handleStartQuiz(nextCategory?.id)}
             >
-              <Text style={styles.primaryBtnText}>
+              <Text style={styles.blueBtnText}>
                 {completed.length > 0 ? "ตอบคำถามต่อ" : "เริ่มตอบคำถาม"}
               </Text>
-              <Ionicons name="arrow-forward" size={18} color={colors.white} />
+              <Ionicons name="arrow-forward" size={16} color={colors.white} />
             </TouchableOpacity>
-
-            {completed.length > 0 && (
-              <TouchableOpacity
-                style={styles.secondaryBtn}
-                activeOpacity={0.85}
-                onPress={() => navigation.navigate("ResultsTab")}
-              >
-                <Text style={styles.secondaryBtnText}>ดูแมตช์ทั้งหมด</Text>
-              </TouchableOpacity>
-            )}
           </View>
         </View>
 
-        {/* Next Move Banner */}
+        {/* Next Move Red Card */}
         <TouchableOpacity
           style={styles.nextMoveCard}
           activeOpacity={0.9}
@@ -94,111 +90,152 @@ export default function HomeScreen({ navigation }) {
             }
           }}
         >
-          <View style={styles.nextMoveHeader}>
-            <Text style={styles.nextMoveEyebrow}>NEXT MOVE</Text>
-            <Ionicons name="arrow-forward" size={24} color={colors.ink} />
+          <View style={styles.nextMoveTop}>
+            <Text style={styles.nextMoveLabel}>NEXT MOVE</Text>
+            <Ionicons name="arrow-forward" size={28} color={colors.ink} />
           </View>
-          <Text style={styles.nextMoveTitle}>
+
+          <Text style={styles.nextMoveHeadline}>
             {!profileReady
               ? "เติมโปรไฟล์ให้คนอื่นรู้จักคุณ"
               : nextCategory
               ? `ตอบ${nextCategory.name}ต่อ`
-              : "คุณตอบครบทุกด้านแล้ว!"}
+              : "คุณตอบครบทุกด้านแล้ว"}
           </Text>
-          <Text style={styles.nextMoveFooter}>
+
+          <View style={styles.nextMoveLine} />
+
+          <Text style={styles.nextMoveSub}>
             {!profileReady
-              ? "แตะเพื่อเพิ่ม Bio หรือโซเชียลมีเดีย"
+              ? "เพิ่ม bio หรือช่องทางติดต่ออย่างน้อย 1 รายการ"
               : nextCategory
               ? `เหลืออีก ${categories.length - completed.length} ด้าน`
-              : "ดูผลลัพธ์คนที่เข้ากับคุณได้เลย"}
+              : "อัปเดตคำตอบเมื่อมุมมองของคุณเปลี่ยนไป"}
           </Text>
         </TouchableOpacity>
 
         {/* Quiz Progress Section */}
-        <View style={styles.section}>
+        <View style={styles.progressSection}>
           <View style={styles.sectionHeader}>
             <View>
               <Text style={styles.sectionEyebrow}>QUIZ PROGRESS</Text>
               <Text style={styles.sectionTitle}>ความคืบหน้าของคุณ</Text>
             </View>
-            <View style={styles.progressBadge}>
-              <Text style={styles.progressBadgeText}>
-                {completed.length}/{categories.length}
-              </Text>
-            </View>
+            <Text style={styles.fractionText}>
+              {completed.length}/{categories.length}
+            </Text>
           </View>
 
-          <View style={styles.categoryGrid}>
+          {/* 4 Category List Items (Matching Image 2) */}
+          <View style={styles.categoryList}>
             {categories.map((cat) => {
+              const theme = categoryTheme[cat.id];
               const isDone = completed.includes(cat.id);
-              const tone = categoryColors[cat.id];
 
               return (
                 <TouchableOpacity
                   key={cat.id}
-                  style={[
-                    styles.catCard,
-                    isDone ? { borderLeftColor: tone.bg, borderLeftWidth: 6 } : null,
-                  ]}
+                  style={styles.catItem}
                   activeOpacity={0.8}
                   onPress={() => handleStartQuiz(cat.id)}
                 >
-                  <View style={styles.catCardTop}>
-                    <Text style={styles.catIcon}>{cat.icon}</Text>
-                    {isDone ? (
-                      <View style={styles.doneBadge}>
-                        <Ionicons name="checkmark" size={14} color={colors.white} />
-                        <Text style={styles.doneBadgeText}>ตอบแล้ว</Text>
+                  <View style={styles.catLeftRow}>
+                    {/* Number box e.g. 01, 02 */}
+                    <View
+                      style={[
+                        styles.catNumberBox,
+                        { backgroundColor: theme.bg },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.catNumberText,
+                          { color: theme.text },
+                        ]}
+                      >
+                        {theme.number}
+                      </Text>
+                    </View>
+
+                    <View style={styles.catTextCol}>
+                      <View style={styles.catTitleRow}>
+                        <Text style={styles.catName}>{cat.name}</Text>
+                        {isDone && (
+                          <Ionicons
+                            name="checkmark-circle"
+                            size={16}
+                            color={colors.primary}
+                            style={{ marginLeft: 6 }}
+                          />
+                        )}
                       </View>
-                    ) : (
-                      <Text style={styles.notDoneText}>แตะเพื่อตอบ</Text>
-                    )}
+                      <Text style={styles.catDesc} numberOfLines={1}>
+                        {cat.description}
+                      </Text>
+                    </View>
                   </View>
-                  <Text style={styles.catName}>{cat.name}</Text>
-                  <Text style={styles.catDesc} numberOfLines={2}>
-                    {cat.description}
-                  </Text>
+
+                  <Ionicons
+                    name="arrow-forward"
+                    size={16}
+                    color={colors.mutedForeground}
+                  />
                 </TouchableOpacity>
               );
             })}
           </View>
+
+          {/* Manage Profile Link Button */}
+          <TouchableOpacity
+            style={styles.manageProfileBtn}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate("ProfileTab")}
+          >
+            <View style={styles.manageProfileLeft}>
+              <Ionicons name="person-outline" size={16} color={colors.ink} />
+              <Text style={styles.manageProfileText}>จัดการโปรไฟล์</Text>
+            </View>
+            <Ionicons name="arrow-forward" size={16} color={colors.ink} />
+          </TouchableOpacity>
         </View>
 
-        {/* Top Matches Preview */}
-        {completed.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View>
-                <Text style={styles.sectionEyebrow}>COMPATIBILITY</Text>
-                <Text style={styles.sectionTitle}>แมตช์ที่ตรงกับคุณมากที่สุด</Text>
-              </View>
+        {/* Top Matches Section */}
+        <View style={styles.matchesSection}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionEyebrow}>TOP MATCHES</Text>
+              <Text style={styles.sectionTitle}>คนที่น่าจะคลิกกับคุณ</Text>
+            </View>
+            {matches.length > 0 && (
               <TouchableOpacity
                 onPress={() => navigation.navigate("ResultsTab")}
               >
-                <Text style={styles.seeAllLink}>ดูทั้งหมด ({matches.length})</Text>
+                <Text style={styles.seeAllText}>ดูทั้งหมด ({matches.length})</Text>
               </TouchableOpacity>
-            </View>
-
-            {topMatches.length > 0 ? (
-              topMatches.map((match, index) => (
-                <MatchCard
-                  key={match.id}
-                  match={match}
-                  index={index}
-                  onPress={() =>
-                    navigation.navigate("MatchDetail", { userId: match.id })
-                  }
-                />
-              ))
-            ) : (
-              <View style={styles.emptyMatchBox}>
-                <Text style={styles.emptyMatchText}>
-                  ยังไม่มีผู้ใช้อื่นที่ตอบหมวดหมู่เดียวกับคุณ
-                </Text>
-              </View>
             )}
           </View>
-        )}
+
+          {matches.length > 0 ? (
+            matches.slice(0, 3).map((match, index) => (
+              <MatchCard
+                key={match.id}
+                match={match}
+                index={index}
+                onPress={() =>
+                  navigation.navigate("MatchDetail", { userId: match.id })
+                }
+              />
+            ))
+          ) : (
+            <View style={styles.emptyDashedBox}>
+              <Ionicons name="sparkles" size={32} color={colors.primary} />
+              <Text style={styles.emptyDashedTitle}>ยังไม่มีแมตช์ให้แสดง</Text>
+              <Text style={styles.emptyDashedSub}>
+                ตอบคำถามอย่างน้อยหนึ่งด้าน แล้วระบบจะเริ่มค้นหาคนที่มีคำตอบคล้ายคุณ
+              </Text>
+            </View>
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -207,7 +244,7 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: "#fafbfc",
   },
   container: {
     flex: 1,
@@ -220,14 +257,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   eyebrow: {
-    fontSize: 12,
-    fontWeight: "900",
-    color: colors.primary,
+    fontSize: 11,
+    fontWeight: "800",
+    color: colors.mutedForeground,
     letterSpacing: 1,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   greetingTitle: {
-    fontSize: 30,
+    fontSize: 34,
     fontWeight: "900",
     color: colors.ink,
     letterSpacing: -0.5,
@@ -239,89 +276,72 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   heroActions: {
-    flexDirection: "row",
-    gap: 12,
-    marginTop: 18,
+    marginTop: 16,
   },
-  primaryBtn: {
+  blueBtn: {
     backgroundColor: colors.primary,
     flexDirection: "row",
     alignItems: "center",
+    alignSelf: "flex-start",
     paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
+    paddingVertical: 12,
+    borderRadius: 8,
     gap: 8,
-    ...shadows.neo,
   },
-  primaryBtnText: {
+  blueBtnText: {
     color: colors.white,
     fontWeight: "800",
     fontSize: 15,
   },
-  secondaryBtn: {
-    backgroundColor: colors.card,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    justifyContent: "center",
-  },
-  secondaryBtnText: {
-    color: colors.ink,
-    fontWeight: "800",
-    fontSize: 15,
-  },
   nextMoveCard: {
-    backgroundColor: colors.coral,
-    borderWidth: 2,
-    borderColor: colors.darkBorder,
-    padding: 18,
+    backgroundColor: "#ff5252",
+    borderRadius: 8,
+    padding: 20,
     marginBottom: 28,
-    ...shadows.neo,
   },
-  nextMoveHeader: {
+  nextMoveTop: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  nextMoveEyebrow: {
+  nextMoveLabel: {
     fontSize: 11,
     fontWeight: "900",
     color: colors.ink,
     letterSpacing: 1,
   },
-  nextMoveTitle: {
-    fontSize: 22,
+  nextMoveHeadline: {
+    fontSize: 24,
     fontWeight: "900",
     color: colors.ink,
-    marginTop: 8,
-    lineHeight: 28,
+    marginTop: 12,
+    lineHeight: 32,
   },
-  nextMoveFooter: {
+  nextMoveLine: {
+    height: 1,
+    backgroundColor: "rgba(23, 23, 28, 0.25)",
+    marginVertical: 14,
+  },
+  nextMoveSub: {
     fontSize: 13,
     fontWeight: "700",
     color: colors.ink,
-    marginTop: 14,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(23, 23, 28, 0.2)",
   },
-  section: {
+  progressSection: {
     marginBottom: 28,
   },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
-    marginBottom: 14,
-    borderBottomWidth: 1.5,
-    borderBottomColor: colors.darkBorder,
-    paddingBottom: 10,
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+    paddingBottom: 8,
   },
   sectionEyebrow: {
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "800",
     color: colors.mutedForeground,
     letterSpacing: 1,
   },
@@ -331,81 +351,114 @@ const styles = StyleSheet.create({
     color: colors.ink,
     marginTop: 2,
   },
-  progressBadge: {
-    backgroundColor: colors.ink,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  progressBadgeText: {
-    color: colors.white,
-    fontWeight: "900",
-    fontSize: 15,
-    fontFamily: "monospace",
-  },
-  categoryGrid: {
-    gap: 12,
-  },
-  catCard: {
-    backgroundColor: colors.card,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    padding: 14,
-    ...shadows.neo,
-  },
-  catCardTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  catIcon: {
-    fontSize: 22,
-  },
-  doneBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.ink,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    gap: 4,
-  },
-  doneBadgeText: {
-    color: colors.white,
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  notDoneText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: colors.primary,
-  },
-  catName: {
-    fontSize: 16,
+  fractionText: {
+    fontSize: 20,
     fontWeight: "900",
     color: colors.ink,
-    marginBottom: 4,
+    fontFamily: "monospace",
+  },
+  categoryList: {
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    backgroundColor: colors.white,
+    borderRadius: 8,
+    overflow: "hidden",
+  },
+  catItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+  },
+  catLeftRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    marginRight: 10,
+  },
+  catNumberBox: {
+    width: 30,
+    height: 30,
+    borderRadius: 4,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  catNumberText: {
+    fontWeight: "900",
+    fontSize: 13,
+  },
+  catTextCol: {
+    flex: 1,
+  },
+  catTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  catName: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: colors.ink,
   },
   catDesc: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.mutedForeground,
-    lineHeight: 18,
+    marginTop: 1,
   },
-  seeAllLink: {
+  manageProfileBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginTop: 10,
+  },
+  manageProfileLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  manageProfileText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.ink,
+  },
+  matchesSection: {
+    marginBottom: 20,
+  },
+  seeAllText: {
     fontSize: 13,
     fontWeight: "800",
     color: colors.primary,
   },
-  emptyMatchBox: {
-    padding: 24,
-    backgroundColor: colors.card,
+  emptyDashedBox: {
+    backgroundColor: colors.white,
     borderWidth: 1.5,
     borderStyle: "dashed",
-    borderColor: colors.border,
+    borderColor: "#d1d5db",
+    borderRadius: 8,
+    padding: 32,
     alignItems: "center",
   },
-  emptyMatchText: {
-    fontSize: 14,
+  emptyDashedTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: colors.ink,
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  emptyDashedSub: {
+    fontSize: 13,
     color: colors.mutedForeground,
-    fontWeight: "600",
+    textAlign: "center",
+    lineHeight: 20,
+    maxWidth: 280,
   },
 });
