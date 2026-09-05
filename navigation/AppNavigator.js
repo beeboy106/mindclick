@@ -99,7 +99,7 @@ export default function AppNavigator() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
           // เมื่อเข้าสู่ระบบแล้ว
-          <>
+          <Stack.Group>
             <Stack.Screen name="Main" component={MainTabNavigator} />
             <Stack.Screen
               name="Quiz"
@@ -116,10 +116,16 @@ export default function AppNavigator() {
                 animation: "slide_from_right",
               }}
             />
-          </>
+          </Stack.Group>
         ) : (
           // เมื่อยังไม่ได้เข้าสู่ระบบ
-          <Stack.Screen name="SignIn" component={SignInScreen} />
+          <Stack.Screen
+            name="SignIn"
+            component={SignInScreen}
+            options={{
+              animationTypeForReplace: "pop",
+            }}
+          />
         )}
       </Stack.Navigator>
     </NavigationContainer>
