@@ -132,6 +132,8 @@ export default function MatchDetailScreen({ route, navigation }) {
               <Text style={styles.scoreNumber}>{overallPercent}%</Text>
               <Text style={styles.scoreLabel}>COMPATIBILITY</Text>
             </View>
+          </View>
+
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
             <Text style={styles.heroName}>{targetUser.name}</Text>
             {targetUser.isRealUser && (

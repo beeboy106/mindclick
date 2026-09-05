@@ -1,16 +1,14 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { mockUsers } from "../data/mockUsers";
 import { getMatches } from "../lib/getMatch";
 import { useAuth } from "./AuthContext";
-import { getDb, isFirebaseConfigured } from "../lib/firebase";
 import {
-  doc,
-  setDoc,
-  getDoc,
-  collection,
-  onSnapshot,
-} from "firebase/firestore";
+  isFirebaseConfigured,
+  getFirestoreUser,
+  saveFirestoreUser,
+  getAllFirestoreUsers,
+} from "../lib/firebase";
 
 const PROFILE_KEY = "@friendq_user_profile";
 const QUIZ_KEY = "@friendq_quiz_responses";
@@ -76,108 +74,103 @@ export function DataProvider({ children }) {
     initLocalData();
   }, []);
 
+  // ฟังก์ชันดึงรายชื่อผู้ใช้จาก Cloud Firestore
+  const fetchCloudPool = useCallback(async () => {
+    if (!isFirebaseConfigured()) return;
+    try {
+      const allCloudUsers = await getAllFirestoreUsers();
+      const realUsers = allCloudUsers.filter(
+        (u) =>
+          u.id !== user?.id &&
+          u.categoryAnswers &&
+          u.categoryAnswers.length > 0
+      );
+
+      // ผสานคนจริงไว้ด้านบน และ mockUsers เสริมหากคนจริงยังมีน้อย
+      const combined = [
+        ...realUsers,
+        ...mockUsers.filter((m) => !realUsers.some((r) => r.id === m.id)),
+      ];
+      setUsersPool(combined);
+      AsyncStorage.setItem(USERS_POOL_KEY, JSON.stringify(combined));
+    } catch (err) {
+      console.warn("Error fetching cloud users pool:", err);
+    }
+  }, [user?.id]);
+
   // 2. ซิงค์กับ Firebase Firestore เมื่อมี user ล็อกอิน
   useEffect(() => {
     if (!user || !isFirebaseConfigured()) return;
-    const db = getDb();
-    if (!db) return;
 
-    let unsubscribeSnapshot = null;
+    let isMounted = true;
 
-    async function syncCloudUserData() {
+    async function syncUserData() {
       try {
-        const userDocRef = doc(db, "users", user.id);
-        const userDocSnap = await getDoc(userDocRef);
+        const cloudUser = await getFirestoreUser(user.id);
 
-        if (userDocSnap.exists()) {
-          const cloudData = userDocSnap.data();
-          // โหลดโปรไฟล์จาก Cloud
+        if (cloudUser && isMounted) {
+          // โหลดโปรไฟล์
           setProfile((prev) => ({
             ...prev,
-            ...cloudData,
+            ...cloudUser,
             socialLinks: {
               ...prev.socialLinks,
-              ...(cloudData.socialLinks || {}),
+              ...(cloudUser.socialLinks || {}),
             },
           }));
 
-          // โหลดคำตอบควิซจาก Cloud
-          if (cloudData.completedCategories && cloudData.categoryAnswers) {
+          // โหลดคำตอบ
+          if (cloudUser.completedCategories && cloudUser.categoryAnswers) {
             const cloudQuiz = {
-              completedCategories: cloudData.completedCategories || [],
-              categoryAnswers: cloudData.categoryAnswers || [],
+              completedCategories: cloudUser.completedCategories || [],
+              categoryAnswers: cloudUser.categoryAnswers || [],
             };
             setQuizResponse(cloudQuiz);
             AsyncStorage.setItem(QUIZ_KEY, JSON.stringify(cloudQuiz));
           }
 
-          if (cloudData.favorites) {
-            setFavorites(cloudData.favorites);
-            AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(cloudData.favorites));
+          if (cloudUser.favorites) {
+            setFavorites(cloudUser.favorites);
+            AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(cloudUser.favorites));
           }
-        } else {
-          // หากยังไม่มีข้อมูลใน Cloud ให้สร้างข้อมูลเริ่มต้นของผู้ใช้นี้
-          await setDoc(userDocRef, {
+        } else if (isMounted) {
+          // หากยังไม่มี ให้สร้างไว้ใน Firestore
+          await saveFirestoreUser(user.id, {
             id: user.id,
             name: user.name || "Google User",
             email: user.email || "",
             image: user.image || null,
-            gender: profile.gender || "prefer_not_to_say",
-            bio: profile.bio || "",
-            socialLinks: profile.socialLinks || {},
-            galleryImages: profile.galleryImages || [],
-            completedCategories: quizResponse.completedCategories || [],
-            categoryAnswers: quizResponse.categoryAnswers || [],
-            hasCompletedQuiz: quizResponse.completedCategories?.length === 4,
-            favorites: favorites || [],
+            gender: "prefer_not_to_say",
+            bio: "",
+            socialLinks: {},
+            galleryImages: [],
+            completedCategories: [],
+            categoryAnswers: [],
+            hasCompletedQuiz: false,
+            favorites: [],
             isRealUser: true,
-            createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           });
         }
       } catch (err) {
-        console.warn("Error syncing user data with Firestore:", err);
+        console.warn("Error syncing user data:", err);
       }
 
-      // ฟัง Real-time Pool ของผู้ใช้คนอื่นๆ เพื่อการคำนวณแมตช์สดๆ
-      try {
-        const usersCollectionRef = collection(db, "users");
-        unsubscribeSnapshot = onSnapshot(usersCollectionRef, (snapshot) => {
-          const realUsers = [];
-          snapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            // ไม่รวมตัวเราเอง และต้องมีชุดคำตอบ
-            if (
-              data.id !== user.id &&
-              data.categoryAnswers &&
-              data.categoryAnswers.length > 0
-            ) {
-              realUsers.push({
-                ...data,
-                isRealUser: true,
-              });
-            }
-          });
-
-          // รวมคนจริงไว้บนสุด และใส่ mockUsers เสริมหากคนจริงยังมีน้อย
-          const combined = [
-            ...realUsers,
-            ...mockUsers.filter((m) => !realUsers.some((r) => r.id === m.id)),
-          ];
-          setUsersPool(combined);
-          AsyncStorage.setItem(USERS_POOL_KEY, JSON.stringify(combined));
-        });
-      } catch (err) {
-        console.warn("Error subscribing to users pool in Firestore:", err);
+      if (isMounted) {
+        await fetchCloudPool();
       }
     }
 
-    syncCloudUserData();
+    syncUserData();
+
+    // ดึงข้อมูล Pool ทุกๆ 15 วินาทีเพื่อให้อัปเดตสดเสมอ
+    const interval = setInterval(fetchCloudPool, 15000);
 
     return () => {
-      if (unsubscribeSnapshot) unsubscribeSnapshot();
+      isMounted = false;
+      clearInterval(interval);
     };
-  }, [user]);
+  }, [user, fetchCloudPool]);
 
   // บันทึกคำตอบ Quiz ทีละหมวดหมู่
   const saveCategoryAnswers = async (categoryId, answers, questionOrder) => {
@@ -208,31 +201,25 @@ export function DataProvider({ children }) {
       await AsyncStorage.setItem(QUIZ_KEY, JSON.stringify(newQuizData));
       setQuizResponse(newQuizData);
 
-      // บันทึกขึ้น Cloud Firestore (ถ้าต่อเน็ตและล็อกอินอยู่)
+      // บันทึกขึ้น Cloud Firestore
       if (user && isFirebaseConfigured()) {
-        const db = getDb();
-        if (db) {
-          const userDocRef = doc(db, "users", user.id);
-          await setDoc(
-            userDocRef,
-            {
-              id: user.id,
-              name: user.name || "Google User",
-              email: user.email || "",
-              image: profile.image || user.image || null,
-              gender: profile.gender,
-              bio: profile.bio,
-              socialLinks: profile.socialLinks,
-              galleryImages: profile.galleryImages,
-              completedCategories: currentCompleted,
-              categoryAnswers: updatedCategoryAnswers,
-              hasCompletedQuiz: currentCompleted.length === 4,
-              isRealUser: true,
-              updatedAt: new Date().toISOString(),
-            },
-            { merge: true }
-          );
-        }
+        await saveFirestoreUser(user.id, {
+          id: user.id,
+          name: user.name || "Google User",
+          email: user.email || "",
+          image: profile.image || user.image || null,
+          gender: profile.gender,
+          bio: profile.bio,
+          socialLinks: profile.socialLinks,
+          galleryImages: profile.galleryImages,
+          completedCategories: currentCompleted,
+          categoryAnswers: updatedCategoryAnswers,
+          hasCompletedQuiz: currentCompleted.length === 4,
+          isRealUser: true,
+          updatedAt: new Date().toISOString(),
+        });
+        // รีเฟรช Pool ทันที
+        fetchCloudPool();
       }
 
       return true;
@@ -259,18 +246,10 @@ export function DataProvider({ children }) {
 
       // บันทึกขึ้น Cloud Firestore
       if (user && isFirebaseConfigured()) {
-        const db = getDb();
-        if (db) {
-          const userDocRef = doc(db, "users", user.id);
-          await setDoc(
-            userDocRef,
-            {
-              ...partialProfile,
-              updatedAt: new Date().toISOString(),
-            },
-            { merge: true }
-          );
-        }
+        await saveFirestoreUser(user.id, {
+          ...partialProfile,
+          updatedAt: new Date().toISOString(),
+        });
       }
 
       return true;
@@ -336,18 +315,10 @@ export function DataProvider({ children }) {
 
       // บันทึกขึ้น Cloud Firestore
       if (user && isFirebaseConfigured()) {
-        const db = getDb();
-        if (db) {
-          const userDocRef = doc(db, "users", user.id);
-          await setDoc(
-            userDocRef,
-            {
-              favorites: updatedFavorites,
-              updatedAt: new Date().toISOString(),
-            },
-            { merge: true }
-          );
-        }
+        await saveFirestoreUser(user.id, {
+          favorites: updatedFavorites,
+          updatedAt: new Date().toISOString(),
+        });
       }
 
       return isNowFavorited;
@@ -379,20 +350,12 @@ export function DataProvider({ children }) {
       setQuizResponse(defaultQuizResponse);
 
       if (user && isFirebaseConfigured()) {
-        const db = getDb();
-        if (db) {
-          const userDocRef = doc(db, "users", user.id);
-          await setDoc(
-            userDocRef,
-            {
-              completedCategories: [],
-              categoryAnswers: [],
-              hasCompletedQuiz: false,
-              updatedAt: new Date().toISOString(),
-            },
-            { merge: true }
-          );
-        }
+        await saveFirestoreUser(user.id, {
+          completedCategories: [],
+          categoryAnswers: [],
+          hasCompletedQuiz: false,
+          updatedAt: new Date().toISOString(),
+        });
       }
     } catch (err) {
       console.error("Error resetting quiz data:", err);
@@ -435,6 +398,7 @@ export function DataProvider({ children }) {
         getUserById,
         resetQuizData,
         resetAllData,
+        refreshPool: fetchCloudPool,
       }}
     >
       {children}
