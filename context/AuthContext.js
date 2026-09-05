@@ -133,6 +133,12 @@ export function AuthProvider({ children }) {
           if (nativeErr.code === "SIGN_IN_CANCELLED" || nativeErr.code === "12501") {
             return;
           }
+          setAuthError(
+            nativeErr.message?.includes("DEVELOPER_ERROR")
+              ? "กรุณาเพิ่ม SHA-1 ใน Firebase Console ก่อนเข้าสู่ระบบ (ดูขั้นตอนในแชท)"
+              : `เกิดข้อผิดพลาดในการล็อกอิน: ${nativeErr.message || nativeErr}`
+          );
+          return;
         }
       }
 
