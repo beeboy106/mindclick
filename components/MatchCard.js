@@ -36,11 +36,16 @@ export default function MatchCard({ match, index, onPress }) {
         </View>
 
         <View style={styles.infoCol}>
-          <Text style={styles.userName} numberOfLines={1}>
-            {match.name}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <Text style={styles.userName} numberOfLines={1}>
+              {match.name}
+            </Text>
+            {match.isRealUser && (
+              <Ionicons name="checkmark-circle" size={14} color="#10b981" />
+            )}
+          </View>
           <Text style={styles.metaText}>
-            ตรงกัน {match.matchedCategories.length} ด้าน
+            ตรงกัน {match.matchedCategories.length} ด้าน{match.isRealUser ? " • ผู้ใช้จริง" : ""}
           </Text>
         </View>
 

@@ -132,9 +132,15 @@ export default function MatchDetailScreen({ route, navigation }) {
               <Text style={styles.scoreNumber}>{overallPercent}%</Text>
               <Text style={styles.scoreLabel}>COMPATIBILITY</Text>
             </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+            <Text style={styles.heroName}>{targetUser.name}</Text>
+            {targetUser.isRealUser && (
+              <View style={styles.realBadge}>
+                <Ionicons name="checkmark-circle" size={14} color="#10b981" />
+                <Text style={styles.realBadgeText}>ผู้ใช้จริง</Text>
+              </View>
+            )}
           </View>
-
-          <Text style={styles.heroName}>{targetUser.name}</Text>
           {targetUser.bio ? (
             <Text style={styles.heroBio}>{targetUser.bio}</Text>
           ) : null}
@@ -352,7 +358,22 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "900",
     color: colors.ink,
-    marginBottom: 6,
+  },
+  realBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#ecfdf5",
+    borderWidth: 1,
+    borderColor: "#a7f3d0",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  realBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#047857",
   },
   heroBio: {
     fontSize: 14,
