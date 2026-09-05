@@ -240,8 +240,8 @@ export function AuthProvider({ children }) {
       }
     }
 
-    // หากยังไม่ได้ตั้งค่า Client ID หรือต้องการทดสอบทันที
-    await signInWithDemo();
+    // หากยังไม่สามารถเข้าสู่ระบบได้
+    setAuthError("ไม่สามารถเข้าสู่ระบบด้วย Google ได้ กรุณาลองใหม่อีกครั้ง");
   };
 
   // ออกจากระบบ
