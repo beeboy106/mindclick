@@ -88,7 +88,8 @@ export function AuthProvider({ children }) {
 
     if (isConfigured) {
       try {
-        let redirectUrl = "https://auth.expo.io/@anonymous/friendq-mobile";
+        // ใช้ Redirect URI ที่ลงทะเบียนไว้ใน Google Cloud Console (URIs 5: snack-runtime)
+        let redirectUrl = "https://snack-runtime.eascdn.net/v2/54/index.html";
         if (Platform.OS === "web" && typeof window !== "undefined") {
           redirectUrl = window.location.origin + window.location.pathname;
         }
