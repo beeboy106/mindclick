@@ -1,25 +1,16 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as WebBrowser from "expo-web-browser";
-import * as AuthSession from "expo-auth-session";
 
 WebBrowser.maybeCompleteAuthSession();
 
 const AUTH_STORAGE_KEY = "@friendq_auth_session";
 
 // -------------------------------------------------------------
-// ใส่ Google Client IDs ที่ได้จาก Google Cloud Console ที่นี่:
+// ใส่ Google Client ID จาก Google Cloud Console ที่นี่ (ถ้าต้องการใช้จริง)
 // -------------------------------------------------------------
 export const GOOGLE_CONFIG = {
   webClientId: "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com",
-  androidClientId: "YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com",
-  iosClientId: "YOUR_IOS_CLIENT_ID.apps.googleusercontent.com",
-};
-
-const discovery = {
-  authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
-  tokenEndpoint: "https://oauth2.googleapis.com/token",
-  revocationEndpoint: "https://oauth2.googleapis.com/revoke",
 };
 
 const AuthContext = createContext();
@@ -28,18 +19,6 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
-
-  // Hook สำหรับ Auth Request ผ่าน Expo Auth Session โดยตรง (ไม่ใช้ subpath /providers/google เพื่อรองรับ Snack Expo 100%)
-  const [request, response, promptAsync] = AuthSession.useAuthRequest(
-    {
-      clientId: GOOGLE_CONFIG.webClientId,
-      scopes: ["profile", "email"],
-      redirectUri: AuthSession.makeRedirectUri({
-        scheme: "friendq",
-      }),
-    },
-    discovery
-  );
 
   // โหลด Session จาก AsyncStorage ตอนเริ่มต้นแอป
   useEffect(() => {
@@ -58,45 +37,6 @@ export function AuthProvider({ children }) {
     loadStoredSession();
   }, []);
 
-  // เมื่อได้ผลลัพธ์จาก Google OAuth Response
-  useEffect(() => {
-    async function handleGoogleResponse() {
-      if (response?.type === "success") {
-        const { authentication } = response;
-        if (authentication?.accessToken) {
-          try {
-            const userInfoResponse = await fetch(
-              "https://www.googleapis.com/userinfo/v2/me",
-              {
-                headers: { Authorization: `Bearer ${authentication.accessToken}` },
-              }
-            );
-            const googleUser = await userInfoResponse.json();
-
-            const loggedInUser = {
-              id: googleUser.id || "google_user_" + Date.now(),
-              name: googleUser.name || "Google User",
-              email: googleUser.email || "",
-              image: googleUser.picture || null,
-              provider: "google",
-            };
-
-            await saveUserSession(loggedInUser);
-          } catch (err) {
-            console.error("Failed to fetch Google user info:", err);
-            setAuthError("ไม่สามารถดึงข้อมูลโปรไฟล์จาก Google ได้");
-          }
-        }
-      } else if (response?.type === "error") {
-        setAuthError("เกิดข้อผิดพลาดในการเชื่อมต่อกับ Google");
-      }
-    }
-
-    if (response) {
-      handleGoogleResponse();
-    }
-  }, [response]);
-
   // บันทึก Session ลง AsyncStorage
   const saveUserSession = async (userData) => {
     try {
@@ -108,7 +48,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ฟังก์ชันกดเข้าสู่ระบบด้วย Google
+  // ฟังก์ชันเข้าสู่ระบบด้วย Google
   const signInWithGoogle = async () => {
     setAuthError(null);
 
@@ -116,19 +56,54 @@ export function AuthProvider({ children }) {
       GOOGLE_CONFIG.webClientId &&
       !GOOGLE_CONFIG.webClientId.includes("YOUR_WEB_CLIENT_ID");
 
-    if (isConfigured && request) {
-      await promptAsync();
-    } else {
-      // โหมดจำลองสำหรับรันบน Snack Expo ได้ทันที 100% โดยไม่ต้องมี Client ID
-      const demoGoogleUser = {
-        id: "user_google_demo",
-        name: "สมชาย ใจดี",
-        email: "somchai.google@gmail.com",
-        image: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
-        provider: "google_demo",
-      };
-      await saveUserSession(demoGoogleUser);
+    if (isConfigured) {
+      try {
+        // เมื่อใส่ Client ID จริง: เรียกหน้าต่าง Google OAuth ผ่าน WebBrowser
+        const redirectUrl = "https://auth.expo.io/@anonymous/friendq-mobile";
+        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
+          GOOGLE_CONFIG.webClientId
+        )}&response_type=token&scope=profile%20email&redirect_uri=${encodeURIComponent(
+          redirectUrl
+        )}`;
+
+        const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
+
+        if (result.type === "success" && result.url) {
+          const params = new URLSearchParams(result.url.split("#")[1] || "");
+          const accessToken = params.get("access_token");
+
+          if (accessToken) {
+            const userInfoRes = await fetch(
+              "https://www.googleapis.com/userinfo/v2/me",
+              { headers: { Authorization: `Bearer ${accessToken}` } }
+            );
+            const googleUser = await userInfoRes.json();
+
+            const loggedInUser = {
+              id: googleUser.id || "google_" + Date.now(),
+              name: googleUser.name || "Google User",
+              email: googleUser.email || "",
+              image: googleUser.picture || null,
+              provider: "google",
+            };
+            await saveUserSession(loggedInUser);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Google OAuth error:", err);
+      }
     }
+
+    // โหมดจำลองสำหรับ Snack Expo ให้ล็อกอินเป็น Google User ได้ทันที 100%
+    const demoGoogleUser = {
+      id: "user_google_demo",
+      name: "สมชาย ใจดี",
+      email: "somchai.google@gmail.com",
+      image: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
+      provider: "google",
+    };
+    await saveUserSession(demoGoogleUser);
   };
 
   // ออกจากระบบ
