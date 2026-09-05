@@ -13,7 +13,7 @@ import { colors } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 
 export default function SignInScreen() {
-  const { signInWithGoogle, authError } = useAuth();
+  const { signInWithGoogle, signInWithDemo, authError } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const handleSignIn = async () => {
@@ -92,6 +92,17 @@ export default function SignInScreen() {
                 <Ionicons name="arrow-forward" size={18} color={colors.ink} />
               </>
             )}
+          </TouchableOpacity>
+
+          {/* Demo Instant Sign-In Button */}
+          <TouchableOpacity
+            style={styles.demoButton}
+            activeOpacity={0.8}
+            onPress={signInWithDemo}
+            disabled={loading}
+          >
+            <Ionicons name="flash-outline" size={16} color={colors.primary} />
+            <Text style={styles.demoButtonText}>เข้าใช้งานแบบด่วน (โหมดทดสอบ Demo)</Text>
           </TouchableOpacity>
 
           {/* Disclaimer Footer */}
@@ -241,6 +252,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
     color: colors.ink,
+  },
+  demoButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    marginBottom: 16,
+    borderRadius: 8,
+    backgroundColor: "#eff4ff",
+    borderWidth: 1,
+    borderColor: "#dbeafe",
+  },
+  demoButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.primary,
   },
   disclaimerText: {
     fontSize: 11,
