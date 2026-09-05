@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -46,6 +46,19 @@ export default function ProfileScreen({ navigation }) {
     line: profile.socialLinks?.line || "",
     tiktok: profile.socialLinks?.tiktok || "",
   });
+
+  // ซิงค์ฟิลด์ข้อมูลโปรไฟล์เมื่อสลับบัญชีผู้ใช้
+  useEffect(() => {
+    setGender(profile?.gender || "prefer_not_to_say");
+    setBio(profile?.bio || "");
+    setAvatarUri(profile?.image || user?.image || null);
+    setSocialLinks({
+      instagram: profile?.socialLinks?.instagram || "",
+      facebook: profile?.socialLinks?.facebook || "",
+      line: profile?.socialLinks?.line || "",
+      tiktok: profile?.socialLinks?.tiktok || "",
+    });
+  }, [profile, user]);
 
   const [isSaving, setIsSaving] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);

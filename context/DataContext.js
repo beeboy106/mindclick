@@ -98,59 +98,69 @@ export function DataProvider({ children }) {
     }
   }, [user?.id]);
 
-  // 2. ซิงค์กับ Firebase Firestore เมื่อมี user ล็อกอิน
+  // 2. ซิงค์กับ Firebase Firestore เมื่อมี user ล็อกอิน หรือสลับบัญชี
   useEffect(() => {
-    if (!user || !isFirebaseConfigured()) return;
+    if (!user) {
+      setProfile(defaultProfile);
+      setQuizResponse(defaultQuizResponse);
+      setFavorites([]);
+      return;
+    }
 
     let isMounted = true;
 
     async function syncUserData() {
       try {
-        const cloudUser = await getFirestoreUser(user.id);
+        const cloudUser = isFirebaseConfigured() ? await getFirestoreUser(user.id) : null;
 
         if (cloudUser && isMounted) {
-          // โหลดโปรไฟล์
-          setProfile((prev) => ({
-            ...prev,
+          // โหลดข้อมูลของผู้ใช้นี้โดยตรง
+          setProfile({
+            ...defaultProfile,
             ...cloudUser,
+            image: cloudUser.image || user.image || null,
             socialLinks: {
-              ...prev.socialLinks,
+              ...defaultProfile.socialLinks,
               ...(cloudUser.socialLinks || {}),
             },
-          }));
-
-          // โหลดคำตอบ
-          if (cloudUser.completedCategories && cloudUser.categoryAnswers) {
-            const cloudQuiz = {
-              completedCategories: cloudUser.completedCategories || [],
-              categoryAnswers: cloudUser.categoryAnswers || [],
-            };
-            setQuizResponse(cloudQuiz);
-            AsyncStorage.setItem(QUIZ_KEY, JSON.stringify(cloudQuiz));
-          }
-
-          if (cloudUser.favorites) {
-            setFavorites(cloudUser.favorites);
-            AsyncStorage.setItem(FAVORITES_KEY, JSON.stringify(cloudUser.favorites));
-          }
-        } else if (isMounted) {
-          // หากยังไม่มี ให้สร้างไว้ใน Firestore
-          await saveFirestoreUser(user.id, {
-            id: user.id,
-            name: user.name || "Google User",
-            email: user.email || "",
-            image: user.image || null,
-            gender: "prefer_not_to_say",
-            bio: "",
-            socialLinks: {},
-            galleryImages: [],
-            completedCategories: [],
-            categoryAnswers: [],
-            hasCompletedQuiz: false,
-            favorites: [],
-            isRealUser: true,
-            updatedAt: new Date().toISOString(),
+            galleryImages: cloudUser.galleryImages || [],
           });
+
+          // โหลดคำตอบควิซของผู้ใช้นี้
+          const cloudQuiz = {
+            completedCategories: cloudUser.completedCategories || [],
+            categoryAnswers: cloudUser.categoryAnswers || [],
+          };
+          setQuizResponse(cloudQuiz);
+          setFavorites(cloudUser.favorites || []);
+        } else if (isMounted) {
+          // หากเป็นผู้ใช้ใหม่ ให้ตั้งต้นโปรไฟล์ใหม่ของผู้ใช้นี้
+          const freshProfile = {
+            ...defaultProfile,
+            image: user.image || null,
+          };
+          setProfile(freshProfile);
+          setQuizResponse(defaultQuizResponse);
+          setFavorites([]);
+
+          if (isFirebaseConfigured()) {
+            await saveFirestoreUser(user.id, {
+              id: user.id,
+              name: user.name || "Google User",
+              email: user.email || "",
+              image: user.image || null,
+              gender: "prefer_not_to_say",
+              bio: "",
+              socialLinks: {},
+              galleryImages: [],
+              completedCategories: [],
+              categoryAnswers: [],
+              hasCompletedQuiz: false,
+              favorites: [],
+              isRealUser: true,
+              updatedAt: new Date().toISOString(),
+            });
+          }
         }
       } catch (err) {
         console.warn("Error syncing user data:", err);

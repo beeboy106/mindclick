@@ -95,7 +95,7 @@ export function AuthProvider({ children }) {
 
         const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
           GOOGLE_CONFIG.webClientId
-        )}&response_type=token&scope=profile%20email&redirect_uri=${encodeURIComponent(
+        )}&response_type=token&scope=profile%20email&prompt=select_account&redirect_uri=${encodeURIComponent(
           redirectUrl
         )}`;
 
