@@ -23,7 +23,13 @@
     "plugins": [
       "expo-asset",
       "expo-dev-client",
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you pick profile pictures."
+        }
+      ]
     ],
     "extra": {
       "eas": {
