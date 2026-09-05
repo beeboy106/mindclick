@@ -500,11 +500,6 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 4,
   },
-  userName: {
-    fontSize: 20,
-    fontWeight: "900",
-    color: colors.ink,
-  },
   userNameInput: {
     fontSize: 20,
     fontWeight: "900",
