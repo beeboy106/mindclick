@@ -7,12 +7,12 @@ import {
   TouchableOpacity,
   TextInput,
   Image,
-  SafeAreaView,
   StatusBar,
   Alert,
   ActivityIndicator,
   Platform,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../lib/theme";
