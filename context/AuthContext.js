@@ -82,7 +82,6 @@ export function AuthProvider({ children }) {
 
     if (isConfigured) {
       try {
-        // บน Web ให้ redirect กลับมาที่ URL เต็มของหน้าเว็บปัจจุบัน
         let redirectUrl = "https://auth.expo.io/@anonymous/friendq-mobile";
         if (Platform.OS === "web" && typeof window !== "undefined") {
           redirectUrl = window.location.origin + window.location.pathname;
@@ -94,29 +93,83 @@ export function AuthProvider({ children }) {
           redirectUrl
         )}`;
 
-        const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
+        let accessToken = null;
 
-        if (result.type === "success" && result.url) {
-          const params = new URLSearchParams(result.url.split("#")[1] || "");
-          const accessToken = params.get("access_token");
+        if (Platform.OS === "web" && typeof window !== "undefined") {
+          // บน Web ให้เปิด popup window และจับ token จาก hash เมื่อ Google redirect กลับมา
+          const popup = window.open(
+            authUrl,
+            "google_oauth",
+            "width=520,height=650,top=100,left=100"
+          );
 
-          if (accessToken) {
-            const userInfoRes = await fetch(
-              "https://www.googleapis.com/userinfo/v2/me",
-              { headers: { Authorization: `Bearer ${accessToken}` } }
-            );
-            const googleUser = await userInfoRes.json();
-
-            const loggedInUser = {
-              id: googleUser.id || "google_" + Date.now(),
-              name: googleUser.name || "Google User",
-              email: googleUser.email || "",
-              image: googleUser.picture || null,
-              provider: "google",
-            };
-            await saveUserSession(loggedInUser);
-            return;
+          if (!popup) {
+            throw new Error("หน้าต่างล็อกอินถูกเบราว์เซอร์บล็อก (Pop-up blocked)");
           }
+
+          accessToken = await new Promise((resolve) => {
+            const timer = setInterval(() => {
+              try {
+                if (popup.closed) {
+                  clearInterval(timer);
+                  resolve(null);
+                  return;
+                }
+
+                // เมื่อ Google redirect กลับมาที่โดเมน snack-runtime.eascdn.net
+                if (popup.location && popup.location.href) {
+                  const hash = popup.location.hash || "";
+                  if (hash.includes("access_token=")) {
+                    clearInterval(timer);
+                    const params = new URLSearchParams(hash.substring(1));
+                    const token = params.get("access_token");
+                    try {
+                      popup.close();
+                    } catch (e) {
+                      // ignore
+                    }
+                    resolve(token);
+                  }
+                }
+              } catch (e) {
+                // ขณะอยู่บน accounts.google.com จะติด cross-origin ให้ข้ามไป
+              }
+            }, 300);
+
+            // Timeout หลังจาก 2 นาที
+            setTimeout(() => {
+              clearInterval(timer);
+              try {
+                if (!popup.closed) popup.close();
+              } catch (e) {}
+              resolve(null);
+            }, 120000);
+          });
+        } else {
+          // บน Native / Expo Go
+          const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
+          if (result.type === "success" && result.url) {
+            const params = new URLSearchParams(result.url.split("#")[1] || "");
+            accessToken = params.get("access_token");
+          }
+        }
+
+        if (accessToken) {
+          const userInfoRes = await fetch(
+            "https://www.googleapis.com/userinfo/v2/me",
+            { headers: { Authorization: `Bearer ${accessToken}` } }
+          );
+          const googleUser = await userInfoRes.json();
+
+          const loggedInUser = {
+            id: googleUser.id || "google_" + Date.now(),
+            name: googleUser.name || "Google User",
+            email: googleUser.email || "",
+            image: googleUser.picture || null,
+            provider: "google",
+          };
+          await saveUserSession(loggedInUser);
+          return;
         }
       } catch (err) {
         console.error("Google OAuth error:", err);
