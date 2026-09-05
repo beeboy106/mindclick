@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -49,18 +49,31 @@ export default function ProfileScreen({ navigation }) {
     tiktok: profile.socialLinks?.tiktok || "",
   });
 
-  // ซิงค์ฟิลด์ข้อมูลโปรไฟล์เมื่อสลับบัญชีผู้ใช้
+  const isInitialLoadedRef = useRef(false);
+  const currentUserIdRef = useRef(user?.id);
+
+  // ซิงค์ฟิลด์ข้อมูลโปรไฟล์เฉพาะเมื่อสลับบัญชีผู้ใช้ หรือ โหลดข้อมูลครั้งแรกเท่านั้น
   useEffect(() => {
-    setDisplayName(profile?.name || user?.name || "");
-    setGender(profile?.gender || "prefer_not_to_say");
-    setBio(profile?.bio || "");
-    setAvatarUri(profile?.image || user?.image || null);
-    setSocialLinks({
-      instagram: profile?.socialLinks?.instagram || "",
-      facebook: profile?.socialLinks?.facebook || "",
-      line: profile?.socialLinks?.line || "",
-      tiktok: profile?.socialLinks?.tiktok || "",
-    });
+    // หากมีการสลับผู้ใช้ (User ID เปลี่ยน) ให้รีเซ็ตสถานะเพื่อให้โหลดค่าใหม่
+    if (user?.id !== currentUserIdRef.current) {
+      currentUserIdRef.current = user?.id;
+      isInitialLoadedRef.current = false;
+    }
+
+    // ทำงานเฉพาะเมื่อยังไม่เคยโหลดค่าเริ่มต้น หรือเมื่อสลับผู้ใช้
+    if (!isInitialLoadedRef.current && (profile?.name || profile?.bio || profile?.image || profile?.email || user?.name)) {
+      isInitialLoadedRef.current = true;
+      setDisplayName(profile?.name || user?.name || "");
+      setGender(profile?.gender || "prefer_not_to_say");
+      setBio(profile?.bio || "");
+      setAvatarUri(profile?.image || user?.image || null);
+      setSocialLinks({
+        instagram: profile?.socialLinks?.instagram || "",
+        facebook: profile?.socialLinks?.facebook || "",
+        line: profile?.socialLinks?.line || "",
+        tiktok: profile?.socialLinks?.tiktok || "",
+      });
+    }
   }, [profile, user]);
 
   const [isSaving, setIsSaving] = useState(false);
@@ -86,7 +99,7 @@ export default function ProfileScreen({ navigation }) {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ["images"],
         allowsEditing: Platform.OS === "ios", // ปิดบน Android เพื่อป้องกัน ActivityResultLauncher ขัดข้องใน Multi-window/Samsung Pop-up
         quality: 0.7,
       });
@@ -94,7 +107,14 @@ export default function ProfileScreen({ navigation }) {
       if (!result.canceled && result.assets?.length > 0) {
         const pickedUri = result.assets[0].uri;
         setAvatarUri(pickedUri);
-        await updateProfile({ image: pickedUri });
+        // บันทึกรูปโปรไฟล์ใหม่พร้อมรักษาสิ่งที่กำลังพิมพ์อยู่ไว้ด้วย
+        await updateProfile({
+          image: pickedUri,
+          name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
+          gender,
+          bio,
+          socialLinks,
+        });
         Alert.alert("สำเร็จ", "เปลี่ยนรูปโปรไฟล์เรียบร้อยแล้ว");
       }
     } catch (e) {
@@ -124,14 +144,20 @@ export default function ProfileScreen({ navigation }) {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ["images"],
         allowsEditing: false,
         quality: 0.7,
       });
 
       if (!result.canceled && result.assets?.length > 0) {
         const pickedUri = result.assets[0].uri;
-        await addGalleryImage(pickedUri);
+        // บันทึกรูปภาพแกลเลอรีพร้อมรักษาสิ่งที่กำลังพิมพ์อยู่ไว้ด้วย
+        await addGalleryImage(pickedUri, {
+          name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
+          gender,
+          bio,
+          socialLinks,
+        });
       }
     } catch (e) {
       console.warn("handleAddGalleryPhoto error:", e);
@@ -361,7 +387,14 @@ export default function ProfileScreen({ navigation }) {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.removePhotoBtn}
-                  onPress={() => removeGalleryImage(img.id)}
+                  onPress={() =>
+                    removeGalleryImage(img.id, {
+                      name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
+                      gender,
+                      bio,
+                      socialLinks,
+                    })
+                  }
                 >
                   <Ionicons name="close" size={12} color={colors.white} />
                 </TouchableOpacity>

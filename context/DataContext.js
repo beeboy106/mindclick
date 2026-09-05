@@ -284,7 +284,7 @@ export function DataProvider({ children }) {
   };
 
   // เพิ่มรูปภาพลง Gallery
-  const addGalleryImage = async (uri) => {
+  const addGalleryImage = async (uri, additionalProfileData = {}) => {
     if (profile.galleryImages.length >= 9) {
       return { success: false, error: "อัลบั้มรูปภาพสามารถใส่ได้สูงสุด 9 รูป" };
     }
@@ -296,17 +296,23 @@ export function DataProvider({ children }) {
     };
 
     const updatedGallery = [...profile.galleryImages, newImage];
-    await updateProfile({ galleryImages: updatedGallery });
+    await updateProfile({
+      galleryImages: updatedGallery,
+      ...additionalProfileData,
+    });
     return { success: true };
   };
 
   // ลบรูปภาพออกจาก Gallery
-  const removeGalleryImage = async (imageId) => {
+  const removeGalleryImage = async (imageId, additionalProfileData = {}) => {
     const updatedGallery = profile.galleryImages
       .filter((img) => img.id !== imageId)
       .map((img, idx) => ({ ...img, order: idx }));
 
-    await updateProfile({ galleryImages: updatedGallery });
+    await updateProfile({
+      galleryImages: updatedGallery,
+      ...additionalProfileData,
+    });
     return true;
   };
 
