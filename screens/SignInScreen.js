@@ -104,7 +104,7 @@ export default function SignInScreen() {
             disabled={loading}
           >
             <Ionicons name="flash-outline" size={16} color={colors.primary} />
-            <Text style={styles.demoButtonText}>เข้าใช้งานด่วนด้วยบัญชี ณัฐวุฒิ (beemnum2548)</Text>
+            <Text style={styles.demoButtonText}>เข้าใช้งานด่วน</Text>
           </TouchableOpacity>
 
           {/* Disclaimer Footer */}
@@ -115,9 +115,9 @@ export default function SignInScreen() {
           </Text>
         </View>
 
-        {/* Bottom-right decorative Q mark */}
+        {/* Bottom-right decorative brand mark */}
         <View style={styles.floatingQBadge}>
-          <Text style={styles.floatingQText}>Q</Text>
+          <Ionicons name="sparkles" size={22} color={colors.white} />
         </View>
       </View>
     </SafeAreaView>
