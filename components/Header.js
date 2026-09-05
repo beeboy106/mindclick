@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 
@@ -10,9 +11,11 @@ export default function Header({ rightComponent, onProfilePress }) {
     <View style={styles.container}>
       {/* Brand Logo */}
       <View style={styles.logoRow}>
-        <Text style={styles.brandTitle}>FriendQ</Text>
-        <View style={styles.limeQBadge}>
-          <Text style={styles.limeQText}>Q</Text>
+        <Text style={styles.brandTitle}>
+          Mind<Text style={styles.brandTitleAccent}>click</Text>
+        </Text>
+        <View style={styles.brandBadge}>
+          <Ionicons name="sparkles" size={13} color={colors.ink} />
         </View>
       </View>
 
@@ -67,18 +70,16 @@ const styles = StyleSheet.create({
     color: colors.ink,
     letterSpacing: -0.5,
   },
-  limeQBadge: {
+  brandTitleAccent: {
+    color: colors.primary,
+  },
+  brandBadge: {
     width: 24,
     height: 24,
-    backgroundColor: "#bbf44a", // FriendQ Lime
-    borderRadius: 4,
+    backgroundColor: "#bbf44a", // Mindclick Lime Accent
+    borderRadius: 6,
     justifyContent: "center",
     alignItems: "center",
-  },
-  limeQText: {
-    color: colors.ink,
-    fontWeight: "900",
-    fontSize: 14,
   },
   right: {
     flexDirection: "row",

@@ -56,7 +56,7 @@ export default function HomeScreen({ navigation }) {
       >
         {/* Welcome Section */}
         <View style={styles.heroSection}>
-          <Text style={styles.eyebrow}>YOUR FRIENDQ</Text>
+          <Text style={styles.eyebrow}>YOUR MINDCLICK</Text>
           <Text style={styles.greetingTitle}>สวัสดี {firstName}</Text>
           <Text style={styles.greetingSubtitle}>
             ไปต่อจากจุดที่ค้างไว้ แล้วดูว่าคำตอบของคุณพาไปเจอใครบ้าง
