@@ -27,7 +27,7 @@ const AUTH_STORAGE_KEY = "@friendq_auth_session";
 // Google Client ID
 // -------------------------------------------------------------
 export const GOOGLE_CONFIG = {
-  webClientId: "522887574870-kb9mg6d7r77k67n576linfcdja65cdql.apps.googleusercontent.com",
+  webClientId: "702542015984-unuf8133kals37q2s2pc81r4vugrep10.apps.googleusercontent.com",
 };
 
 const AuthContext = createContext();
