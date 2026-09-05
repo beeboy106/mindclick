@@ -5,10 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "splash": {
-      "resizeMode": "contain",
-      "backgroundColor": "#f7f8fc"
-    },
+    "backgroundColor": "#f7f8fc",
     "scheme": "friendq",
     "ios": {
       "supportsTablet": true
