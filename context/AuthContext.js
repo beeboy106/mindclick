@@ -3,15 +3,21 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as WebBrowser from "expo-web-browser";
 import { Platform } from "react-native";
 
-WebBrowser.maybeCompleteAuthSession();
+try {
+  if (Platform.OS !== "web") {
+    WebBrowser.maybeCompleteAuthSession();
+  }
+} catch (e) {
+  // ป้องกันข้อผิดพลาด iframe บน Web
+}
 
 const AUTH_STORAGE_KEY = "@friendq_auth_session";
 
 // -------------------------------------------------------------
-// ใส่ Google Client ID จาก Google Cloud Console ที่นี่
+// Google Client ID
 // -------------------------------------------------------------
 export const GOOGLE_CONFIG = {
-  webClientId: "YOUR_WEB_CLIENT_ID.apps.googleusercontent.com",
+  webClientId: "522887574870-kb9mg6d7r77k67n576linfcdja65cdql.apps.googleusercontent.com",
 };
 
 const AuthContext = createContext();
@@ -141,7 +147,9 @@ export function AuthProvider({ children }) {
               clearInterval(timer);
               try {
                 if (!popup.closed) popup.close();
-              } catch (e) {}
+              } catch (e) {
+                // ignore
+              }
               resolve(null);
             }, 120000);
           });
