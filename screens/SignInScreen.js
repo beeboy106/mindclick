@@ -8,7 +8,7 @@ import {
   StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 
@@ -38,7 +38,7 @@ export default function SignInScreen() {
             Mind<Text style={styles.brandTitleAccent}>click</Text>
           </Text>
           <View style={styles.brandBadge}>
-            <Ionicons name="sparkles" size={13} color={colors.ink} />
+            <MaterialCommunityIcons name="cursor-default-click" size={15} color={colors.ink} />
           </View>
         </View>
       </View>
