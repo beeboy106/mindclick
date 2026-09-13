@@ -8,6 +8,8 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { colors } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
+import { useData } from "../context/DataContext";
+import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
 
 // Screens
 import SignInScreen from "../screens/SignInScreen";
@@ -84,7 +86,8 @@ function MainTabNavigator() {
 
 // Navigation แม่แบบ Root Stack
 export default function AppNavigator() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, signOut } = useAuth();
+  const { hasAcceptedPolicy, acceptPolicy, isLoadingData } = useData();
 
   if (isLoading) {
     return (
@@ -128,6 +131,16 @@ export default function AppNavigator() {
           />
         )}
       </Stack.Navigator>
+
+      {/* บังคับอ่านและกดยินยอมนโยบายเมื่อล็อกอินเข้าสู่ระบบ */}
+      {Boolean(user && !isLoadingData && !hasAcceptedPolicy) && (
+        <PrivacyPolicyModal
+          visible={!hasAcceptedPolicy}
+          onAccept={acceptPolicy}
+          onDecline={signOut}
+          mode="consent"
+        />
+      )}
     </NavigationContainer>
   );
 }

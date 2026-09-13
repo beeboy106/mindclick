@@ -16,6 +16,7 @@ const USERS_POOL_KEY = "@friendq_users_pool";
 const getProfileKey = (userId) => `@friendq_profile_${userId || "guest"}`;
 const getQuizKey = (userId) => `@friendq_quiz_${userId || "guest"}`;
 const getFavoritesKey = (userId) => `@friendq_favorites_${userId || "guest"}`;
+const getPolicyKey = (userId) => `@friendq_policy_${userId || "guest"}`;
 
 const defaultProfile = {
   name: "",
@@ -47,6 +48,7 @@ export function DataProvider({ children }) {
   const [quizResponse, setQuizResponse] = useState(defaultQuizResponse);
   const [favorites, setFavorites] = useState([]);
   const [usersPool, setUsersPool] = useState(mockUsers);
+  const [hasAcceptedPolicy, setHasAcceptedPolicy] = useState(true); // เริ่มต้น true ระหว่างโหลด
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   // ดึงรายชื่อผู้ใช้จาก Cloud Firestore สำหรับคำนวณ Match
@@ -80,6 +82,7 @@ export function DataProvider({ children }) {
       setProfile(defaultProfile);
       setQuizResponse(defaultQuizResponse);
       setFavorites([]);
+      setHasAcceptedPolicy(true);
       setIsLoadingData(false);
       return;
     }
@@ -91,13 +94,15 @@ export function DataProvider({ children }) {
       const pKey = getProfileKey(user.id);
       const qKey = getQuizKey(user.id);
       const fKey = getFavoritesKey(user.id);
+      const polKey = getPolicyKey(user.id);
 
       try {
         // ก. โหลดข้อมูลแคชเฉพาะของ User นี้ในเครื่องก่อน
-        const [localProfile, localQuiz, localFavs] = await Promise.all([
+        const [localProfile, localQuiz, localFavs, localPolicy] = await Promise.all([
           AsyncStorage.getItem(pKey),
           AsyncStorage.getItem(qKey),
           AsyncStorage.getItem(fKey),
+          AsyncStorage.getItem(polKey),
         ]);
 
         if (isMounted) {
@@ -118,6 +123,12 @@ export function DataProvider({ children }) {
 
           if (localFavs) setFavorites(JSON.parse(localFavs));
           else setFavorites([]);
+
+          if (localPolicy === "true") {
+            setHasAcceptedPolicy(true);
+          } else {
+            setHasAcceptedPolicy(false);
+          }
         }
 
         // ข. โหลดข้อมูลจริงล่าสุดจาก Cloud Firestore ของ User นี้
@@ -152,6 +163,11 @@ export function DataProvider({ children }) {
             if (cloudUser.favorites) {
               setFavorites(cloudUser.favorites);
               await AsyncStorage.setItem(fKey, JSON.stringify(cloudUser.favorites));
+            }
+
+            if (cloudUser.hasAcceptedPolicy) {
+              setHasAcceptedPolicy(true);
+              await AsyncStorage.setItem(polKey, "true");
             }
           } else if (isMounted) {
             // บัญชีใหม่ในระบบ Cloud ให้บันทึกข้อมูลเริ่มต้นขึ้น Firestore
@@ -373,6 +389,26 @@ export function DataProvider({ children }) {
     }
   };
 
+  // ยินยอมนโยบายการเก็บข้อมูล (PDPA Consent)
+  const acceptPolicy = async () => {
+    if (!user) return;
+    try {
+      setHasAcceptedPolicy(true);
+      const polKey = getPolicyKey(user.id);
+      await AsyncStorage.setItem(polKey, "true");
+
+      if (isFirebaseConfigured()) {
+        await saveFirestoreUser(user.id, {
+          hasAcceptedPolicy: true,
+          policyAcceptedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      console.warn("Error accepting policy:", err);
+    }
+  };
+
   const resetAllData = async () => {
     if (!user) return;
     try {
@@ -380,11 +416,13 @@ export function DataProvider({ children }) {
         getProfileKey(user.id),
         getQuizKey(user.id),
         getFavoritesKey(user.id),
+        getPolicyKey(user.id),
       ]);
       setProfile(defaultProfile);
       setQuizResponse(defaultQuizResponse);
       setFavorites([]);
       setUsersPool(mockUsers);
+      setHasAcceptedPolicy(false);
     } catch (err) {
       console.error("Error resetting all data:", err);
     }
@@ -398,6 +436,8 @@ export function DataProvider({ children }) {
         favorites,
         usersPool,
         isLoadingData,
+        hasAcceptedPolicy,
+        acceptPolicy,
         saveCategoryAnswers,
         updateProfile,
         addGalleryImage,

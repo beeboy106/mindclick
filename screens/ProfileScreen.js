@@ -20,6 +20,7 @@ import { useAuth } from "../context/AuthContext";
 import { useData } from "../context/DataContext";
 import Header from "../components/Header";
 import GalleryViewer from "../components/GalleryViewer";
+import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
 
 const genderOptions = [
   { value: "male", label: "ชาย", icon: "male" },
@@ -78,6 +79,7 @@ export default function ProfileScreen({ navigation }) {
 
   const [isSaving, setIsSaving] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [showPolicyModal, setShowPolicyModal] = useState(false);
 
   const profileReady = Boolean(
     profile?.bio ||
@@ -428,6 +430,22 @@ export default function ProfileScreen({ navigation }) {
           )}
         </TouchableOpacity>
 
+        {/* Privacy Policy Link */}
+        <TouchableOpacity
+          style={styles.policyBtn}
+          activeOpacity={0.8}
+          onPress={() => setShowPolicyModal(true)}
+        >
+          <Ionicons
+            name="shield-checkmark-outline"
+            size={16}
+            color={colors.mutedForeground}
+          />
+          <Text style={styles.policyText}>
+            นโยบายความเป็นส่วนตัว (PDPA Notice)
+          </Text>
+        </TouchableOpacity>
+
         {/* Sign Out Button */}
         <TouchableOpacity
           style={styles.signOutBtn}
@@ -443,6 +461,12 @@ export default function ProfileScreen({ navigation }) {
         visible={Boolean(selectedPhoto)}
         imageUrl={selectedPhoto}
         onClose={() => setSelectedPhoto(null)}
+      />
+
+      <PrivacyPolicyModal
+        visible={showPolicyModal}
+        onClose={() => setShowPolicyModal(false)}
+        mode="view"
       />
     </SafeAreaView>
   );
@@ -719,6 +743,21 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 15,
     fontWeight: "800",
+  },
+  policyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  policyText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.mutedForeground,
+    textDecorationLine: "underline",
   },
   signOutBtn: {
     flexDirection: "row",
