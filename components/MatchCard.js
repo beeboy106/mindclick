@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, categoryColors, shadows } from "../lib/theme";
@@ -7,6 +7,11 @@ import FavoriteButton from "./FavoriteButton";
 
 export default function MatchCard({ match, index, onPress }) {
   const rank = String(index + 1).padStart(2, "0");
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [match?.image]);
 
   const matchedCatObjects = match.matchedCategories
     .map((catId) => categories.find((c) => c.id === catId))
@@ -24,8 +29,12 @@ export default function MatchCard({ match, index, onPress }) {
         </View>
 
         <View style={styles.avatarContainer}>
-          {match.image ? (
-            <Image source={{ uri: match.image }} style={styles.avatar} />
+          {!imgError && match.image ? (
+            <Image
+              source={{ uri: match.image }}
+              style={styles.avatar}
+              onError={() => setImgError(true)}
+            />
           ) : (
             <View style={[styles.avatar, styles.avatarFallback]}>
               <Text style={styles.avatarInitial}>

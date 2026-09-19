@@ -23,6 +23,7 @@ export default function MatchDetailScreen({ route, navigation }) {
   const { getUserById, quizResponse } = useData();
 
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+  const [avatarError, setAvatarError] = useState(false);
 
   const targetUser = getUserById(userId);
 
@@ -118,12 +119,16 @@ export default function MatchDetailScreen({ route, navigation }) {
         {/* User Hero Section */}
         <View style={styles.heroCard}>
           <View style={styles.heroTopRow}>
-            {targetUser.image ? (
-              <Image source={{ uri: targetUser.image }} style={styles.heroAvatar} />
+            {!avatarError && targetUser.image ? (
+              <Image
+                source={{ uri: targetUser.image }}
+                style={styles.heroAvatar}
+                onError={() => setAvatarError(true)}
+              />
             ) : (
               <View style={[styles.heroAvatar, styles.heroAvatarFallback]}>
                 <Text style={styles.heroAvatarInitial}>
-                  {targetUser.name.charAt(0).toUpperCase()}
+                  {(targetUser.name || "U").charAt(0).toUpperCase()}
                 </Text>
               </View>
             )}

@@ -80,6 +80,11 @@ export default function ProfileScreen({ navigation }) {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [showPolicyModal, setShowPolicyModal] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
+
+  useEffect(() => {
+    setAvatarError(false);
+  }, [avatarUri, profile?.image, user?.image]);
 
   const profileReady = Boolean(
     profile?.bio ||
@@ -108,6 +113,7 @@ export default function ProfileScreen({ navigation }) {
 
       if (!result.canceled && result.assets?.length > 0) {
         const pickedUri = result.assets[0].uri;
+        setAvatarError(false);
         setAvatarUri(pickedUri);
         // บันทึกรูปโปรไฟล์ใหม่พร้อมรักษาสิ่งที่กำลังพิมพ์อยู่ไว้ด้วย
         await updateProfile({
@@ -215,14 +221,17 @@ export default function ProfileScreen({ navigation }) {
         {/* User Card */}
         <View style={styles.userCard}>
           <View style={styles.avatarWrapper}>
-            {(avatarUri || profile?.image || user?.image) ? (
+            {!avatarError && (avatarUri || profile?.image || user?.image) ? (
               <Image
                 source={{ uri: avatarUri || profile?.image || user?.image }}
                 style={styles.avatar}
+                onError={() => setAvatarError(true)}
               />
             ) : (
               <View style={styles.avatarDefault}>
-                <Ionicons name="person" size={54} color={colors.white} />
+                <Text style={styles.avatarDefaultInitial}>
+                  {(displayName || profile?.name || user?.name || "U").charAt(0).toUpperCase()}
+                </Text>
               </View>
             )}
             <TouchableOpacity
@@ -549,6 +558,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#3b82f6",
     justifyContent: "center",
     alignItems: "center",
+  },
+  avatarDefaultInitial: {
+    fontSize: 36,
+    fontWeight: "900",
+    color: colors.white,
   },
   editAvatarBtn: {
     position: "absolute",

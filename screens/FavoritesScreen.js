@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,27 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../lib/theme";
 import { useData } from "../context/DataContext";
 import Header from "../components/Header";
+
+function FavoriteAvatar({ image, name }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (!hasError && image) {
+    return (
+      <Image
+        source={{ uri: image }}
+        style={styles.avatarImage}
+        onError={() => setHasError(true)}
+      />
+    );
+  }
+  return (
+    <View style={styles.avatarFallback}>
+      <Text style={styles.avatarInitial}>
+        {(name || "U").charAt(0).toUpperCase()}
+      </Text>
+    </View>
+  );
+}
 
 export default function FavoritesScreen({ navigation }) {
   const { favorites, getUserById, toggleFavorite } = useData();
@@ -70,18 +91,7 @@ export default function FavoritesScreen({ navigation }) {
                   }
                 >
                   <View style={styles.avatarWrapper}>
-                    {user.image ? (
-                      <Image
-                        source={{ uri: user.image }}
-                        style={styles.avatarImage}
-                      />
-                    ) : (
-                      <View style={styles.avatarFallback}>
-                        <Text style={styles.avatarInitial}>
-                          {user.name.charAt(0).toUpperCase()}
-                        </Text>
-                      </View>
-                    )}
+                    <FavoriteAvatar image={user.image} name={user.name} />
                   </View>
 
                   <View style={styles.userInfo}>

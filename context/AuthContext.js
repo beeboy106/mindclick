@@ -121,7 +121,7 @@ export function AuthProvider({ children }) {
               id: gUser.id || "google_" + Date.now(),
               name: gUser.name || "Google User",
               email: gUser.email || "",
-              image: gUser.photo || null,
+              image: gUser.photo || gUser.photoUrl || gUser.picture || null,
               provider: "google",
             };
             await saveUserSession(loggedInUser);
@@ -229,7 +229,7 @@ export function AuthProvider({ children }) {
             id: googleUser.id || "google_" + Date.now(),
             name: googleUser.name || "Google User",
             email: googleUser.email || "",
-            image: googleUser.picture || null,
+            image: googleUser.picture || googleUser.photo || googleUser.avatar_url || null,
             provider: "google",
           };
           await saveUserSession(loggedInUser);

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors } from "../lib/theme";
@@ -6,6 +6,11 @@ import { useAuth } from "../context/AuthContext";
 
 export default function Header({ rightComponent, onProfilePress }) {
   const { user } = useAuth();
+  const [imgError, setImgError] = useState(false);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [user?.image]);
 
   return (
     <View style={styles.container}>
@@ -29,8 +34,12 @@ export default function Header({ rightComponent, onProfilePress }) {
             activeOpacity={0.8}
             onPress={onProfilePress}
           >
-            {user.image ? (
-              <Image source={{ uri: user.image }} style={styles.avatarImage} />
+            {!imgError && user.image ? (
+              <Image
+                source={{ uri: user.image }}
+                style={styles.avatarImage}
+                onError={() => setImgError(true)}
+              />
             ) : (
               <View style={styles.avatarFallback}>
                 <Text style={styles.avatarInitial}>
