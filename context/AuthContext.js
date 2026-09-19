@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as WebBrowser from "expo-web-browser";
-import { Platform } from "react-native";
+import { Platform, NativeModules } from "react-native";
 
 let GoogleSignin = null;
-if (Platform.OS !== "web") {
+if (Platform.OS !== "web" && NativeModules?.RNGoogleSignin) {
   try {
     const gSigninModule = require("@react-native-google-signin/google-signin");
     GoogleSignin = gSigninModule.GoogleSignin;
@@ -56,7 +56,7 @@ export function AuthProvider({ children }) {
 
   // กำหนดค่า GoogleSignin บน Native เมื่อเริ่มต้นแอป
   useEffect(() => {
-    if (Platform.OS !== "web" && GoogleSignin) {
+    if (Platform.OS !== "web" && GoogleSignin && NativeModules?.RNGoogleSignin) {
       try {
         GoogleSignin.configure({
           webClientId: GOOGLE_CONFIG.webClientId,
@@ -110,8 +110,8 @@ export function AuthProvider({ children }) {
       !GOOGLE_CONFIG.webClientId.includes("YOUR_WEB_CLIENT_ID");
 
     if (isConfigured) {
-      // 1. บน Native (Android/iOS Development Build) - ใช้ Google Play Services โดยตรง
-      if (Platform.OS !== "web" && GoogleSignin) {
+      // 1. บน Native (เฉพาะ Development Build ที่มี Google Play Services จริง)
+      if (Platform.OS !== "web" && GoogleSignin && NativeModules?.RNGoogleSignin) {
         try {
           await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
           const response = await GoogleSignin.signIn();
@@ -133,12 +133,7 @@ export function AuthProvider({ children }) {
           if (nativeErr.code === "SIGN_IN_CANCELLED" || nativeErr.code === "12501") {
             return;
           }
-          setAuthError(
-            nativeErr.message?.includes("DEVELOPER_ERROR")
-              ? "กรุณาเพิ่ม SHA-1 ใน Firebase Console ก่อนเข้าสู่ระบบ (ดูขั้นตอนในแชท)"
-              : `เกิดข้อผิดพลาดในการล็อกอิน: ${nativeErr.message || nativeErr}`
-          );
-          return;
+          // หากติดปัญหา Native Play Services ให้ปล่อยไหลลงไปทำ OAuth WebBrowser ด้านล่าง
         }
       }
 
@@ -247,7 +242,7 @@ export function AuthProvider({ children }) {
   // ออกจากระบบ
   const signOut = async () => {
     try {
-      if (Platform.OS !== "web" && GoogleSignin) {
+      if (Platform.OS !== "web" && GoogleSignin && NativeModules?.RNGoogleSignin) {
         try {
           await GoogleSignin.signOut();
         } catch (e) {

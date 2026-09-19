@@ -13,7 +13,7 @@ import { colors } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 
 export default function SignInScreen() {
-  const { signInWithGoogle, authError } = useAuth();
+  const { signInWithGoogle, signInWithDemo, authError } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const handleSignIn = async () => {
@@ -94,6 +94,18 @@ export default function SignInScreen() {
                 <Ionicons name="arrow-forward" size={18} color={colors.ink} />
               </>
             )}
+          </TouchableOpacity>
+
+          {/* Demo Button for Expo Go testing */}
+          <TouchableOpacity
+            style={styles.demoButton}
+            activeOpacity={0.8}
+            onPress={() => signInWithDemo()}
+          >
+            <Ionicons name="sparkles-outline" size={15} color={colors.mutedForeground} />
+            <Text style={styles.demoButtonText}>
+              เข้าใช้งานแบบทดสอบ (สำหรับ Expo Go / ไม่ใช้ Google)
+            </Text>
           </TouchableOpacity>
 
           {/* Disclaimer Footer */}
@@ -241,6 +253,20 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
     color: colors.ink,
+  },
+  demoButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    marginBottom: 6,
+  },
+  demoButtonText: {
+    fontSize: 12,
+    color: colors.mutedForeground,
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
   disclaimerText: {
     fontSize: 11,
