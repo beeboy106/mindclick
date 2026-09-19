@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -9,12 +9,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../lib/theme";
+import { colors, shadows } from "../lib/theme";
 import { categories } from "../data/questions";
 import { useAuth } from "../context/AuthContext";
 import { useData } from "../context/DataContext";
+import { useDilemma } from "../context/DilemmaContext";
 import Header from "../components/Header";
 import MatchCard from "../components/MatchCard";
+import DailyDilemmaModal from "../components/DailyDilemmaModal";
 
 const categoryTheme = {
   lifestyle: { number: "01", bg: "#c7f65a", text: "#17171c" },
@@ -40,6 +42,9 @@ export default function HomeScreen({ navigation }) {
   const nextCategory = categories.find((c) => !completed.includes(c.id));
   const isCompletedAll = completed.length === categories.length;
 
+  const [dilemmaModalVisible, setDilemmaModalVisible] = useState(false);
+  const { streakCount, streakStatus, hasAnsweredToday, todayQuestion } = useDilemma();
+
   const handleStartQuiz = (categoryId = null) => {
     navigation.navigate("Quiz", { categoryId });
   };
@@ -56,63 +61,146 @@ export default function HomeScreen({ navigation }) {
       >
         {/* Welcome Section */}
         <View style={styles.heroSection}>
-          <Text style={styles.eyebrow}>YOUR MINDCLICK</Text>
-          <Text style={styles.greetingTitle}>สวัสดี {firstName}</Text>
+          <View style={styles.heroTopRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.eyebrow}>YOUR MINDCLICK</Text>
+              <Text style={styles.greetingTitle}>สวัสดี {firstName}</Text>
+            </View>
+
+            {/* Streak Flame Badge (Visible when completed all or has streak) */}
+            {(isCompletedAll || streakCount > 0) && (
+              <TouchableOpacity
+                style={[
+                  styles.streakBadgeMini,
+                  streakStatus === "active" && styles.streakBadgeActiveMini,
+                  streakStatus === "warning" && styles.streakBadgeWarningMini,
+                ]}
+                activeOpacity={0.8}
+                onPress={() => setDilemmaModalVisible(true)}
+              >
+                <Text style={styles.streakFlameIconMini}>
+                  {streakStatus === "active" ? "🔥" : streakStatus === "warning" ? "⚠️" : "💨"}
+                </Text>
+                <Text
+                  style={[
+                    styles.streakTextMini,
+                    streakStatus === "active" && styles.streakTextActiveMini,
+                  ]}
+                >
+                  {streakCount} วัน
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
           <Text style={styles.greetingSubtitle}>
-            ไปต่อจากจุดที่ค้างไว้ แล้วดูว่าคำตอบของคุณพาไปเจอใครบ้าง
+            {isCompletedAll
+              ? "คุณตอบคำถามแมตช์ครบ 4 ด้านแล้ว! มาท้าทายคำถามประจำวันเพื่อรู้จักตัวเองยิ่งขึ้น"
+              : "ไปต่อจากจุดที่ค้างไว้ แล้วดูว่าคำตอบของคุณพาไปเจอใครบ้าง"}
           </Text>
 
-          <View style={styles.heroActions}>
-            <TouchableOpacity
-              style={styles.blueBtn}
-              activeOpacity={0.85}
-              onPress={() => handleStartQuiz(nextCategory?.id)}
-            >
-              <Text style={styles.blueBtnText}>
-                {completed.length > 0 ? "ตอบคำถามต่อ" : "เริ่มตอบคำถาม"}
-              </Text>
-              <Ionicons name="arrow-forward" size={16} color={colors.white} />
-            </TouchableOpacity>
-          </View>
+          {!isCompletedAll && (
+            <View style={styles.heroActions}>
+              <TouchableOpacity
+                style={styles.blueBtn}
+                activeOpacity={0.85}
+                onPress={() => handleStartQuiz(nextCategory?.id)}
+              >
+                <Text style={styles.blueBtnText}>
+                  {completed.length > 0 ? "ตอบคำถามต่อ" : "เริ่มตอบคำถาม"}
+                </Text>
+                <Ionicons name="arrow-forward" size={16} color={colors.white} />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
-        {/* Next Move Red Card */}
-        <TouchableOpacity
-          style={styles.nextMoveCard}
-          activeOpacity={0.9}
-          onPress={() => {
-            if (!profileReady) {
-              navigation.navigate("ProfileTab");
-            } else if (!isCompletedAll) {
-              handleStartQuiz(nextCategory?.id);
-            } else {
-              navigation.navigate("ResultsTab");
-            }
-          }}
-        >
-          <View style={styles.nextMoveTop}>
-            <Text style={styles.nextMoveLabel}>NEXT MOVE</Text>
-            <Ionicons name="arrow-forward" size={28} color={colors.ink} />
-          </View>
+        {/* Next Move / Daily Campus Dilemma Card */}
+        {isCompletedAll ? (
+          <TouchableOpacity
+            style={styles.dilemmaHeroCard}
+            activeOpacity={0.9}
+            onPress={() => setDilemmaModalVisible(true)}
+          >
+            <View style={styles.dilemmaHeroTop}>
+              <View style={styles.dilemmaTagBadge}>
+                <Text style={styles.dilemmaTagText}>DAILY CAMPUS DILEMMA</Text>
+              </View>
 
-          <Text style={styles.nextMoveHeadline}>
-            {!profileReady
-              ? "เติมโปรไฟล์ให้คนอื่นรู้จักคุณ"
-              : nextCategory
-              ? `ตอบ${nextCategory.name}ต่อ`
-              : "คุณตอบครบทุกด้านแล้ว"}
-          </Text>
+              <View
+                style={[
+                  styles.dilemmaStreakPill,
+                  streakStatus === "active" && styles.dilemmaStreakPillActive,
+                  streakStatus === "warning" && styles.dilemmaStreakPillWarning,
+                ]}
+              >
+                <Text style={styles.dilemmaStreakIcon}>
+                  {streakStatus === "active" ? "🔥" : streakStatus === "warning" ? "⚠️" : "💨"}
+                </Text>
+                <Text
+                  style={[
+                    styles.dilemmaStreakNumber,
+                    streakStatus === "active" && styles.dilemmaStreakNumberActive,
+                  ]}
+                >
+                  {streakCount} วัน
+                </Text>
+              </View>
+            </View>
 
-          <View style={styles.nextMoveLine} />
+            <Text style={styles.dilemmaHeadline}>
+              {hasAnsweredToday
+                ? "คุณรักษาสตรีคไฟของวันนี้แล้ว!"
+                : todayQuestion?.title || "คำถามประจำวันพร้อมให้คุณตอบแล้ว"}
+            </Text>
 
-          <Text style={styles.nextMoveSub}>
-            {!profileReady
-              ? "เพิ่ม bio หรือช่องทางติดต่ออย่างน้อย 1 รายการ"
-              : nextCategory
-              ? `เหลืออีก ${categories.length - completed.length} ด้าน`
-              : "อัปเดตคำตอบเมื่อมุมมองของคุณเปลี่ยนไป"}
-          </Text>
-        </TouchableOpacity>
+            <View style={styles.dilemmaLine} />
+
+            <Text style={styles.dilemmaSub} numberOfLines={2}>
+              {hasAnsweredToday
+                ? "แตะเพื่อดูบทวิเคราะห์ตัวตนของคุณ หรือทบทวนสถิติของเพื่อน"
+                : todayQuestion?.situation || "ตอบคำถามประจำวันสะท้อนตัวตนเพื่อเก็บสตรีคไฟไม่ให้ดับ"}
+            </Text>
+
+            <View style={styles.dilemmaActionRow}>
+              <Text style={styles.dilemmaActionText}>
+                {hasAnsweredToday ? "ดูผลและบทวิเคราะห์ตัวตน" : "เริ่มตอบคำถามวันนี้"}
+              </Text>
+              <Ionicons name="arrow-forward" size={16} color={colors.white} />
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.nextMoveCard}
+            activeOpacity={0.9}
+            onPress={() => {
+              if (!profileReady) {
+                navigation.navigate("ProfileTab");
+              } else {
+                handleStartQuiz(nextCategory?.id);
+              }
+            }}
+          >
+            <View style={styles.nextMoveTop}>
+              <Text style={styles.nextMoveLabel}>NEXT MOVE</Text>
+              <Ionicons name="arrow-forward" size={28} color={colors.ink} />
+            </View>
+
+            <Text style={styles.nextMoveHeadline}>
+              {!profileReady
+                ? "เติมโปรไฟล์ให้คนอื่นรู้จักคุณ"
+                : `ตอบ${nextCategory?.name}ต่อ`}
+            </Text>
+
+            <View style={styles.nextMoveLine} />
+
+            <Text style={styles.nextMoveSub}>
+              {!profileReady
+                ? "เพิ่ม bio หรือช่องทางติดต่ออย่างน้อย 1 รายการ"
+                : `เหลืออีก ${categories.length - completed.length} ด้าน`}
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {/* Quiz Progress Section */}
         <View style={styles.progressSection}>
@@ -237,6 +325,12 @@ export default function HomeScreen({ navigation }) {
           )}
         </View>
       </ScrollView>
+
+      {/* Daily Campus Dilemma Full Modal */}
+      <DailyDilemmaModal
+        visible={dilemmaModalVisible}
+        onClose={() => setDilemmaModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -256,6 +350,41 @@ const styles = StyleSheet.create({
   },
   heroSection: {
     marginBottom: 20,
+  },
+  heroTopRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+  },
+  streakBadgeMini: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    backgroundColor: "#f3f4f6",
+  },
+  streakBadgeActiveMini: {
+    backgroundColor: "#fff7ed",
+    borderColor: "#ea580c",
+  },
+  streakBadgeWarningMini: {
+    backgroundColor: "#fefce8",
+    borderColor: "#eab308",
+  },
+  streakFlameIconMini: {
+    fontSize: 14,
+  },
+  streakTextMini: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: colors.mutedForeground,
+  },
+  streakTextActiveMini: {
+    color: "#c2410c",
   },
   eyebrow: {
     fontSize: 11,
@@ -299,6 +428,97 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 20,
     marginBottom: 28,
+  },
+  dilemmaHeroCard: {
+    backgroundColor: "#17171c",
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: colors.darkBorder,
+    padding: 20,
+    marginBottom: 28,
+    ...shadows.neo,
+  },
+  dilemmaHeroTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  dilemmaTagBadge: {
+    backgroundColor: "#bbf44a",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+  },
+  dilemmaTagText: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: colors.ink,
+    letterSpacing: 0.5,
+  },
+  dilemmaStreakPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.2)",
+  },
+  dilemmaStreakPillActive: {
+    backgroundColor: "#ea580c",
+    borderColor: "#f97316",
+  },
+  dilemmaStreakPillWarning: {
+    backgroundColor: "#ca8a04",
+    borderColor: "#eab308",
+  },
+  dilemmaStreakIcon: {
+    fontSize: 12,
+  },
+  dilemmaStreakNumber: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: colors.white,
+  },
+  dilemmaStreakNumberActive: {
+    color: colors.white,
+  },
+  dilemmaHeadline: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: colors.white,
+    marginTop: 4,
+    lineHeight: 28,
+  },
+  dilemmaLine: {
+    height: 1,
+    backgroundColor: "rgba(255, 255, 255, 0.15)",
+    marginVertical: 12,
+  },
+  dilemmaSub: {
+    fontSize: 13,
+    color: "rgba(255, 255, 255, 0.8)",
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  dilemmaActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  dilemmaActionText: {
+    color: colors.white,
+    fontWeight: "900",
+    fontSize: 13,
   },
   nextMoveTop: {
     flexDirection: "row",
