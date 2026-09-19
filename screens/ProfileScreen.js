@@ -130,20 +130,27 @@ export default function ProfileScreen({ navigation }) {
 
   const handlePickAvatar = async () => {
     try {
-      // ตรวจสอบสิทธิ์ก่อน ถ้ายังไม่มีจึงค่อยขอ เพื่อป้องกันปัญหา ActivityResult บน Android
-      const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        const permissionResult =
-          await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!permissionResult.granted) {
-          Alert.alert("ต้องการสิทธิ์", "กรุณาอนุญาตให้เข้าถึงคลังรูปภาพในตั้งค่าของอุปกรณ์");
-          return;
+      // บน iOS จำเป็นต้องขอสิทธิ์ แต่บน Android ระบบ Photo Picker ทำงานได้ทันทีโดยไม่ต้องขอสิทธิ์
+      // และการละเว้น permission dialog บน Android ช่วยให้ทำงานในหน้าต่างลอย (Floating / Pop-up view) ได้อย่างสมบูรณ์
+      if (Platform.OS === "ios") {
+        try {
+          const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+          if (status !== "granted") {
+            const permissionResult =
+              await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (!permissionResult.granted) {
+              Alert.alert("ต้องการสิทธิ์", "กรุณาอนุญาตให้เข้าถึงคลังรูปภาพในตั้งค่าของอุปกรณ์");
+              return;
+            }
+          }
+        } catch (permErr) {
+          console.warn("iOS permission error:", permErr);
         }
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
-        allowsEditing: Platform.OS === "ios", // ปิดบน Android เพื่อป้องกัน ActivityResultLauncher ขัดข้องใน Multi-window/Samsung Pop-up
+        allowsEditing: false, // ปิด crop ทั้งหมดเพื่อรองรับหน้าต่างลอย / Samsung Pop-up view
         quality: 0.5,
         base64: true,
       });
@@ -169,7 +176,7 @@ export default function ProfileScreen({ navigation }) {
       console.warn("handlePickAvatar error:", e);
       Alert.alert(
         "ไม่สามารถเปิดคลังภาพได้",
-        "กรุณาลองเปิดแอปแบบเต็มหน้าจอ (ไม่ใช่หน้าต่างลอย) หรือลองใหม่อีกครั้งครับ"
+        `เกิดข้อผิดพลาด: ${e.message || e}`
       );
     }
   };
@@ -181,19 +188,25 @@ export default function ProfileScreen({ navigation }) {
         return;
       }
 
-      const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-      if (status !== "granted") {
-        const permissionResult =
-          await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!permissionResult.granted) {
-          Alert.alert("ต้องการสิทธิ์", "กรุณาอนุญาตให้เข้าถึงคลังรูปภาพในตั้งค่าของอุปกรณ์");
-          return;
+      if (Platform.OS === "ios") {
+        try {
+          const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+          if (status !== "granted") {
+            const permissionResult =
+              await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (!permissionResult.granted) {
+              Alert.alert("ต้องการสิทธิ์", "กรุณาอนุญาตให้เข้าถึงคลังรูปภาพในตั้งค่าของอุปกรณ์");
+              return;
+            }
+          }
+        } catch (permErr) {
+          console.warn("iOS permission error:", permErr);
         }
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
-        allowsEditing: false,
+        allowsEditing: false, // ปิด crop ทั้งหมดเพื่อรองรับหน้าต่างลอย / Samsung Pop-up view
         quality: 0.4,
         base64: true,
       });
@@ -215,7 +228,7 @@ export default function ProfileScreen({ navigation }) {
       console.warn("handleAddGalleryPhoto error:", e);
       Alert.alert(
         "ไม่สามารถเปิดคลังภาพได้",
-        "กรุณาลองเปิดแอปแบบเต็มหน้าจอ (ไม่ใช่หน้าต่างลอย) หรือลองใหม่อีกครั้งครับ"
+        `เกิดข้อผิดพลาด: ${e.message || e}`
       );
     }
   };
