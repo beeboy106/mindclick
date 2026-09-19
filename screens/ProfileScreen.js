@@ -29,6 +29,42 @@ const genderOptions = [
   { value: "prefer_not_to_say", label: "ไม่ระบุ", icon: "help-circle-outline" },
 ];
 
+function GalleryThumbItem({ img, onSelect, onRemove }) {
+  const [loadError, setLoadError] = useState(false);
+
+  return (
+    <View style={styles.galleryThumbWrapper}>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={onSelect}
+        style={styles.galleryThumbBtn}
+      >
+        {!loadError ? (
+          <Image
+            source={{ uri: img.url }}
+            style={styles.galleryThumb}
+            resizeMode="cover"
+            onError={() => setLoadError(true)}
+          />
+        ) : (
+          <View style={styles.galleryThumbError}>
+            <Ionicons name="image-outline" size={22} color={colors.mutedForeground} />
+            <Text style={styles.galleryThumbErrorText} numberOfLines={1}>
+              ไฟล์หมดอายุ
+            </Text>
+          </View>
+        )}
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.removePhotoBtn}
+        onPress={onRemove}
+      >
+        <Ionicons name="close" size={12} color={colors.white} />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 export default function ProfileScreen({ navigation }) {
   const { user, signOut } = useAuth();
   const {
@@ -108,16 +144,20 @@ export default function ProfileScreen({ navigation }) {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: Platform.OS === "ios", // ปิดบน Android เพื่อป้องกัน ActivityResultLauncher ขัดข้องใน Multi-window/Samsung Pop-up
-        quality: 0.7,
+        quality: 0.5,
+        base64: true,
       });
 
       if (!result.canceled && result.assets?.length > 0) {
-        const pickedUri = result.assets[0].uri;
+        const asset = result.assets[0];
+        const permanentUri = asset.base64
+          ? `data:image/jpeg;base64,${asset.base64}`
+          : asset.uri;
         setAvatarError(false);
-        setAvatarUri(pickedUri);
+        setAvatarUri(permanentUri);
         // บันทึกรูปโปรไฟล์ใหม่พร้อมรักษาสิ่งที่กำลังพิมพ์อยู่ไว้ด้วย
         await updateProfile({
-          image: pickedUri,
+          image: permanentUri,
           name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
           gender,
           bio,
@@ -154,13 +194,17 @@ export default function ProfileScreen({ navigation }) {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: false,
-        quality: 0.7,
+        quality: 0.4,
+        base64: true,
       });
 
       if (!result.canceled && result.assets?.length > 0) {
-        const pickedUri = result.assets[0].uri;
+        const asset = result.assets[0];
+        const permanentUri = asset.base64
+          ? `data:image/jpeg;base64,${asset.base64}`
+          : asset.uri;
         // บันทึกรูปภาพแกลเลอรีพร้อมรักษาสิ่งที่กำลังพิมพ์อยู่ไว้ด้วย
-        await addGalleryImage(pickedUri, {
+        await addGalleryImage(permanentUri, {
           name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
           gender,
           bio,
@@ -388,28 +432,19 @@ export default function ProfileScreen({ navigation }) {
 
           <View style={styles.galleryGrid}>
             {profile.galleryImages.map((img) => (
-              <View key={img.id} style={styles.galleryThumbWrapper}>
-                <TouchableOpacity
-                  activeOpacity={0.85}
-                  onPress={() => setSelectedPhoto(img.url)}
-                  style={{ width: "100%", height: "100%" }}
-                >
-                  <Image source={{ uri: img.url }} style={styles.galleryThumb} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.removePhotoBtn}
-                  onPress={() =>
-                    removeGalleryImage(img.id, {
-                      name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
-                      gender,
-                      bio,
-                      socialLinks,
-                    })
-                  }
-                >
-                  <Ionicons name="close" size={12} color={colors.white} />
-                </TouchableOpacity>
-              </View>
+              <GalleryThumbItem
+                key={img.id}
+                img={img}
+                onSelect={() => setSelectedPhoto(img.url)}
+                onRemove={() =>
+                  removeGalleryImage(img.id, {
+                    name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
+                    gender,
+                    bio,
+                    socialLinks,
+                  })
+                }
+              />
             ))}
 
             {profile.galleryImages.length < 9 && (
@@ -711,10 +746,31 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "#e2e8f0",
+    backgroundColor: "#f1f5f9",
+  },
+  galleryThumbBtn: {
+    width: "100%",
+    height: "100%",
   },
   galleryThumb: {
     width: "100%",
     height: "100%",
+    resizeMode: "cover",
+  },
+  galleryThumbError: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
+    padding: 4,
+  },
+  galleryThumbErrorText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#94a3b8",
+    marginTop: 2,
+    textAlign: "center",
   },
   removePhotoBtn: {
     position: "absolute",

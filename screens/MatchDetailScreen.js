@@ -18,6 +18,27 @@ import { useData } from "../context/DataContext";
 import FavoriteButton from "../components/FavoriteButton";
 import GalleryViewer from "../components/GalleryViewer";
 
+function MatchGalleryThumb({ img, onPress }) {
+  const [loadError, setLoadError] = useState(false);
+
+  if (loadError) return null;
+
+  return (
+    <TouchableOpacity
+      style={styles.galleryThumbWrapper}
+      activeOpacity={0.85}
+      onPress={onPress}
+    >
+      <Image
+        source={{ uri: img.url }}
+        style={styles.galleryThumb}
+        resizeMode="cover"
+        onError={() => setLoadError(true)}
+      />
+    </TouchableOpacity>
+  );
+}
+
 export default function MatchDetailScreen({ route, navigation }) {
   const { userId } = route.params || {};
   const { getUserById, quizResponse } = useData();
@@ -259,14 +280,11 @@ export default function MatchDetailScreen({ route, navigation }) {
 
             <View style={styles.galleryGrid}>
               {targetUser.galleryImages.map((img) => (
-                <TouchableOpacity
+                <MatchGalleryThumb
                   key={img.id}
-                  style={styles.galleryThumbWrapper}
-                  activeOpacity={0.85}
+                  img={img}
                   onPress={() => setSelectedPhoto(img.url)}
-                >
-                  <Image source={{ uri: img.url }} style={styles.galleryThumb} />
-                </TouchableOpacity>
+                />
               ))}
             </View>
           </View>

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Modal,
   View,
@@ -15,6 +15,12 @@ import { colors } from "../lib/theme";
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export default function GalleryViewer({ visible, imageUrl, onClose }) {
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [imageUrl]);
+
   if (!imageUrl) return null;
 
   return (
@@ -40,11 +46,21 @@ export default function GalleryViewer({ visible, imageUrl, onClose }) {
           activeOpacity={1}
           onPress={onClose}
         >
-          <Image
-            source={{ uri: imageUrl }}
-            style={styles.fullImage}
-            resizeMode="contain"
-          />
+          {!hasError ? (
+            <Image
+              source={{ uri: imageUrl }}
+              style={styles.fullImage}
+              resizeMode="contain"
+              onError={() => setHasError(true)}
+            />
+          ) : (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle-outline" size={48} color="#94a3b8" />
+              <Text style={styles.errorText}>
+                ไม่สามารถแสดงรูปภาพได้{"\n"}(ไฟล์ในเครื่องเดิมอาจถูกล้างไปแล้ว)
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
       </SafeAreaView>
     </Modal>
@@ -80,5 +96,18 @@ const styles = StyleSheet.create({
   fullImage: {
     width: SCREEN_WIDTH,
     height: SCREEN_HEIGHT * 0.75,
+  },
+  errorContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+    gap: 12,
+  },
+  errorText: {
+    color: colors.white,
+    fontSize: 14,
+    textAlign: "center",
+    opacity: 0.8,
+    lineHeight: 20,
   },
 });
