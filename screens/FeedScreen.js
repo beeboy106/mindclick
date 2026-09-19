@@ -1,0 +1,875 @@
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Image,
+  StatusBar,
+  ActivityIndicator,
+  Alert,
+  Platform,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { colors, shadows } from "../lib/theme";
+import { useAuth } from "../context/AuthContext";
+import { useData } from "../context/DataContext";
+import { useFeed } from "../context/FeedContext";
+import PostCard from "../components/PostCard";
+import ChatModal from "../components/ChatModal";
+
+export default function FeedScreen({ navigation }) {
+  const { user } = useAuth();
+  const { profile } = useData();
+  const {
+    posts,
+    isLoading,
+    userStatus,
+    setUserStatus,
+    addPost,
+    deletePost,
+    toggleLike,
+    addComment,
+    friends,
+    totalUnreadCount,
+  } = useFeed();
+
+  const [postText, setPostText] = useState("");
+  const [postImage, setPostImage] = useState(null);
+  const [isPosting, setIsPosting] = useState(false);
+  const [chatModalVisible, setChatModalVisible] = useState(false);
+  const [selectedFriendId, setSelectedFriendId] = useState(null);
+  const [avatarError, setAvatarError] = useState(false);
+
+  // ข้อมูลโปรไฟล์ของผู้ใช้ปัจจุบัน
+  const displayImage = profile?.image || user?.image || null;
+  const displayName = profile?.name || user?.name || "ผู้ใช้งาน";
+  const displayEmail = user?.email || "user@mindclick.app";
+
+  // เลือกรูปภาพสำหรับโพสต์
+  const handlePickImage = async () => {
+    try {
+      if (Platform.OS === "ios") {
+        const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!perm.granted) {
+            Alert.alert("ต้องการสิทธิ์", "กรุณาอนุญาตให้เข้าถึงรูปภาพในตั้งค่า");
+            return;
+          }
+        }
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: false,
+        quality: 0.6,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets?.length > 0) {
+        const asset = result.assets[0];
+        const uri = asset.base64
+          ? `data:image/jpeg;base64,${asset.base64}`
+          : asset.uri;
+        setPostImage(uri);
+      }
+    } catch (e) {
+      console.warn("handlePickImage error:", e);
+      Alert.alert("แจ้งเตือน", "ไม่สามารถเปิดคลังภาพได้");
+    }
+  };
+
+  // สร้างโพสต์
+  const handleCreatePost = async () => {
+    if (!postText.trim() && !postImage) {
+      Alert.alert("แจ้งเตือน", "กรุณาพิมพ์ข้อความหรือเลือกรูปภาพก่อนโพสต์");
+      return;
+    }
+
+    try {
+      setIsPosting(true);
+      await addPost({
+        content: postText,
+        image: postImage,
+      });
+      setPostText("");
+      setPostImage(null);
+      Alert.alert("สำเร็จ", "แชร์เรื่องราวของคุณเรียบร้อยแล้ว");
+    } catch (e) {
+      console.error("handleCreatePost error:", e);
+      Alert.alert("เกิดข้อผิดพลาด", "ไม่สามารถสร้างโพสต์ได้ กรุณาลองใหม่");
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
+  // เปิดแชทกับเพื่อนที่ระบุ
+  const handleOpenChatWith = (friendId) => {
+    setSelectedFriendId(friendId);
+    setChatModalVisible(true);
+  };
+
+  // เปิดหน้ารายชื่อแชททั้งหมด
+  const handleOpenChatList = () => {
+    setSelectedFriendId(null);
+    setChatModalVisible(true);
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
+
+      {/* Top Header */}
+      <View style={styles.topHeader}>
+        <View style={styles.logoRow}>
+          <Text style={styles.brandTitle}>
+            Mind<Text style={styles.brandTitleAccent}>click</Text>
+          </Text>
+          <View style={styles.brandBadge}>
+            <MaterialCommunityIcons name="cursor-default-click" size={15} color={colors.ink} />
+          </View>
+        </View>
+
+        {/* Chat Notification Button */}
+        <TouchableOpacity
+          style={styles.chatIconBtn}
+          activeOpacity={0.8}
+          onPress={handleOpenChatList}
+        >
+          <Ionicons name="chatbubbles-outline" size={24} color={colors.ink} />
+          {totalUnreadCount > 0 && (
+            <View style={styles.badgeCount}>
+              <Text style={styles.badgeText}>{totalUnreadCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* SECTION 1: User Profile & Status Card (Matching Left Card from Reference) */}
+        <View style={styles.userCard}>
+          <View style={styles.userCardCover} />
+          <View style={styles.userCardAvatarRow}>
+            {displayImage && !avatarError ? (
+              <Image
+                source={{ uri: displayImage }}
+                style={styles.userAvatar}
+                onError={() => setAvatarError(true)}
+              />
+            ) : (
+              <View style={styles.userAvatarFallback}>
+                <Text style={styles.userAvatarInitial}>
+                  {displayName.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.userCardInfo}>
+            <Text style={styles.userNameText}>{displayName}</Text>
+            <Text style={styles.userEmailText}>{displayEmail}</Text>
+
+            {/* Status Switcher Buttons */}
+            <View style={styles.statusRow}>
+              <TouchableOpacity
+                style={[
+                  styles.statusPill,
+                  userStatus === "online" && styles.statusPillActiveGreen,
+                ]}
+                activeOpacity={0.8}
+                onPress={() => setUserStatus("online")}
+              >
+                <View style={[styles.statusDot, { backgroundColor: "#22c55e" }]} />
+                <Text
+                  style={[
+                    styles.statusPillText,
+                    userStatus === "online" && styles.statusTextActive,
+                  ]}
+                >
+                  online
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.statusPill,
+                  userStatus === "busy" && styles.statusPillActiveRed,
+                ]}
+                activeOpacity={0.8}
+                onPress={() => setUserStatus("busy")}
+              >
+                <View style={[styles.statusDot, { backgroundColor: "#ef4444" }]} />
+                <Text
+                  style={[
+                    styles.statusPillText,
+                    userStatus === "busy" && styles.statusTextActive,
+                  ]}
+                >
+                  ห้ามรบกวน
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.statusPill,
+                  userStatus === "offline" && styles.statusPillActiveGray,
+                ]}
+                activeOpacity={0.8}
+                onPress={() => setUserStatus("offline")}
+              >
+                <View style={[styles.statusDot, { backgroundColor: "#9ca3af" }]} />
+                <Text
+                  style={[
+                    styles.statusPillText,
+                    userStatus === "offline" && styles.statusTextActive,
+                  ]}
+                >
+                  offline
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Sub-status badges (Minimal Space / Live Status) */}
+            <View style={styles.metaPillsRow}>
+              <View style={styles.metaPill}>
+                <Text style={styles.metaPillTitle}>Community</Text>
+                <Text style={styles.metaPillSubtitle}>Space</Text>
+              </View>
+              <View style={styles.metaPill}>
+                <Text style={styles.metaPillTitle}>Live</Text>
+                <Text style={styles.metaPillSubtitle}>Status</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* SECTION 2: Friends Online / Chat Quick Access Bar */}
+        <View style={styles.friendsSection}>
+          <View style={styles.friendsSectionHeader}>
+            <Text style={styles.sectionTitle}>เพื่อนที่เคยคุยด้วย (Friends)</Text>
+            <TouchableOpacity onPress={handleOpenChatList}>
+              <Text style={styles.seeAllText}>เปิดแชททั้งหมด</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.friendsScroll}
+          >
+            {friends.map((friend) => (
+              <TouchableOpacity
+                key={friend.id}
+                style={styles.friendBubble}
+                activeOpacity={0.8}
+                onPress={() => handleOpenChatWith(friend.id)}
+              >
+                <View style={styles.friendBubbleAvatarWrapper}>
+                  {friend.avatar ? (
+                    <Image
+                      source={{ uri: friend.avatar }}
+                      style={styles.friendBubbleAvatar}
+                    />
+                  ) : (
+                    <View style={styles.friendBubbleAvatarFallback}>
+                      <Text style={styles.friendBubbleInitial}>
+                        {friend.name.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                  <View
+                    style={[
+                      styles.friendStatusIndicator,
+                      {
+                        backgroundColor:
+                          friend.status === "online" ? "#22c55e" : "#9ca3af",
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.friendBubbleName} numberOfLines={1}>
+                  {friend.name.split(" ")[0]}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* SECTION 3: Post Creator Card (Matching Top Box from Reference) */}
+        <View style={styles.createCard}>
+          <Text style={styles.createCardHeader}>แชร์เรื่องราวของคุณ</Text>
+
+          <View style={styles.createInputRow}>
+            {displayImage && !avatarError ? (
+              <Image
+                source={{ uri: displayImage }}
+                style={styles.inputAvatar}
+                onError={() => setAvatarError(true)}
+              />
+            ) : (
+              <View style={styles.inputAvatarFallback}>
+                <Text style={styles.inputAvatarInitial}>
+                  {displayName.charAt(0).toUpperCase()}
+                </Text>
+              </View>
+            )}
+
+            <TextInput
+              style={styles.postTextInput}
+              placeholder="แชร์อะไรกับเพื่อนของคุณ..."
+              placeholderTextColor="#9ca3af"
+              multiline
+              maxLength={1000}
+              value={postText}
+              onChangeText={setPostText}
+            />
+          </View>
+
+          {/* Attached Image Preview */}
+          {Boolean(postImage) && (
+            <View style={styles.imagePreviewWrapper}>
+              <Image source={{ uri: postImage }} style={styles.imagePreview} />
+              <TouchableOpacity
+                style={styles.removeImageBtn}
+                onPress={() => setPostImage(null)}
+              >
+                <Ionicons name="close" size={16} color={colors.white} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Bottom Controls */}
+          <View style={styles.createActionsRow}>
+            <TouchableOpacity
+              style={styles.photoAttachBtn}
+              activeOpacity={0.8}
+              onPress={handlePickImage}
+            >
+              <Ionicons name="image-outline" size={20} color={colors.primary} />
+              <Text style={styles.photoAttachText}>
+                {postImage ? "เปลี่ยนรูป" : "แนบรูปภาพ"}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.rightCreateControls}>
+              <Text style={styles.charCount}>{postText.length}/1000</Text>
+              <TouchableOpacity
+                style={[
+                  styles.postSubmitBtn,
+                  (!postText.trim() && !postImage) || isPosting
+                    ? styles.postSubmitBtnDisabled
+                    : null,
+                ]}
+                disabled={(!postText.trim() && !postImage) || isPosting}
+                activeOpacity={0.85}
+                onPress={handleCreatePost}
+              >
+                {isPosting ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Text style={styles.postSubmitBtnText}>โพสต์</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* SECTION 4: Feed List */}
+        <View style={styles.feedHeaderRow}>
+          <Text style={styles.feedSectionTitle}>
+            เรื่องราวล่าสุดจากคนในวงของคุณ
+          </Text>
+          <TouchableOpacity
+            style={styles.refreshBtn}
+            activeOpacity={0.8}
+            onPress={() => {
+              Alert.alert("รีเฟรช", "อัปเดตข้อมูลโพสต์ล่าสุดแล้ว");
+            }}
+          >
+            <Ionicons name="refresh" size={14} color={colors.ink} />
+            <Text style={styles.refreshText}>Refresh</Text>
+          </TouchableOpacity>
+        </View>
+
+        {isLoading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : posts.length === 0 ? (
+          <View style={styles.emptyFeed}>
+            <Ionicons
+              name="newspaper-outline"
+              size={48}
+              color={colors.mutedForeground}
+            />
+            <Text style={styles.emptyFeedText}>ยังไม่มีเรื่องราวใหม่</Text>
+            <Text style={styles.emptyFeedSubtext}>
+              เป็นคนแรกที่เริ่มแชร์เรื่องราวให้กับเพื่อนๆ
+            </Text>
+          </View>
+        ) : (
+          posts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              currentUserId={user?.id || "guest"}
+              onToggleLike={toggleLike}
+              onDelete={deletePost}
+              onAddComment={addComment}
+            />
+          ))
+        )}
+      </ScrollView>
+
+      {/* Chat Modal */}
+      <ChatModal
+        visible={chatModalVisible}
+        onClose={() => setChatModalVisible(false)}
+        initialFriendId={selectedFriendId}
+      />
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.card,
+  },
+  topHeader: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+  },
+  logoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  brandTitle: {
+    fontSize: 22,
+    fontWeight: "900",
+    color: colors.ink,
+    letterSpacing: -0.5,
+  },
+  brandTitleAccent: {
+    color: colors.primary,
+  },
+  brandBadge: {
+    width: 24,
+    height: 24,
+    backgroundColor: "#bbf44a",
+    borderRadius: 6,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  chatIconBtn: {
+    position: "relative",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f3f4f6",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badgeCount: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    backgroundColor: colors.coral,
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: colors.white,
+  },
+  badgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: "900",
+  },
+  container: {
+    flex: 1,
+    backgroundColor: "#fafbfc",
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 40,
+  },
+  userCard: {
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    marginBottom: 20,
+    overflow: "hidden",
+    ...shadows.neo,
+  },
+  userCardCover: {
+    height: 56,
+    backgroundColor: "#e0e7ff",
+  },
+  userCardAvatarRow: {
+    alignItems: "center",
+    marginTop: -36,
+  },
+  userAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 3,
+    borderColor: colors.white,
+    backgroundColor: colors.card,
+  },
+  userAvatarFallback: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.primary,
+    borderWidth: 3,
+    borderColor: colors.white,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  userAvatarInitial: {
+    color: colors.white,
+    fontSize: 28,
+    fontWeight: "900",
+  },
+  userCardInfo: {
+    padding: 16,
+    alignItems: "center",
+  },
+  userNameText: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: colors.ink,
+    marginBottom: 2,
+  },
+  userEmailText: {
+    fontSize: 13,
+    color: colors.mutedForeground,
+    marginBottom: 14,
+  },
+  statusRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 16,
+  },
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    backgroundColor: "#f9fafb",
+  },
+  statusPillActiveGreen: {
+    backgroundColor: "#dcfce7",
+    borderColor: "#86efac",
+  },
+  statusPillActiveRed: {
+    backgroundColor: "#fee2e2",
+    borderColor: "#fca5a5",
+  },
+  statusPillActiveGray: {
+    backgroundColor: "#f3f4f6",
+    borderColor: "#d1d5db",
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusPillText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.mutedForeground,
+  },
+  statusTextActive: {
+    color: colors.ink,
+  },
+  metaPillsRow: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+    justifyContent: "center",
+    borderTopWidth: 1,
+    borderTopColor: "#f3f4f6",
+    paddingTop: 12,
+  },
+  metaPill: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: "#f8fafc",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  metaPillTitle: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: colors.ink,
+  },
+  metaPillSubtitle: {
+    fontSize: 10,
+    color: colors.mutedForeground,
+  },
+  friendsSection: {
+    marginBottom: 20,
+  },
+  friendsSectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.ink,
+  },
+  seeAllText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.primary,
+  },
+  friendsScroll: {
+    gap: 14,
+    paddingVertical: 4,
+  },
+  friendBubble: {
+    alignItems: "center",
+    width: 58,
+  },
+  friendBubbleAvatarWrapper: {
+    position: "relative",
+    marginBottom: 4,
+  },
+  friendBubbleAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+  },
+  friendBubbleAvatarFallback: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  friendBubbleInitial: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  friendStatusIndicator: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: colors.white,
+  },
+  friendBubbleName: {
+    fontSize: 11,
+    color: colors.ink,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  createCard: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    padding: 16,
+    marginBottom: 20,
+    ...shadows.neo,
+  },
+  createCardHeader: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.ink,
+    marginBottom: 12,
+  },
+  createInputRow: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "flex-start",
+    marginBottom: 12,
+  },
+  inputAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+  },
+  inputAvatarFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  inputAvatarInitial: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  postTextInput: {
+    flex: 1,
+    minHeight: 70,
+    borderWidth: 1.5,
+    borderColor: "#e5e7eb",
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    color: colors.ink,
+    backgroundColor: "#f9fafb",
+    textAlignVertical: "top",
+  },
+  imagePreviewWrapper: {
+    position: "relative",
+    marginBottom: 12,
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+  },
+  imagePreview: {
+    width: "100%",
+    height: 180,
+  },
+  removeImageBtn: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  createActionsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: "#f3f4f6",
+    paddingTop: 12,
+  },
+  photoAttachBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  photoAttachText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.primary,
+  },
+  rightCreateControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  charCount: {
+    fontSize: 12,
+    color: colors.mutedForeground,
+  },
+  postSubmitBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 9,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  postSubmitBtnDisabled: {
+    backgroundColor: "#cbd5e1",
+  },
+  postSubmitBtnText: {
+    color: colors.white,
+    fontWeight: "800",
+    fontSize: 13,
+  },
+  feedHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  feedSectionTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.ink,
+  },
+  refreshBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.darkBorder,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  refreshText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.ink,
+  },
+  loadingBox: {
+    paddingVertical: 40,
+    alignItems: "center",
+  },
+  emptyFeed: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 50,
+    gap: 8,
+  },
+  emptyFeedText: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: colors.ink,
+  },
+  emptyFeedSubtext: {
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
+});

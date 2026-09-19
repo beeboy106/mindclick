@@ -17,6 +17,7 @@ import HomeScreen from "../screens/HomeScreen";
 import ResultsScreen from "../screens/ResultsScreen";
 import FavoritesScreen from "../screens/FavoritesScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+import FeedScreen from "../screens/FeedScreen";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import QuizScreen from "../screens/QuizScreen";
 import MatchDetailScreen from "../screens/MatchDetailScreen";
@@ -24,7 +25,7 @@ import MatchDetailScreen from "../screens/MatchDetailScreen";
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// แท็บเมนูด้านล่าง 4 แท็บหลัก
+// แท็บเมนูด้านล่าง 5 แท็บหลัก
 function MainTabNavigator() {
   const insets = useSafeAreaInsets();
 
@@ -53,6 +54,8 @@ function MainTabNavigator() {
             iconName = focused ? "home" : "home-outline";
           } else if (route.name === "ResultsTab") {
             iconName = focused ? "people" : "people-outline";
+          } else if (route.name === "FeedTab") {
+            iconName = focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline";
           } else if (route.name === "FavoritesTab") {
             iconName = focused ? "heart" : "heart-outline";
           } else if (route.name === "ProfileTab") {
@@ -72,6 +75,11 @@ function MainTabNavigator() {
         name="ResultsTab"
         component={ResultsScreen}
         options={{ tabBarLabel: "แมตช์" }}
+      />
+      <Tab.Screen
+        name="FeedTab"
+        component={FeedScreen}
+        options={{ tabBarLabel: "โพสต์" }}
       />
       <Tab.Screen
         name="FavoritesTab"

@@ -6,6 +6,7 @@ import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-c
 
 import { AuthProvider } from "./context/AuthContext";
 import { DataProvider } from "./context/DataContext";
+import { FeedProvider } from "./context/FeedContext";
 import AppNavigator from "./navigation/AppNavigator";
 
 export default function App() {
@@ -13,8 +14,10 @@ export default function App() {
     <SafeAreaProvider initialWindowMetrics={initialWindowMetrics}>
       <AuthProvider>
         <DataProvider>
-          <StatusBar style="dark" />
-          <AppNavigator />
+          <FeedProvider>
+            <StatusBar style="dark" />
+            <AppNavigator />
+          </FeedProvider>
         </DataProvider>
       </AuthProvider>
     </SafeAreaProvider>
