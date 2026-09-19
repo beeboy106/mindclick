@@ -45,8 +45,8 @@ export default function HomeScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
       <Header onProfilePress={() => navigation.navigate("ProfileTab")} />
 
       <ScrollView
@@ -244,10 +244,11 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#fafbfc",
+    backgroundColor: colors.card,
   },
   container: {
     flex: 1,
+    backgroundColor: "#fafbfc",
   },
   scrollContent: {
     padding: 20,

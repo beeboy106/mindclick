@@ -30,7 +30,7 @@ export default function GalleryViewer({ visible, imageUrl, onClose }) {
       animationType="fade"
       onRequestClose={onClose}
     >
-      <SafeAreaView style={styles.overlay}>
+      <SafeAreaView style={styles.overlay} edges={["top", "bottom", "left", "right"]}>
         <View style={styles.topBar}>
           <TouchableOpacity
             style={styles.closeButton}

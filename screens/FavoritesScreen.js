@@ -59,8 +59,8 @@ export default function FavoritesScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
       <Header />
 
       <ScrollView
@@ -154,10 +154,11 @@ export default function FavoritesScreen({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#fafbfc",
+    backgroundColor: colors.card,
   },
   container: {
     flex: 1,
+    backgroundColor: "#fafbfc",
   },
   scrollContent: {
     padding: 20,

@@ -50,7 +50,8 @@ export default function MatchDetailScreen({ route, navigation }) {
 
   if (!targetUser) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={["top", "bottom", "left", "right"]}>
+        <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
         <View style={styles.notFoundContainer}>
           <Text style={styles.notFoundTitle}>ไม่พบข้อมูลผู้ใช้</Text>
           <TouchableOpacity
@@ -114,8 +115,8 @@ export default function MatchDetailScreen({ route, navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.card} />
+    <SafeAreaView style={styles.safeArea} edges={["top", "bottom", "left", "right"]}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
 
       {/* Top Header */}
       <View style={styles.topBar}>
@@ -304,7 +305,7 @@ export default function MatchDetailScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.card,
   },
   topBar: {
     height: 56,
@@ -329,6 +330,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     padding: 20,

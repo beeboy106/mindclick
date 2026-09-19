@@ -82,8 +82,8 @@ export default function QuizScreen({ route, navigation }) {
     : { bg: colors.primary, text: colors.white };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.card} />
+    <SafeAreaView style={styles.safeArea} edges={["top", "bottom", "left", "right"]}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
 
       {/* Top Bar */}
       <View style={styles.topBar}>
@@ -312,7 +312,7 @@ export default function QuizScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.card,
   },
   topBar: {
     height: 54,
@@ -350,6 +350,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     padding: 20,

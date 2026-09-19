@@ -49,7 +49,7 @@ export default function PrivacyPolicyModal({
       onRequestClose={isConsentMode ? handleDeclinePress : onClose}
     >
       <View style={styles.backdrop}>
-        <SafeAreaView style={styles.safeContainer}>
+        <SafeAreaView style={styles.safeContainer} edges={["top", "bottom", "left", "right"]}>
           <View style={styles.modalCard}>
             {/* Header */}
             <View style={styles.header}>
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 2,
     borderColor: colors.darkBorder,
-    maxHeight: SCREEN_HEIGHT * 0.88,
+    maxHeight: "92%",
     ...shadows.neo,
     overflow: "hidden",
     display: "flex",

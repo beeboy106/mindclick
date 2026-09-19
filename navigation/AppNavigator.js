@@ -17,6 +17,7 @@ import HomeScreen from "../screens/HomeScreen";
 import ResultsScreen from "../screens/ResultsScreen";
 import FavoritesScreen from "../screens/FavoritesScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import QuizScreen from "../screens/QuizScreen";
 import MatchDetailScreen from "../screens/MatchDetailScreen";
 
@@ -25,6 +26,8 @@ const Tab = createBottomTabNavigator();
 
 // แท็บเมนูด้านล่าง 4 แท็บหลัก
 function MainTabNavigator() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -35,9 +38,9 @@ function MainTabNavigator() {
           backgroundColor: colors.card,
           borderTopWidth: 1.5,
           borderTopColor: colors.darkBorder,
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 6,
+          height: 58 + insets.bottom,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
+          paddingTop: 8,
         },
         tabBarLabelStyle: {
           fontSize: 11,

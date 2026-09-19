@@ -26,8 +26,8 @@ export default function ResultsScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.card} />
+    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
       <Header />
 
       <ScrollView
@@ -126,10 +126,11 @@ export default function ResultsScreen({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.card,
   },
   container: {
     flex: 1,
+    backgroundColor: colors.background,
   },
   scrollContent: {
     padding: 20,

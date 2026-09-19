@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StatusBar,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -28,8 +29,8 @@ export default function SignInScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor={colors.white} />
+    <SafeAreaView style={styles.safeArea} edges={["top", "bottom", "left", "right"]}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
 
       {/* Top Header */}
       <View style={styles.topHeader}>
@@ -43,7 +44,12 @@ export default function SignInScreen() {
         </View>
       </View>
 
-      <View style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
         <View style={styles.contentBox}>
           {/* Eyebrow */}
           <Text style={styles.eyebrow}>MEET THROUGH QUESTIONS</Text>
@@ -120,7 +126,7 @@ export default function SignInScreen() {
         <View style={styles.floatingQBadge}>
           <Ionicons name="sparkles" size={22} color={colors.white} />
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -161,7 +167,11 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
     paddingHorizontal: 28,
+    paddingVertical: 24,
     justifyContent: "center",
     position: "relative",
   },
