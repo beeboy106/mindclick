@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Mindclick",
+    "slug": "mindclick",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#f7f8fc"
+    },
+    "scheme": "mindclick",
+    "android": {
+      "package": "com.mindclick.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#f7f8fc"
+      }
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mindclick.app"
+    },
+    "plugins": [
+      "expo-asset",
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app accesses your photos to let you pick profile pictures."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "bb1e085c-e4a5-4640-be6d-d3aa08b7074f"
+      }
+    }
+  }
+}
