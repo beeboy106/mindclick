@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import { colors, categoryColors, shadows } from "../lib/theme";
 import { categories } from "../data/questions";
 import { calculateCategoryMatch } from "../lib/getMatch";
 import { useData } from "../context/DataContext";
+import { usePremium } from "../context/PremiumContext";
 import FavoriteButton from "../components/FavoriteButton";
 import GalleryViewer from "../components/GalleryViewer";
 
@@ -42,11 +43,18 @@ function MatchGalleryThumb({ img, onPress }) {
 export default function MatchDetailScreen({ route, navigation }) {
   const { userId } = route.params || {};
   const { getUserById, quizResponse } = useData();
+  const { recordProfileView } = usePremium();
 
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [avatarError, setAvatarError] = useState(false);
 
   const targetUser = getUserById(userId);
+
+  useEffect(() => {
+    if (userId) {
+      recordProfileView(userId);
+    }
+  }, [userId, recordProfileView]);
 
   if (!targetUser) {
     return (

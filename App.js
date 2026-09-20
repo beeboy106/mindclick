@@ -8,6 +8,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { DataProvider } from "./context/DataContext";
 import { FeedProvider } from "./context/FeedContext";
 import { DilemmaProvider } from "./context/DilemmaContext";
+import { PremiumProvider } from "./context/PremiumContext";
 import AppNavigator from "./navigation/AppNavigator";
 
 export default function App() {
@@ -17,8 +18,10 @@ export default function App() {
         <DataProvider>
           <FeedProvider>
             <DilemmaProvider>
-              <StatusBar style="dark" />
-              <AppNavigator />
+              <PremiumProvider>
+                <StatusBar style="dark" />
+                <AppNavigator />
+              </PremiumProvider>
             </DilemmaProvider>
           </FeedProvider>
         </DataProvider>

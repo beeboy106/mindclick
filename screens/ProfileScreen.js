@@ -18,9 +18,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 import { useData } from "../context/DataContext";
+import { usePremium } from "../context/PremiumContext";
 import Header from "../components/Header";
 import GalleryViewer from "../components/GalleryViewer";
 import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
+import ProfileViewsModal from "../components/ProfileViewsModal";
+import PaywallModal from "../components/PaywallModal";
 
 const genderOptions = [
   { value: "male", label: "ชาย", icon: "male" },
@@ -74,6 +77,18 @@ export default function ProfileScreen({ navigation }) {
     removeGalleryImage,
     resetQuizData,
   } = useData();
+
+  const {
+    isPremium,
+    isIncognito,
+    viewCount,
+    togglePremiumMock,
+    toggleIncognito,
+    addMockProfileView,
+  } = usePremium();
+
+  const [viewsModalVisible, setViewsModalVisible] = useState(false);
+  const [paywallVisible, setPaywallVisible] = useState(false);
 
   const [displayName, setDisplayName] = useState(profile?.name || user?.name || "");
   const [gender, setGender] = useState(profile.gender || "prefer_not_to_say");
@@ -297,6 +312,12 @@ export default function ProfileScreen({ navigation }) {
             >
               <Ionicons name="pencil" size={14} color={colors.white} />
             </TouchableOpacity>
+            {isPremium && (
+              <View style={styles.goldCrownBadge}>
+                <Ionicons name="sparkles" size={11} color={colors.ink} />
+                <Text style={styles.goldCrownBadgeText}>GOLD</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.userNameRow}>
@@ -316,6 +337,48 @@ export default function ProfileScreen({ navigation }) {
             <Text style={styles.publicProfileText}>ดูโปรไฟล์สาธารณะ</Text>
           </View>
         </View>
+
+        {/* Profile Views Entry Banner (Freemium & Teaser) */}
+        <TouchableOpacity
+          style={[
+            styles.viewsEntryBanner,
+            isPremium ? styles.viewsEntryBannerGold : styles.viewsEntryBannerTeaser,
+          ]}
+          activeOpacity={0.88}
+          onPress={() => setViewsModalVisible(true)}
+        >
+          <View
+            style={[
+              styles.viewsEntryIconBox,
+              isPremium ? styles.iconGold : styles.iconRose,
+            ]}
+          >
+            <Ionicons
+              name={isPremium ? "sparkles" : "eye"}
+              size={22}
+              color={colors.ink}
+            />
+          </View>
+          <View style={styles.viewsEntryTextBox}>
+            <View style={styles.viewsEntryTitleRow}>
+              <Text style={styles.viewsEntryTitle}>ใครมาดูโปรไฟล์คุณบ้าง</Text>
+              <View
+                style={[
+                  styles.viewsCountPill,
+                  isPremium ? styles.pillGold : styles.pillRose,
+                ]}
+              >
+                <Text style={styles.viewsCountPillText}>{viewCount} คน</Text>
+              </View>
+            </View>
+            <Text style={styles.viewsEntrySubtitle} numberOfLines={1}>
+              {isPremium
+                ? "👑 สมาชิก Premium: แตะดูรายชื่อย้อนหลัง 30 วัน"
+                : "👀 มีคนแอบสนใจคุณ! แตะเพื่อดูตัวอย่างและปลดล็อก"}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.ink} />
+        </TouchableOpacity>
 
         {/* Form: Gender (Matching Image 3) */}
         <View style={styles.formCard}>
@@ -487,6 +550,81 @@ export default function ProfileScreen({ navigation }) {
           )}
         </TouchableOpacity>
 
+        {/* Membership & Developer Sandbox Card */}
+        <View style={styles.membershipCard}>
+          <View style={styles.membershipHeader}>
+            <View style={styles.membershipBadge}>
+              <Ionicons
+                name={isPremium ? "ribbon" : "shield-outline"}
+                size={16}
+                color={colors.ink}
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.membershipBadgeText}>
+                {isPremium ? "MINDCLICK GOLD / PREMIUM" : "MINDCLICK FREE"}
+              </Text>
+            </View>
+            {!isPremium ? (
+              <TouchableOpacity
+                style={styles.upgradeMiniBtn}
+                onPress={() => setPaywallVisible(true)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.upgradeMiniBtnText}>อัปเกรด 👑</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.activePill}>
+                <Text style={styles.activePillText}>ใช้งานอยู่</Text>
+              </View>
+            )}
+          </View>
+
+          {isPremium && (
+            <View style={styles.incognitoRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.incognitoTitle}>โหมดซ่อนตัว (Incognito Mode)</Text>
+                <Text style={styles.incognitoSub}>
+                  {isIncognito
+                    ? "เปิดอยู่: ส่องโปรไฟล์คนอื่นได้โดยไม่ทิ้งประวัติ"
+                    : "ปิดอยู่: คนอื่นจะเห็นว่าคุณมาดูโปรไฟล์"}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[
+                  styles.incognitoToggleSwitch,
+                  isIncognito && styles.incognitoToggleSwitchActive,
+                ]}
+                onPress={toggleIncognito}
+              >
+                <Text style={styles.incognitoToggleSwitchText}>
+                  {isIncognito ? "ON" : "OFF"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Dev Mode Sandbox Actions */}
+          <View style={styles.sandboxDevBox}>
+            <Text style={styles.sandboxTitle}>🛠️ SANDBOX ควบคุมการทดสอบ (DEV MODE)</Text>
+            <View style={styles.sandboxBtnRow}>
+              <TouchableOpacity
+                style={styles.sandboxBtn}
+                onPress={() => togglePremiumMock()}
+              >
+                <Text style={styles.sandboxBtnText}>
+                  {isPremium ? "สลับเป็น Free" : "สลับเป็น Premium"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.sandboxBtn}
+                onPress={addMockProfileView}
+              >
+                <Text style={styles.sandboxBtnText}>+ จำลองคนมาดู</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
         {/* Privacy Policy Link */}
         <TouchableOpacity
           style={styles.policyBtn}
@@ -524,6 +662,19 @@ export default function ProfileScreen({ navigation }) {
         visible={showPolicyModal}
         onClose={() => setShowPolicyModal(false)}
         mode="view"
+      />
+
+      <ProfileViewsModal
+        visible={viewsModalVisible}
+        onClose={() => setViewsModalVisible(false)}
+        onSelectUser={(uid) => {
+          navigation.navigate("MatchDetail", { userId: uid });
+        }}
+      />
+
+      <PaywallModal
+        visible={paywallVisible}
+        onClose={() => setPaywallVisible(false)}
       />
     </SafeAreaView>
   );
@@ -858,5 +1009,222 @@ const styles = StyleSheet.create({
     color: colors.destructive,
     fontSize: 14,
     fontWeight: "700",
+  },
+  goldCrownBadge: {
+    position: "absolute",
+    top: -8,
+    right: -4,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFE600",
+    borderWidth: 2,
+    borderColor: colors.ink,
+    borderRadius: 12,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  goldCrownBadgeText: {
+    fontSize: 9,
+    fontWeight: "900",
+    color: colors.ink,
+    marginLeft: 2,
+  },
+  viewsEntryBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 2.5,
+    borderColor: colors.ink,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 20,
+  },
+  viewsEntryBannerGold: {
+    backgroundColor: "#FEF08A",
+  },
+  viewsEntryBannerTeaser: {
+    backgroundColor: "#FFE4E6",
+  },
+  viewsEntryIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: colors.ink,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  iconGold: {
+    backgroundColor: colors.white,
+  },
+  iconRose: {
+    backgroundColor: colors.white,
+  },
+  viewsEntryTextBox: {
+    flex: 1,
+  },
+  viewsEntryTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  viewsEntryTitle: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: colors.ink,
+    marginRight: 8,
+  },
+  viewsCountPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: colors.ink,
+  },
+  pillGold: {
+    backgroundColor: "#FFE600",
+  },
+  pillRose: {
+    backgroundColor: "#FDA4AF",
+  },
+  viewsCountPillText: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: colors.ink,
+  },
+  viewsEntrySubtitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.ink,
+  },
+  membershipCard: {
+    backgroundColor: colors.white,
+    borderWidth: 2.5,
+    borderColor: colors.ink,
+    borderRadius: 14,
+    padding: 16,
+    marginTop: 10,
+    marginBottom: 16,
+  },
+  membershipHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  membershipBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1.5,
+    borderColor: colors.ink,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  membershipBadgeText: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: colors.ink,
+  },
+  upgradeMiniBtn: {
+    backgroundColor: "#FFE600",
+    borderWidth: 2,
+    borderColor: colors.ink,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  upgradeMiniBtnText: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: colors.ink,
+  },
+  activePill: {
+    backgroundColor: "#BBF7D0",
+    borderWidth: 1.5,
+    borderColor: colors.ink,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  activePillText: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: colors.ink,
+  },
+  incognitoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1.5,
+    borderColor: colors.ink,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 14,
+  },
+  incognitoTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: colors.ink,
+    marginBottom: 2,
+  },
+  incognitoSub: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: colors.mutedForeground,
+  },
+  incognitoToggleSwitch: {
+    width: 48,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: colors.ink,
+    backgroundColor: "#E2E8F0",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  incognitoToggleSwitchActive: {
+    backgroundColor: "#67E8F9",
+  },
+  incognitoToggleSwitchText: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: colors.ink,
+  },
+  sandboxDevBox: {
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: colors.ink,
+    borderRadius: 8,
+    padding: 12,
+  },
+  sandboxTitle: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: "#B45309",
+    marginBottom: 8,
+    textAlign: "center",
+    letterSpacing: 0.5,
+  },
+  sandboxBtnRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  sandboxBtn: {
+    flex: 0.48,
+    backgroundColor: colors.white,
+    borderWidth: 1.5,
+    borderColor: colors.ink,
+    borderRadius: 6,
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  sandboxBtnText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: colors.ink,
   },
 });
