@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "./AuthContext";
 import { useData } from "./DataContext";
 import { mockUsers } from "../data/mockUsers";
+import { getSharedInsights } from "../lib/mindInsight";
 
 const PremiumContext = createContext();
 
@@ -10,34 +11,78 @@ const getPremiumKey = (userId) => `@mindclick_is_premium_${userId || "guest"}`;
 const getIncognitoKey = (userId) => `@mindclick_is_incognito_${userId || "guest"}`;
 const getViewsKey = (userId) => `@mindclick_profile_views_${userId || "guest"}`;
 
-// ค่าเริ่มต้นสำหรับประวัติการเข้าชมแบบตัวอย่างเพื่อให้นักพัฒนาเห็นภาพทันที
+// ค่าเริ่มต้นสำหรับประวัติการเข้าชมพร้อม Mind-Insight และ Mutual Spark
 const initialDemoViews = [
   {
     visitorId: "mock_user_1",
-    visitorName: "แพรว นภัสสร",
-    visitorImage: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&auto=format&fit=crop&q=80",
-    matchPercentage: 94,
-    visitedAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(), // 45 นาทีที่แล้ว
+    visitorName: "ฟ้าใส ธนภัทร",
+    visitorFaculty: "คณะวิทยาศาสตร์",
+    visitorImage: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80",
+    matchPercentage: 92,
+    isSpark: true,
+    sharedInsights: [
+      {
+        tag: "🎶 รสนิยมดนตรี & คอนเสิร์ตตรงกัน",
+        color: "#67E8F9",
+        icon: "headset-outline",
+        icebreakers: [
+          "เห็นชอบฟังเพลงและไปคอนเสิร์ตเหมือนกันเลย ช่วงนี้มีศิลปินหรือเพลย์ลิสต์ไหนที่ฟังวนซ้ำๆ บ่อยสุดมั้ย?",
+        ],
+      },
+      {
+        tag: "🌿 สายเที่ยวพักผ่อน & ตะลุยวันหยุด",
+        color: "#86EFAC",
+        icon: "compass-outline",
+        icebreakers: [
+          "เห็นชอบเที่ยวและทำกิจกรรมวันหยุดคล้ายกันเลย ถ้ามีเวลาว่าง 1 วันชอบไปนั่งชิลที่ไหนแถวมหาลัย?",
+        ],
+      },
+    ],
+    visitedAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(), // 35 นาทีที่แล้ว
   },
   {
     visitorId: "mock_user_2",
-    visitorName: "วิน ภัทรดนัย",
-    visitorImage: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80",
-    matchPercentage: 88,
-    visitedAt: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(), // 3 ชั่วโมงที่แล้ว
+    visitorName: "นนท์ วรเมธ",
+    visitorFaculty: "คณะวิศวกรรมศาสตร์",
+    visitorImage: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
+    matchPercentage: 86,
+    isSpark: true,
+    sharedInsights: [
+      {
+        tag: "⚡ ชอบความท้าทาย & ประสบการณ์ใหม่",
+        color: "#FDE047",
+        icon: "sparkles-outline",
+        icebreakers: [
+          "เห็นค่านิยมชอบลองอะไรใหม่ๆ ตรงกันเลย ช่วงนี้กำลังอินกับกิจกรรมหรือโปรเจกต์อะไรอยู่เหรอ?",
+        ],
+      },
+    ],
+    visitedAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 ชั่วโมงที่แล้ว
   },
   {
     visitorId: "mock_user_3",
-    visitorName: "มีน ธัญญ่า",
+    visitorName: "แพรว ชนิตา",
+    visitorFaculty: "คณะสถาปัตยกรรมศาสตร์",
     visitorImage: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&auto=format&fit=crop&q=80",
-    matchPercentage: 82,
-    visitedAt: new Date(Date.now() - 1000 * 60 * 60 * 26).toISOString(), // เมื่อวานนี้
+    matchPercentage: 79,
+    isSpark: false,
+    sharedInsights: [
+      {
+        tag: "💬 สไตล์การเปิดบทสนทนาที่เข้ากันได้",
+        color: "#F472B6",
+        icon: "chatbubbles-outline",
+        icebreakers: [
+          "เห็นสไตล์การพูดคุยและสร้างเพื่อนใหม่คล้ายกันมาก เลยอยากแวะมาทักทาย ทำความรู้จักกันไว้!",
+        ],
+      },
+    ],
+    visitedAt: new Date(Date.now() - 1000 * 60 * 60 * 22).toISOString(), // เมื่อวานนี้
   },
 ];
 
 export function PremiumProvider({ children }) {
   const { user } = useAuth();
-  const { profile } = useData();
+  const { profile, quizResponse, getUserById } = useData();
 
   const [isPremium, setIsPremium] = useState(false);
   const [isIncognito, setIsIncognito] = useState(false);
@@ -70,17 +115,15 @@ export function PremiumProvider({ children }) {
           if (viewsVal) {
             try {
               const parsed = JSON.parse(viewsVal);
-              // กรองเฉพาะประวัติภายใน 30 วันย้อนหลัง (Rolling 30-Day Window)
               const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
               const filtered = (parsed || []).filter(
                 (v) => new Date(v.visitedAt).getTime() >= thirtyDaysAgo
               );
-              setProfileViews(filtered);
+              setProfileViews(filtered.length > 0 ? filtered : initialDemoViews);
             } catch {
               setProfileViews(initialDemoViews);
             }
           } else {
-            // ใส่ข้อมูลจำลองเริ่มต้นเพื่อให้เห็นฟีเจอร์ชัดเจน
             setProfileViews(initialDemoViews);
             AsyncStorage.setItem(getViewsKey(user.id), JSON.stringify(initialDemoViews));
           }
@@ -138,19 +181,29 @@ export function PremiumProvider({ children }) {
         // ลบรายการเดิมของผู้ใช้คนนี้ออกก่อน เพื่ออัปเดต timestamp ใหม่ล่าสุด (De-duplication)
         list = list.filter((v) => v.visitorId !== user.id);
 
+        const targetUserObj = getUserById ? getUserById(targetUserId) : null;
+        const sharedInsights = getSharedInsights(
+          quizResponse?.categoryAnswers,
+          targetUserObj?.categoryAnswers
+        );
+
+        const matchPct = Math.floor(Math.random() * 20) + 80;
+
         // ใส่รายการผู้เข้าชมใหม่ไว้บนสุด
         const newEntry = {
           visitorId: user.id,
           visitorName: profile?.name || user.name || "เพื่อนร่วมแอป",
+          visitorFaculty: profile?.faculty || "คณะวิศวกรรมศาสตร์",
           visitorImage: profile?.image || user.image || null,
-          matchPercentage: Math.floor(Math.random() * 25) + 75, // 75 - 99%
+          matchPercentage: matchPct,
+          isSpark: matchPct >= 80,
+          sharedInsights,
           visitedAt: new Date().toISOString(),
         };
 
-        const updatedList = [newEntry, ...list].slice(0, 50); // บันทึกสูงสุด 50 คนล่าสุด
+        const updatedList = [newEntry, ...list].slice(0, 50);
         await AsyncStorage.setItem(targetViewsKey, JSON.stringify(updatedList));
 
-        // หากกำลังเข้าดูโปรไฟล์ตัวเองในกรณีทดสอบ ให้อัปเดต state ทันที
         if (targetUserId === user.id) {
           setProfileViews(updatedList);
         }
@@ -158,25 +211,34 @@ export function PremiumProvider({ children }) {
         console.warn("Error recording profile view:", err);
       }
     },
-    [user, profile, isIncognito]
+    [user, profile, isIncognito, quizResponse, getUserById]
   );
 
   // เพิ่มผู้เข้าชมแบบ Mock เพื่อความสะดวกในการทดสอบฟีเจอร์
   const addMockProfileView = useCallback(async () => {
     if (!user?.id) return;
     const randomUser = mockUsers[Math.floor(Math.random() * mockUsers.length)];
+    const sharedInsights = getSharedInsights(
+      quizResponse?.categoryAnswers,
+      randomUser.categoryAnswers
+    );
+    const matchPct = Math.floor(Math.random() * 20) + 80;
+
     const mockEntry = {
       visitorId: randomUser.id + "_" + Date.now(),
       visitorName: randomUser.name,
+      visitorFaculty: randomUser.faculty || "คณะวิทยาศาสตร์",
       visitorImage: randomUser.image,
-      matchPercentage: Math.floor(Math.random() * 20) + 80,
+      matchPercentage: matchPct,
+      isSpark: matchPct >= 80,
+      sharedInsights,
       visitedAt: new Date().toISOString(),
     };
 
     const updated = [mockEntry, ...profileViews];
     setProfileViews(updated);
     await AsyncStorage.setItem(getViewsKey(user.id), JSON.stringify(updated));
-  }, [user?.id, profileViews]);
+  }, [user?.id, profileViews, quizResponse]);
 
   // ล้างประวัติเพื่อทดสอบ
   const clearProfileViews = useCallback(async () => {
@@ -186,6 +248,10 @@ export function PremiumProvider({ children }) {
   }, [user?.id]);
 
   const viewCount = profileViews.length;
+  // ตรวจสอบว่ามีผู้เข้าชมที่เป็น Mutual Spark (> 80%) หรือไม่
+  const sparkVisitors = profileViews.filter((v) => v.isSpark || v.matchPercentage >= 80);
+  const hasSparkVisitor = sparkVisitors.length > 0;
+  const topSparkVisitor = sparkVisitors[0] || null;
 
   return (
     <PremiumContext.Provider
@@ -194,6 +260,9 @@ export function PremiumProvider({ children }) {
         isIncognito,
         profileViews,
         viewCount,
+        hasSparkVisitor,
+        topSparkVisitor,
+        sparkVisitorsCount: sparkVisitors.length,
         isLoadingPremium,
         togglePremiumMock,
         toggleIncognito,

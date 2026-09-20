@@ -24,6 +24,7 @@ import GalleryViewer from "../components/GalleryViewer";
 import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
 import ProfileViewsModal from "../components/ProfileViewsModal";
 import PaywallModal from "../components/PaywallModal";
+import { CAMPUS_FACULTIES } from "../lib/mindInsight";
 
 const genderOptions = [
   { value: "male", label: "ชาย", icon: "male" },
@@ -92,6 +93,7 @@ export default function ProfileScreen({ navigation }) {
 
   const [displayName, setDisplayName] = useState(profile?.name || user?.name || "");
   const [gender, setGender] = useState(profile.gender || "prefer_not_to_say");
+  const [faculty, setFaculty] = useState(profile.faculty || "");
   const [bio, setBio] = useState(profile.bio || "");
   const [avatarUri, setAvatarUri] = useState(profile.image || user?.image || null);
   const [socialLinks, setSocialLinks] = useState({
@@ -113,10 +115,11 @@ export default function ProfileScreen({ navigation }) {
     }
 
     // ทำงานเฉพาะเมื่อยังไม่เคยโหลดค่าเริ่มต้น หรือเมื่อสลับผู้ใช้
-    if (!isInitialLoadedRef.current && (profile?.name || profile?.bio || profile?.image || profile?.email || user?.name)) {
+    if (!isInitialLoadedRef.current && (profile?.name || profile?.bio || profile?.image || profile?.email || profile?.faculty || user?.name)) {
       isInitialLoadedRef.current = true;
       setDisplayName(profile?.name || user?.name || "");
       setGender(profile?.gender || "prefer_not_to_say");
+      setFaculty(profile?.faculty || "");
       setBio(profile?.bio || "");
       setAvatarUri(profile?.image || user?.image || null);
       setSocialLinks({
@@ -182,6 +185,7 @@ export default function ProfileScreen({ navigation }) {
           image: permanentUri,
           name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
           gender,
+          faculty,
           bio,
           socialLinks,
         });
@@ -235,6 +239,7 @@ export default function ProfileScreen({ navigation }) {
         await addGalleryImage(permanentUri, {
           name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
           gender,
+          faculty,
           bio,
           socialLinks,
         });
@@ -253,6 +258,7 @@ export default function ProfileScreen({ navigation }) {
     await updateProfile({
       name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
       gender,
+      faculty,
       bio,
       socialLinks,
       image: avatarUri || profile?.image || user?.image || null,
@@ -412,6 +418,43 @@ export default function ProfileScreen({ navigation }) {
                     ]}
                   >
                     {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Form: Faculty (Campus Matching & Cross-Bubble) */}
+        <View style={styles.formCard}>
+          <View style={styles.sectionHeaderRow}>
+            <Ionicons name="school-outline" size={16} color={colors.primary} />
+            <Text style={styles.sectionTitle}>คณะ / สาขาวิชา (Faculty)</Text>
+          </View>
+          <Text style={styles.fieldHelperText}>
+            ช่วยทลาย Social Bubble และค้นหาเพื่อนต่างคณะที่เคมีความคิดตรงกัน
+          </Text>
+
+          <View style={styles.facultyChipsContainer}>
+            {CAMPUS_FACULTIES.map((fac) => {
+              const isSelected = faculty === fac;
+              return (
+                <TouchableOpacity
+                  key={fac}
+                  style={[
+                    styles.facultyChip,
+                    isSelected && styles.facultyChipSelected,
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={() => setFaculty(isSelected ? "" : fac)}
+                >
+                  <Text
+                    style={[
+                      styles.facultyChipText,
+                      isSelected && styles.facultyChipTextSelected,
+                    ]}
+                  >
+                    {fac}
                   </Text>
                 </TouchableOpacity>
               );
@@ -1225,6 +1268,40 @@ const styles = StyleSheet.create({
   sandboxBtnText: {
     fontSize: 11,
     fontWeight: "800",
+    color: colors.ink,
+  },
+  fieldHelperText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: colors.mutedForeground,
+    marginBottom: 12,
+    lineHeight: 16,
+  },
+  facultyChipsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  facultyChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: colors.ink,
+    backgroundColor: colors.surface,
+  },
+  facultyChipSelected: {
+    backgroundColor: "#FFE600",
+    borderWidth: 2,
+    borderColor: colors.ink,
+  },
+  facultyChipText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.ink,
+  },
+  facultyChipTextSelected: {
+    fontWeight: "900",
     color: colors.ink,
   },
 });

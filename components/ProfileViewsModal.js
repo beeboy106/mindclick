@@ -7,11 +7,13 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, shadows } from "../lib/theme";
 import { usePremium } from "../context/PremiumContext";
+import { getRandomIcebreaker } from "../lib/mindInsight";
 import PaywallModal from "./PaywallModal";
 
 function formatTimeAgo(isoString) {
@@ -34,12 +36,19 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
     isIncognito,
     profileViews,
     viewCount,
+    hasSparkVisitor,
+    topSparkVisitor,
+    sparkVisitorsCount,
     togglePremiumMock,
     toggleIncognito,
     addMockProfileView,
   } = usePremium();
 
   const [paywallVisible, setPaywallVisible] = useState(false);
+  const [icebreakerModalVisible, setIcebreakerModalVisible] = useState(false);
+  const [activeVisitor, setActiveVisitor] = useState(null);
+  const [icebreakerText, setIcebreakerText] = useState("");
+  const [wavedUsers, setWavedUsers] = useState({});
 
   const handleOpenVisitor = (visitor) => {
     if (!isPremium) {
@@ -50,6 +59,20 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
       onClose();
       onSelectUser(visitor.visitorId);
     }
+  };
+
+  const handleQuickWave = (visitor) => {
+    if (!isPremium) {
+      setPaywallVisible(true);
+      return;
+    }
+
+    const topic = visitor.sharedInsights?.[0];
+    const starter = getRandomIcebreaker(topic, visitor.visitorName);
+    setActiveVisitor(visitor);
+    setIcebreakerText(starter);
+    setWavedUsers((prev) => ({ ...prev, [visitor.visitorId]: true }));
+    setIcebreakerModalVisible(true);
   };
 
   return (
@@ -93,6 +116,41 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
+            {/* Mutual Spark Teaser Banner for Free Users */}
+            {!isPremium && hasSparkVisitor && (
+              <TouchableOpacity
+                style={styles.sparkTeaserBanner}
+                activeOpacity={0.88}
+                onPress={() => setPaywallVisible(true)}
+              >
+                <View style={styles.sparkFlameCircle}>
+                  <Ionicons name="flame" size={26} color="#FFF" />
+                </View>
+                <View style={styles.sparkTextBox}>
+                  <View style={styles.sparkHeaderRow}>
+                    <Text style={styles.sparkEyebrow}>🔥 MUTUAL SPARK DETECTED!</Text>
+                  </View>
+                  <Text style={styles.sparkTitle}>
+                    มีคนเคมีตรงกับคุณถึง {topSparkVisitor?.matchPercentage}% แอบมาส่อง!
+                  </Text>
+                  <Text style={styles.sparkSubtitle}>
+                    ปลดล็อก Mindclick Premium เพื่อดูตัวจริงและทักทายกลับทันที
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.ink} />
+              </TouchableOpacity>
+            )}
+
+            {/* Mutual Spark Notice for Premium Users */}
+            {isPremium && hasSparkVisitor && (
+              <View style={styles.sparkActiveBanner}>
+                <Ionicons name="flame" size={22} color="#E11D48" style={{ marginRight: 8 }} />
+                <Text style={styles.sparkActiveText}>
+                  🔥 พบสัญญาณ <Text style={{ fontWeight: "900" }}>Mutual Spark ({sparkVisitorsCount} คน)</Text> ที่เคมีเข้ากันได้เกิน 80%!
+                </Text>
+              </View>
+            )}
+
             {/* Counter Summary Banner */}
             <View
               style={[
@@ -148,9 +206,9 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
               </View>
             )}
 
-            {/* List of Profile Views */}
+            {/* Section Title */}
             <Text style={styles.sectionHeader}>
-              {isPremium ? "รายชื่อผู้เข้าชมล่าสุด (30 วัน)" : "ตัวอย่างผู้ที่แวะมาส่องคุณ"}
+              {isPremium ? "รายชื่อผู้เข้าชมล่าสุด (พร้อม MIND-INSIGHT)" : "ตัวอย่างผู้ที่แวะมาส่องคุณ"}
             </Text>
 
             {profileViews.length === 0 ? (
@@ -164,75 +222,166 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
             ) : (
               <View style={styles.visitorsList}>
                 {profileViews.map((visitor, index) => {
+                  const isSpark = visitor.isSpark || visitor.matchPercentage >= 80;
+                  const isWaved = wavedUsers[visitor.visitorId];
+
                   return (
                     <TouchableOpacity
                       key={visitor.visitorId || index}
                       style={[
                         styles.visitorCard,
+                        isSpark && isPremium && styles.visitorCardSpark,
                         !isPremium && styles.visitorCardBlurred,
                       ]}
-                      activeOpacity={0.85}
+                      activeOpacity={0.88}
                       onPress={() => handleOpenVisitor(visitor)}
                     >
-                      {/* Avatar */}
-                      <View style={styles.avatarBox}>
-                        {isPremium && visitor.visitorImage ? (
-                          <Image
-                            source={{ uri: visitor.visitorImage }}
-                            style={styles.visitorAvatar}
-                          />
-                        ) : isPremium ? (
-                          <View style={styles.visitorAvatarInitial}>
-                            <Text style={styles.visitorAvatarInitialText}>
-                              {(visitor.visitorName || "U").charAt(0).toUpperCase()}
+                      {/* Top Row: Avatar + Name/Redacted + Match Badge */}
+                      <View style={styles.cardTopRow}>
+                        {/* Avatar */}
+                        <View style={styles.avatarBox}>
+                          {isPremium && visitor.visitorImage ? (
+                            <Image
+                              source={{ uri: visitor.visitorImage }}
+                              style={styles.visitorAvatar}
+                            />
+                          ) : isPremium ? (
+                            <View style={styles.visitorAvatarInitial}>
+                              <Text style={styles.visitorAvatarInitialText}>
+                                {(visitor.visitorName || "U").charAt(0).toUpperCase()}
+                              </Text>
+                            </View>
+                          ) : (
+                            <View style={styles.teaserAvatar}>
+                              <Ionicons name="lock-closed" size={18} color={colors.ink} />
+                            </View>
+                          )}
+                          {isSpark && (
+                            <View style={styles.flameAvatarBadge}>
+                              <Ionicons name="flame" size={12} color="#FFF" />
+                            </View>
+                          )}
+                        </View>
+
+                        {/* Info Box */}
+                        <View style={styles.visitorInfo}>
+                          {isPremium ? (
+                            <>
+                              <View style={styles.nameRow}>
+                                <Text style={styles.visitorName} numberOfLines={1}>
+                                  {visitor.visitorName}
+                                </Text>
+                                {isSpark && (
+                                  <View style={styles.sparkBadgePill}>
+                                    <Text style={styles.sparkBadgePillText}>SPARK 🔥</Text>
+                                  </View>
+                                )}
+                              </View>
+                              {/* Faculty Chip */}
+                              <View style={styles.facultyPill}>
+                                <Ionicons name="school" size={11} color={colors.ink} style={{ marginRight: 4 }} />
+                                <Text style={styles.facultyPillText}>
+                                  {visitor.visitorFaculty || "คณะวิทยาศาสตร์"}
+                                </Text>
+                              </View>
+                            </>
+                          ) : (
+                            <>
+                              <View style={styles.redactedBar} />
+                              {/* Free Teaser Faculty */}
+                              <View style={styles.facultyPill}>
+                                <Ionicons name="school" size={11} color={colors.ink} style={{ marginRight: 4 }} />
+                                <Text style={styles.facultyPillText}>
+                                  เพื่อนจาก{visitor.visitorFaculty || "ต่างคณะ"}
+                                </Text>
+                              </View>
+                            </>
+                          )}
+                        </View>
+
+                        {/* Match & Time */}
+                        <View style={styles.matchColumn}>
+                          <View
+                            style={[
+                              styles.matchPill,
+                              isSpark ? styles.matchPillSpark : styles.matchPillNormal,
+                            ]}
+                          >
+                            <Ionicons
+                              name={isSpark ? "flame" : "heart"}
+                              size={12}
+                              color={isSpark ? "#E11D48" : "#E11D48"}
+                              style={{ marginRight: 4 }}
+                            />
+                            <Text style={styles.matchPillText}>
+                              {visitor.matchPercentage}%
                             </Text>
                           </View>
-                        ) : (
-                          // Teaser Blurred Avatar
-                          <View style={styles.teaserAvatar}>
-                            <Ionicons name="lock-closed" size={18} color={colors.ink} />
-                          </View>
-                        )}
+                          <Text style={styles.visitorTime}>
+                            {formatTimeAgo(visitor.visitedAt)}
+                          </Text>
+                        </View>
                       </View>
 
-                      {/* Info Box */}
-                      <View style={styles.visitorInfo}>
+                      {/* Middle Row: Why They Clicked (Mind-Insight) */}
+                      <View style={styles.mindInsightRow}>
                         {isPremium ? (
                           <>
-                            <Text style={styles.visitorName} numberOfLines={1}>
-                              {visitor.visitorName}
-                            </Text>
-                            <Text style={styles.visitorTime}>
-                              {formatTimeAgo(visitor.visitedAt)}
-                            </Text>
+                            <Text style={styles.mindInsightLabel}>💡 จุดร่วมที่ตอบตรงกัน:</Text>
+                            <View style={styles.insightsList}>
+                              {(visitor.sharedInsights || []).map((ins, i) => (
+                                <View
+                                  key={i}
+                                  style={[
+                                    styles.insightChip,
+                                    { backgroundColor: ins.color || "#FEF08A" },
+                                  ]}
+                                >
+                                  <Ionicons
+                                    name={ins.icon || "sparkles"}
+                                    size={13}
+                                    color={colors.ink}
+                                    style={{ marginRight: 4 }}
+                                  />
+                                  <Text style={styles.insightChipText}>{ins.tag}</Text>
+                                </View>
+                              ))}
+                            </View>
                           </>
                         ) : (
-                          <>
-                            {/* Blurred Redacted Name Bar */}
-                            <View style={styles.redactedBar} />
-                            <Text style={styles.visitorTime}>
-                              {formatTimeAgo(visitor.visitedAt)}
+                          // Teaser for Free Users
+                          <View style={styles.freeInsightTeaser}>
+                            <Ionicons name="sparkles" size={13} color="#B45309" style={{ marginRight: 4 }} />
+                            <Text style={styles.freeInsightTeaserText}>
+                              สนใจคุณเพราะ: ตอบคำถามควิซตรงกันในหมวดไลฟ์สไตล์ 🔒
                             </Text>
-                          </>
+                          </View>
                         )}
                       </View>
 
-                      {/* Match Badge */}
-                      <View style={styles.matchPill}>
-                        <Ionicons name="heart" size={12} color="#E11D48" style={{ marginRight: 4 }} />
-                        <Text style={styles.matchPillText}>
-                          {visitor.matchPercentage}%
-                        </Text>
-                      </View>
-
-                      {/* Action Arrow / Lock Icon */}
-                      <View style={styles.actionIconBox}>
-                        <Ionicons
-                          name={isPremium ? "chevron-forward" : "lock-closed"}
-                          size={18}
-                          color={colors.ink}
-                        />
-                      </View>
+                      {/* Bottom Action Row if Spark & Premium */}
+                      {isPremium && isSpark && (
+                        <View style={styles.cardActionsRow}>
+                          <TouchableOpacity
+                            style={[
+                              styles.waveBtn,
+                              isWaved && styles.waveBtnActive,
+                            ]}
+                            activeOpacity={0.82}
+                            onPress={() => handleQuickWave(visitor)}
+                          >
+                            <Ionicons
+                              name={isWaved ? "checkmark-circle" : "hand-left"}
+                              size={15}
+                              color={colors.ink}
+                              style={{ marginRight: 6 }}
+                            />
+                            <Text style={styles.waveBtnText}>
+                              {isWaved ? "ส่งทักทายแล้ว (เปิดดูหัวข้อคุย)" : "👋 ส่งสัญญาณทักทาย (Quick Wave)"}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
                     </TouchableOpacity>
                   );
                 })}
@@ -249,7 +398,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
                   </Text>
                 </View>
                 <Text style={styles.teaserLockSubtitle}>
-                  ปลดล็อก Mindclick Premium เพื่อดูรูปโปรไฟล์จริง ชื่อ และทักทายกลับได้ทันทีก่อนหมด 30 วัน
+                  ปลดล็อก Mindclick Premium เพื่อดูรูปโปรไฟล์จริง ชื่อ คณะที่เรียน และจุดร่วมที่ตอบตรงกันทั้งหมด
                 </Text>
                 <TouchableOpacity
                   style={styles.unlockBtn}
@@ -280,7 +429,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
                   style={styles.devBtn}
                   onPress={addMockProfileView}
                 >
-                  <Text style={styles.devBtnText}>+ เพิ่ม 1 คนส่อง</Text>
+                  <Text style={styles.devBtnText}>+ จำลองคนส่อง (Mind-Insight)</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -293,6 +442,67 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
         visible={paywallVisible}
         onClose={() => setPaywallVisible(false)}
       />
+
+      {/* Icebreaker Starter Modal */}
+      <Modal
+        visible={icebreakerModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIcebreakerModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.icebreakerCard}>
+            <View style={styles.icebreakerHeader}>
+              <View style={styles.waveIconCircle}>
+                <Text style={{ fontSize: 24 }}>👋</Text>
+              </View>
+              <Text style={styles.icebreakerTitle}>ส่งสัญญาณทักทายแล้ว!</Text>
+              <Text style={styles.icebreakerSub}>
+                เคมีตรงกันขนาดนี้ เริ่มต้นชวนคุยด้วยประเด็นนี้ได้เลย:
+              </Text>
+            </View>
+
+            {/* Conversation Starter Bubble */}
+            <View style={styles.quoteBubble}>
+              <Ionicons name="chatbubble-ellipses" size={20} color={colors.primary} style={{ marginBottom: 6 }} />
+              <Text style={styles.quoteText}>"{icebreakerText}"</Text>
+            </View>
+
+            {/* Buttons */}
+            <TouchableOpacity
+              style={styles.copyStarterBtn}
+              activeOpacity={0.85}
+              onPress={() => {
+                Alert.alert("คัดลอกสำเร็จ", "นำประโยคนี้ไปทักทายในแชทหรือ Instagram/Line ได้เลย!");
+              }}
+            >
+              <Ionicons name="copy-outline" size={16} color={colors.ink} style={{ marginRight: 6 }} />
+              <Text style={styles.copyStarterBtnText}>คัดลอกประโยคทักทาย</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.viewProfileBtn}
+              activeOpacity={0.85}
+              onPress={() => {
+                setIcebreakerModalVisible(false);
+                if (activeVisitor?.visitorId) {
+                  handleOpenVisitor(activeVisitor);
+                }
+              }}
+            >
+              <Ionicons name="person-outline" size={16} color={colors.white} style={{ marginRight: 6 }} />
+              <Text style={styles.viewProfileBtnText}>เปิดดูโปรไฟล์และช่องทางติดต่อ</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.closeIcebreakerBtn}
+              onPress={() => setIcebreakerModalVisible(false)}
+            >
+              <Text style={styles.closeIcebreakerBtnText}>ปิดหน้าต่าง</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -361,6 +571,69 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     paddingBottom: 40,
+  },
+  sparkTeaserBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFE4E6",
+    borderWidth: 2.5,
+    borderColor: "#E11D48",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 16,
+    ...shadows.card,
+  },
+  sparkFlameCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#E11D48",
+    borderWidth: 2,
+    borderColor: colors.ink,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    ...shadows.button,
+  },
+  sparkTextBox: {
+    flex: 1,
+  },
+  sparkHeaderRow: {
+    marginBottom: 2,
+  },
+  sparkEyebrow: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: "#E11D48",
+    letterSpacing: 0.5,
+  },
+  sparkTitle: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: colors.ink,
+    marginBottom: 2,
+  },
+  sparkSubtitle: {
+    fontSize: 11,
+    fontWeight: "500",
+    color: colors.mutedForeground,
+  },
+  sparkActiveBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF1F2",
+    borderWidth: 2,
+    borderColor: "#E11D48",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 16,
+    ...shadows.button,
+  },
+  sparkActiveText: {
+    fontSize: 12,
+    color: colors.ink,
+    flex: 1,
   },
   counterCard: {
     flexDirection: "row",
@@ -477,20 +750,30 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   visitorCard: {
-    flexDirection: "row",
-    alignItems: "center",
     backgroundColor: colors.white,
     borderWidth: 2.5,
     borderColor: colors.ink,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
     ...shadows.button,
+  },
+  visitorCardSpark: {
+    backgroundColor: "#FFFBEB",
+    borderColor: "#E11D48",
+    borderWidth: 2.5,
+    ...shadows.card,
   },
   visitorCardBlurred: {
     backgroundColor: "#FAF5FF",
   },
+  cardTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
   avatarBox: {
+    position: "relative",
     marginRight: 12,
   },
   visitorAvatar: {
@@ -525,48 +808,162 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  flameAvatarBadge: {
+    position: "absolute",
+    bottom: -3,
+    right: -3,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#E11D48",
+    borderWidth: 1.5,
+    borderColor: colors.ink,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   visitorInfo: {
     flex: 1,
+  },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
   },
   visitorName: {
     fontSize: 15,
     fontWeight: "800",
     color: colors.ink,
-    marginBottom: 2,
+    marginRight: 6,
+  },
+  sparkBadgePill: {
+    backgroundColor: "#FFE4E6",
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#E11D48",
+  },
+  sparkBadgePillText: {
+    fontSize: 9,
+    fontWeight: "900",
+    color: "#E11D48",
+  },
+  facultyPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: "#F1F5F9",
+    borderWidth: 1,
+    borderColor: colors.ink,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginTop: 2,
+  },
+  facultyPillText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: colors.ink,
   },
   redactedBar: {
-    width: 100,
-    height: 14,
+    width: 90,
+    height: 13,
     backgroundColor: "#CBD5E1",
     borderRadius: 4,
     marginBottom: 4,
   },
-  visitorTime: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: colors.mutedForeground,
+  matchColumn: {
+    alignItems: "flex-end",
   },
   matchPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFE4E6",
     borderWidth: 1.5,
     borderColor: colors.ink,
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    marginRight: 8,
+    marginBottom: 4,
+  },
+  matchPillNormal: {
+    backgroundColor: "#FFE4E6",
+  },
+  matchPillSpark: {
+    backgroundColor: "#FECDD3",
+    borderWidth: 2,
   },
   matchPillText: {
     fontSize: 11,
     fontWeight: "900",
     color: colors.ink,
   },
-  actionIconBox: {
-    width: 28,
-    height: 28,
+  visitorTime: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: colors.mutedForeground,
+  },
+  mindInsightRow: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1.5,
+    borderColor: colors.ink,
+    borderRadius: 8,
+    padding: 8,
+  },
+  mindInsightLabel: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: colors.mutedForeground,
+    marginBottom: 6,
+  },
+  insightsList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  insightChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1.2,
+    borderColor: colors.ink,
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  insightChipText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: colors.ink,
+  },
+  freeInsightTeaser: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  freeInsightTeaserText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#B45309",
+  },
+  cardActionsRow: {
+    marginTop: 10,
+  },
+  waveBtn: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "#FFE600",
+    borderWidth: 2,
+    borderColor: colors.ink,
+    borderRadius: 8,
+    paddingVertical: 8,
+    ...shadows.button,
+  },
+  waveBtnActive: {
+    backgroundColor: "#86EFAC",
+  },
+  waveBtnText: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: colors.ink,
   },
   teaserLockBox: {
     backgroundColor: "#FFFBEB",
@@ -645,5 +1042,107 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     color: colors.ink,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  icebreakerCard: {
+    width: "100%",
+    backgroundColor: colors.white,
+    borderRadius: 16,
+    borderWidth: 3,
+    borderColor: colors.ink,
+    padding: 20,
+    ...shadows.card,
+  },
+  icebreakerHeader: {
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  waveIconCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: "#FEF08A",
+    borderWidth: 2,
+    borderColor: colors.ink,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+    ...shadows.button,
+  },
+  icebreakerTitle: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: colors.ink,
+    marginBottom: 4,
+  },
+  icebreakerSub: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.mutedForeground,
+    textAlign: "center",
+  },
+  quoteBubble: {
+    backgroundColor: "#F0FDF4",
+    borderWidth: 2,
+    borderColor: colors.ink,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  quoteText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.ink,
+    lineHeight: 20,
+    fontStyle: "italic",
+  },
+  copyStarterBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFE600",
+    borderWidth: 2,
+    borderColor: colors.ink,
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginBottom: 10,
+    ...shadows.button,
+  },
+  copyStarterBtnText: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: colors.ink,
+  },
+  viewProfileBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: colors.ink,
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginBottom: 10,
+    ...shadows.button,
+  },
+  viewProfileBtnText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.white,
+  },
+  closeIcebreakerBtn: {
+    alignItems: "center",
+    paddingVertical: 6,
+  },
+  closeIcebreakerBtnText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.mutedForeground,
   },
 });

@@ -22,6 +22,7 @@ const defaultProfile = {
   name: "",
   email: "",
   gender: "prefer_not_to_say",
+  faculty: "",
   bio: "",
   socialLinks: {
     instagram: "",
@@ -142,6 +143,7 @@ export function DataProvider({ children }) {
               email: cloudUser.email || user.email || "",
               image: cloudUser.image || user.image || null,
               gender: cloudUser.gender || "prefer_not_to_say",
+              faculty: cloudUser.faculty || "",
               bio: cloudUser.bio || "",
               socialLinks: {
                 ...defaultProfile.socialLinks,
@@ -285,6 +287,7 @@ export function DataProvider({ children }) {
           email: updated.email,
           image: updated.image || user.image || null,
           gender: updated.gender,
+          faculty: updated.faculty || "",
           bio: updated.bio,
           socialLinks: updated.socialLinks,
           galleryImages: updated.galleryImages,

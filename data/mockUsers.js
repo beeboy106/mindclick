@@ -4,6 +4,7 @@ export const mockUsers = [
   {
     id: "user_mock_1",
     name: "ฟ้าใส ธนภัทร",
+    faculty: "คณะวิทยาศาสตร์",
     image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80",
     gender: "female",
     bio: "ชอบฟังเพลงยุค 90s ดื่มกาแฟดริป และเที่ยวธรรมชาติวันหยุด วันว่างๆ ชอบอ่านหนังสือพัฒนาตัวเอง ☕🌿",
@@ -44,6 +45,7 @@ export const mockUsers = [
   {
     id: "user_mock_2",
     name: "นนท์ วรเมธ",
+    faculty: "คณะวิศวกรรมศาสตร์",
     image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
     gender: "male",
     bio: "Software Engineer สายกิจกรรม ชอบวิ่งมาราธอน แคมป์ปิ้ง และเล่นบอร์ดเกม สนใจเรื่อง Tech & Startup",
@@ -83,6 +85,7 @@ export const mockUsers = [
   {
     id: "user_mock_3",
     name: "แพรว ชนิตา",
+    faculty: "คณะสถาปัตยกรรมศาสตร์",
     image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&auto=format&fit=crop&q=80",
     gender: "female",
     bio: "Graphic Designer & Cat lover 🐱 ชื่นชอบศิลปะ งานคราฟต์ และนิทรรศการ เข้ากับคนง่ายแต่มีมุม Introvert",
@@ -122,6 +125,7 @@ export const mockUsers = [
   {
     id: "user_mock_4",
     name: "มิกซ์ กานต์",
+    faculty: "คณะศิลปศาสตร์ / มนุษยศาสตร์",
     image: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80",
     gender: "male",
     bio: "นักดนตรีอิสระ ชอบเล่นกีตาร์ ท่องเที่ยวแบ็คแพ็ค และค้นพบเพลงใหม่ๆ ใช้ชีวิตเรียบง่าย มองโลกในแง่ดี 🎸",
@@ -159,6 +163,7 @@ export const mockUsers = [
   {
     id: "user_mock_5",
     name: "รินลดา วงศ์สุวรรณ",
+    faculty: "คณะบริหารธุรกิจ / บัญชี",
     image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&auto=format&fit=crop&q=80",
     gender: "female",
     bio: "นักการตลาดดิจิทัล ชอบกินของอร่อย ทำขนมเบเกอรี่ และดูซีรีส์เกาหลี คุยสนุก เป็นมิตรกับทุกคน 🧁🍰",

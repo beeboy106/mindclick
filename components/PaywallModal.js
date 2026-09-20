@@ -44,20 +44,20 @@ const PERKS = [
   {
     icon: "eye-outline",
     color: "#FFE600",
-    title: "Profile View History",
-    desc: "ดูรายชื่อและรูปโปรไฟล์ชัดเจนของทุกคนที่แวะมาส่องคุณย้อนหลัง 30 วัน",
+    title: "Profile Visitors with Mind-Insight",
+    desc: "ดูชื่อ รูปโปรไฟล์ คณะ และแท็กจุดร่วมความคิด 'Why They Clicked' ที่ตอบตรงกัน",
+  },
+  {
+    icon: "flame-outline",
+    color: "#FDA4AF",
+    title: "Mutual Spark (>80%) & Quick Wave",
+    desc: "แจ้งเตือนพิเศษเมื่อมีคนเคมีตรงกันเกิน 80% มาดู พร้อมแจกประโยคเปิดบทสนทนา (Icebreaker)",
   },
   {
     icon: "glasses-outline",
     color: "#67E8F9",
     title: "Incognito Mode (โหมดซ่อนตัว)",
-    desc: "เปิดใช้งานเพื่อแอบดูโปรไฟล์คนอื่นได้แบบไร้ร่องรอย ไม่ทิ้งประวัติ",
-  },
-  {
-    icon: "filter-circle-outline",
-    color: "#F472B6",
-    title: "Advanced Match Filters",
-    desc: "กรองคู่แมตช์ตามช่วงความเข้ากันได้ และหมวดหมู่ไลฟ์สไตล์เฉพาะเจาะจง",
+    desc: "เปิดใช้งานเพื่อแอบดูโปรไฟล์คนอื่นได้แบบไร้ร่องรอย ไม่ทิ้งประวัติการเข้าชม",
   },
   {
     icon: "ribbon-outline",
