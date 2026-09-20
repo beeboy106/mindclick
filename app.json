@@ -21,7 +21,6 @@
       "bundleIdentifier": "com.mindclick.app"
     },
     "plugins": [
-      "expo-asset",
       "expo-dev-client",
       "@react-native-google-signin/google-signin",
       [
