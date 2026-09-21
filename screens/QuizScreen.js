@@ -283,7 +283,7 @@ export default function QuizScreen({ route, navigation }) {
                 style={styles.completePrimaryBtn}
                 activeOpacity={0.85}
                 onPress={() => {
-                  navigation.navigate("ResultsTab");
+                  navigation.navigate("Main", { screen: "ResultsTab" });
                 }}
               >
                 <Text style={styles.completePrimaryBtnText}>

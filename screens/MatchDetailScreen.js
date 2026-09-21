@@ -8,12 +8,14 @@ import {
   Image,
   StatusBar,
   Linking,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, categoryColors, shadows } from "../lib/theme";
 import { categories } from "../data/questions";
 import { calculateCategoryMatch } from "../lib/getMatch";
+import { useAuth } from "../context/AuthContext";
 import { useData } from "../context/DataContext";
 import { usePremium } from "../context/PremiumContext";
 import FavoriteButton from "../components/FavoriteButton";
@@ -27,6 +29,9 @@ function MatchGalleryThumb({ img, onPress }) {
 
   if (loadError) return null;
 
+  const uri = typeof img === "string" ? img : img?.url;
+  if (!uri) return null;
+
   return (
     <TouchableOpacity
       style={styles.galleryThumbWrapper}
@@ -34,7 +39,7 @@ function MatchGalleryThumb({ img, onPress }) {
       onPress={onPress}
     >
       <Image
-        source={{ uri: img.url }}
+        source={{ uri }}
         style={styles.galleryThumb}
         resizeMode="cover"
         onError={() => setLoadError(true)}
@@ -44,8 +49,9 @@ function MatchGalleryThumb({ img, onPress }) {
 }
 
 export default function MatchDetailScreen({ route, navigation }) {
-  const { userId } = route.params || {};
-  const { getUserById, quizResponse } = useData();
+  const { userId, isPreview: paramPreview } = route.params || {};
+  const { user } = useAuth();
+  const { profile, getUserById, quizResponse } = useData();
   const { recordProfileView } = usePremium();
   const { startChatWithUser } = useFeed();
 
@@ -53,13 +59,32 @@ export default function MatchDetailScreen({ route, navigation }) {
   const [avatarError, setAvatarError] = useState(false);
   const [chatVisible, setChatVisible] = useState(false);
 
-  const targetUser = getUserById(userId);
+  // ตรวจสอบว่าเป็นโหมดพรีวิวโปรไฟล์ตนเองหรือไม่
+  const isPreview = Boolean(paramPreview || (user?.id && userId === user?.id));
+
+  // ดึงข้อมูลผู้ใช้ (หากเป็นพรีวิว ให้ใช้โปรไฟล์ของผู้ใช้ปัจจุบัน)
+  const targetUser = isPreview
+    ? {
+        id: user?.id,
+        name: profile?.name || user?.name || "คุณ (โปรไฟล์สาธารณะ)",
+        image: profile?.image || user?.image || null,
+        bio: profile?.bio || "ยังไม่ได้ระบุประวัติส่วนตัว",
+        gender: profile?.gender,
+        faculty: profile?.faculty || "มหาวิทยาลัย",
+        socialLinks: profile?.socialLinks || {},
+        galleryImages: profile?.galleryImages || [],
+        categoryAnswers: quizResponse?.categoryAnswers || [],
+        completedCategories: quizResponse?.completedCategories || [],
+        isRealUser: true,
+      }
+    : getUserById(userId);
 
   useEffect(() => {
-    if (userId) {
+    // บันทึกประวัติการเข้าชมเฉพาะเมื่อดูโปรไฟล์คนอื่น (ไม่ใช่ดูโปรไฟล์ตัวเอง)
+    if (userId && !isPreview) {
       recordProfileView(userId);
     }
-  }, [userId, recordProfileView]);
+  }, [userId, isPreview, recordProfileView]);
 
   if (!targetUser) {
     return (
@@ -113,19 +138,20 @@ export default function MatchDetailScreen({ route, navigation }) {
     commonCount > 0 ? Math.round(totalMatchScore / commonCount) : 0;
 
   // วิเคราะห์จุดร่วมและประโยคเปิดบทสนทนา (Mind-Insight & Icebreakers)
-  const sharedTopics = targetUser
+  const sharedTopics = (!isPreview && targetUser)
     ? getSharedInsights(quizResponse.categoryAnswers, targetUser.categoryAnswers)
     : [];
-  const icebreakerPrompts = targetUser
+  const icebreakerPrompts = (!isPreview && targetUser)
     ? getIcebreakerList(sharedTopics, targetUser.name)
     : [];
 
   const handleStartSparkChat = async (starterText = null) => {
+    if (isPreview) return;
     await startChatWithUser(targetUser, starterText);
     setChatVisible(true);
   };
 
-  const handleOpenSocial = (platform, username) => {
+  const handleOpenSocial = async (platform, username) => {
     if (!username) return;
     let url = "";
     if (platform === "instagram") url = `https://instagram.com/${username}`;
@@ -134,9 +160,17 @@ export default function MatchDetailScreen({ route, navigation }) {
     if (platform === "line") url = `https://line.me/ti/p/~${username}`;
 
     if (url) {
-      Linking.openURL(url).catch((err) =>
-        console.error("Failed to open link:", err)
-      );
+      try {
+        const supported = await Linking.canOpenURL(url);
+        if (supported) {
+          await Linking.openURL(url);
+        } else {
+          Alert.alert("ไม่สามารถเปิดลิงก์ได้", `ไม่พบแอปหรือเบราว์เซอร์ที่รองรับ ${url}`);
+        }
+      } catch (err) {
+        console.error("Failed to open link:", err);
+        Alert.alert("ไม่สามารถเปิดลิงก์", `เกิดข้อผิดพลาดในการเปิดลิงก์ ${platform}`);
+      }
     }
   };
 
@@ -154,9 +188,17 @@ export default function MatchDetailScreen({ route, navigation }) {
           <Ionicons name="arrow-back" size={22} color={colors.ink} />
         </TouchableOpacity>
 
-        <Text style={styles.topBarTitle}>รายละเอียดคู่แมตช์</Text>
+        <Text style={styles.topBarTitle}>
+          {isPreview ? "มุมมองโปรไฟล์ของคุณ" : "รายละเอียดคู่แมตช์"}
+        </Text>
 
-        <FavoriteButton userId={targetUser.id} size="sm" />
+        {isPreview ? (
+          <View style={styles.previewTag}>
+            <Text style={styles.previewTagText}>มุมมองผู้อื่น</Text>
+          </View>
+        ) : (
+          <FavoriteButton userId={targetUser.id} size="sm" />
+        )}
       </View>
 
       <ScrollView
@@ -181,10 +223,17 @@ export default function MatchDetailScreen({ route, navigation }) {
               </View>
             )}
 
-            <View style={styles.scoreContainer}>
-              <Text style={styles.scoreNumber}>{overallPercent}%</Text>
-              <Text style={styles.scoreLabel}>COMPATIBILITY</Text>
-            </View>
+            {isPreview ? (
+              <View style={styles.scoreContainerPreview}>
+                <Ionicons name="person" size={24} color={colors.primary} />
+                <Text style={styles.scoreLabel}>MY PROFILE</Text>
+              </View>
+            ) : (
+              <View style={styles.scoreContainer}>
+                <Text style={styles.scoreNumber}>{overallPercent}%</Text>
+                <Text style={styles.scoreLabel}>COMPATIBILITY</Text>
+              </View>
+            )}
           </View>
 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
@@ -249,6 +298,19 @@ export default function MatchDetailScreen({ route, navigation }) {
             )}
         </View>
 
+        {/* Preview Info Notice Banner */}
+        {isPreview && (
+          <View style={styles.previewNoticeCard}>
+            <Ionicons name="information-circle" size={22} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.previewNoticeTitle}>โหมดดูโปรไฟล์สาธารณะ (Preview)</Text>
+              <Text style={styles.previewNoticeText}>
+                นี่คือมุมมองที่ผู้อื่นจะเห็นเมื่อเข้ามาเปิดดูการ์ดโปรไฟล์ของคุณ โดยระบบจะนำคำตอบแบบทดสอบของคุณไปเปรียบเทียบกับคำตอบของพวกเขาเพื่อวิเคราะห์ความเข้ากันได้
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Mind-Insight Section: จุดร่วมที่คุณทั้งสองตอบตรงกัน */}
         {sharedTopics.length > 0 && (
           <View style={styles.section}>
@@ -303,8 +365,12 @@ export default function MatchDetailScreen({ route, navigation }) {
         {/* Category Breakdown */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionEyebrow}>BREAKDOWN</Text>
-            <Text style={styles.sectionTitle}>ความเข้ากันได้แต่ละด้าน</Text>
+            <Text style={styles.sectionEyebrow}>
+              {isPreview ? "YOUR ANSWERS" : "BREAKDOWN"}
+            </Text>
+            <Text style={styles.sectionTitle}>
+              {isPreview ? "ความคืบหน้าคำถามแต่ละด้านของคุณ" : "ความเข้ากันได้แต่ละด้าน"}
+            </Text>
           </View>
 
           <View style={styles.breakdownList}>
@@ -325,7 +391,13 @@ export default function MatchDetailScreen({ route, navigation }) {
                         { color: isCommon ? colors.primary : colors.mutedForeground },
                       ]}
                     >
-                      {isCommon ? `${percent}%` : "ยังไม่ตอบ"}
+                      {isPreview
+                        ? isCommon
+                          ? "ตอบแล้ว (10/10)"
+                          : "ยังไม่ตอบ"
+                        : isCommon
+                        ? `${percent}%`
+                        : "ยังไม่ตอบ"}
                     </Text>
                   </View>
 
@@ -334,7 +406,7 @@ export default function MatchDetailScreen({ route, navigation }) {
                       style={[
                         styles.breakdownFill,
                         {
-                          width: `${isCommon ? percent : 0}%`,
+                          width: `${isCommon ? (isPreview ? 100 : percent) : 0}%`,
                           backgroundColor: tone.bg,
                         },
                       ]}
@@ -357,11 +429,11 @@ export default function MatchDetailScreen({ route, navigation }) {
             </View>
 
             <View style={styles.galleryGrid}>
-              {targetUser.galleryImages.map((img) => (
+              {targetUser.galleryImages.map((img, idx) => (
                 <MatchGalleryThumb
-                  key={img.id}
+                  key={img?.id || `thumb_${idx}`}
                   img={img}
-                  onPress={() => setSelectedPhoto(img.url)}
+                  onPress={() => setSelectedPhoto(typeof img === "string" ? img : img.url)}
                 />
               ))}
             </View>
@@ -371,17 +443,28 @@ export default function MatchDetailScreen({ route, navigation }) {
 
       {/* Sticky Bottom Action Bar */}
       <View style={styles.bottomActionBar}>
-        <TouchableOpacity
-          style={styles.sparkChatMainBtn}
-          activeOpacity={0.88}
-          onPress={() => handleStartSparkChat()}
-        >
-          <Ionicons name="chatbubbles" size={20} color={colors.white} style={{ marginRight: 8 }} />
-          <View>
-            <Text style={styles.sparkChatMainBtnText}>💬 เริ่มแชทด้วยจุดร่วม (Spark Chat)</Text>
-            <Text style={styles.sparkChatMainBtnSub}>เปิดห้องแชทพร้อมหัวข้อคุยแนะนำ</Text>
-          </View>
-        </TouchableOpacity>
+        {isPreview ? (
+          <TouchableOpacity
+            style={styles.editProfileBtn}
+            activeOpacity={0.88}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="create-outline" size={20} color={colors.ink} style={{ marginRight: 8 }} />
+            <Text style={styles.editProfileBtnText}>ย้อนกลับไปแก้ไขโปรไฟล์</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.sparkChatMainBtn}
+            activeOpacity={0.88}
+            onPress={() => handleStartSparkChat()}
+          >
+            <Ionicons name="chatbubbles" size={20} color={colors.white} style={{ marginRight: 8 }} />
+            <View>
+              <Text style={styles.sparkChatMainBtnText}>💬 เริ่มแชทด้วยจุดร่วม (Spark Chat)</Text>
+              <Text style={styles.sparkChatMainBtnSub}>เปิดห้องแชทพร้อมหัวข้อคุยแนะนำ</Text>
+            </View>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Image Fullscreen Viewer */}
@@ -736,5 +819,67 @@ const styles = StyleSheet.create({
     color: "rgba(255, 255, 255, 0.85)",
     fontSize: 11,
     fontWeight: "700",
+  },
+  previewTag: {
+    backgroundColor: "#bbf44a",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+  },
+  previewTagText: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: colors.ink,
+  },
+  scoreContainerPreview: {
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.muted,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    minWidth: 80,
+  },
+  previewNoticeCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: colors.card,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    padding: 14,
+    marginBottom: 20,
+    gap: 12,
+    ...shadows.neoSm,
+  },
+  previewNoticeTitle: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: colors.ink,
+    marginBottom: 4,
+  },
+  previewNoticeText: {
+    fontSize: 13,
+    color: colors.mutedForeground,
+    lineHeight: 18,
+  },
+  editProfileBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#bbf44a",
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    ...shadows.neo,
+  },
+  editProfileBtnText: {
+    color: colors.ink,
+    fontSize: 15,
+    fontWeight: "900",
   },
 });

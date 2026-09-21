@@ -61,7 +61,7 @@ export default function FavoritesScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
-      <Header />
+      <Header onProfilePress={() => navigation.navigate("ProfileTab")} />
 
       <ScrollView
         style={styles.container}

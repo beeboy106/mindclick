@@ -361,10 +361,19 @@ export default function ProfileScreen({ navigation }) {
           </View>
           <Text style={styles.userEmail}>{user?.email || profile?.email || "อีเมล Google"}</Text>
 
-          <View style={styles.publicProfileLink}>
+          <TouchableOpacity
+            style={styles.publicProfileLink}
+            activeOpacity={0.8}
+            onPress={() =>
+              navigation.navigate("MatchDetail", {
+                userId: user?.id,
+                isPreview: true,
+              })
+            }
+          >
             <Ionicons name="open-outline" size={14} color={colors.primary} />
             <Text style={styles.publicProfileText}>ดูโปรไฟล์สาธารณะ</Text>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Profile Views Entry Banner (Freemium & Teaser) */}

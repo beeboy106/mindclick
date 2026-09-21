@@ -12,10 +12,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
+import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
 
 export default function SignInScreen() {
   const { signInWithGoogle, signInWithDemo, authError } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [showPolicyModal, setShowPolicyModal] = useState(false);
 
   const handleSignIn = async () => {
     try {
@@ -117,8 +119,19 @@ export default function SignInScreen() {
           {/* Disclaimer Footer */}
           <Text style={styles.disclaimerText}>
             เมื่อดำเนินการต่อ คุณยอมรับ{" "}
-            <Text style={styles.linkText}>ข้อกำหนดการใช้งาน</Text> และ{" "}
-            <Text style={styles.linkText}>นโยบายความเป็นส่วนตัว</Text>
+            <Text
+              style={styles.linkText}
+              onPress={() => setShowPolicyModal(true)}
+            >
+              ข้อกำหนดการใช้งาน
+            </Text>{" "}
+            และ{" "}
+            <Text
+              style={styles.linkText}
+              onPress={() => setShowPolicyModal(true)}
+            >
+              นโยบายความเป็นส่วนตัว
+            </Text>
           </Text>
         </View>
 
@@ -127,6 +140,13 @@ export default function SignInScreen() {
           <Ionicons name="sparkles" size={22} color={colors.white} />
         </View>
       </ScrollView>
+
+      {/* Privacy Policy Modal */}
+      <PrivacyPolicyModal
+        visible={showPolicyModal}
+        onClose={() => setShowPolicyModal(false)}
+        mode="view"
+      />
     </SafeAreaView>
   );
 }

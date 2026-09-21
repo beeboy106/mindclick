@@ -21,6 +21,7 @@ import { useData } from "../context/DataContext";
 import { useFeed } from "../context/FeedContext";
 import PostCard from "../components/PostCard";
 import ChatModal from "../components/ChatModal";
+import GalleryViewer from "../components/GalleryViewer";
 import { uploadImageToCloudinary } from "../lib/cloudinary";
 
 export default function FeedScreen({ navigation }) {
@@ -45,6 +46,17 @@ export default function FeedScreen({ navigation }) {
   const [chatModalVisible, setChatModalVisible] = useState(false);
   const [selectedFriendId, setSelectedFriendId] = useState(null);
   const [avatarError, setAvatarError] = useState(false);
+  const [selectedPhoto, setSelectedPhoto] = useState(null);
+
+  // นำทางไปยังโปรไฟล์ของผู้โพสต์
+  const handlePressAuthor = (authorId) => {
+    if (!authorId) return;
+    if (authorId === user?.id) {
+      navigation.navigate("ProfileTab");
+    } else {
+      navigation.navigate("MatchDetail", { userId: authorId });
+    }
+  };
 
   // ข้อมูลโปรไฟล์ของผู้ใช้ปัจจุบัน
   const displayImage = profile?.image || user?.image || null;
@@ -427,10 +439,19 @@ export default function FeedScreen({ navigation }) {
               onToggleLike={toggleLike}
               onDelete={deletePost}
               onAddComment={addComment}
+              onPressAuthor={handlePressAuthor}
+              onPressImage={(imgUri) => setSelectedPhoto(imgUri)}
             />
           ))
         )}
       </ScrollView>
+
+      {/* Fullscreen Photo Viewer */}
+      <GalleryViewer
+        visible={Boolean(selectedPhoto)}
+        imageUrl={selectedPhoto}
+        onClose={() => setSelectedPhoto(null)}
+      />
 
       {/* Chat Modal */}
       <ChatModal

@@ -17,6 +17,8 @@ export default function PostCard({
   onToggleLike,
   onDelete,
   onAddComment,
+  onPressAuthor,
+  onPressImage,
 }) {
   const [commentText, setCommentText] = useState("");
   const [showComments, setShowComments] = useState(true);
@@ -52,7 +54,12 @@ export default function PostCard({
     <View style={styles.card}>
       {/* Post Header */}
       <View style={styles.header}>
-        <View style={styles.authorRow}>
+        <TouchableOpacity
+          style={styles.authorRow}
+          activeOpacity={onPressAuthor ? 0.75 : 1}
+          onPress={() => onPressAuthor && onPressAuthor(post.authorId)}
+          disabled={!onPressAuthor}
+        >
           {post.authorAvatar && !avatarError ? (
             <Image
               source={{ uri: post.authorAvatar }}
@@ -68,10 +75,15 @@ export default function PostCard({
           )}
 
           <View style={styles.authorMeta}>
-            <Text style={styles.authorName}>{post.authorName}</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+              <Text style={styles.authorName}>{post.authorName}</Text>
+              {onPressAuthor && (
+                <Ionicons name="chevron-forward" size={12} color={colors.mutedForeground} />
+              )}
+            </View>
             <Text style={styles.createdAt}>{post.createdAt}</Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
         {isAuthor && (
           <TouchableOpacity
@@ -89,13 +101,18 @@ export default function PostCard({
         <Text style={styles.postText}>{post.content}</Text>
 
         {Boolean(post.image) && (
-          <View style={styles.imageWrapper}>
+          <TouchableOpacity
+            style={styles.imageWrapper}
+            activeOpacity={onPressImage ? 0.9 : 1}
+            onPress={() => onPressImage && onPressImage(post.image)}
+            disabled={!onPressImage}
+          >
             <Image
               source={{ uri: post.image }}
               style={styles.postImage}
               resizeMode="cover"
             />
-          </View>
+          </TouchableOpacity>
         )}
       </View>
 
