@@ -21,6 +21,7 @@ import { useData } from "../context/DataContext";
 import { useFeed } from "../context/FeedContext";
 import PostCard from "../components/PostCard";
 import ChatModal from "../components/ChatModal";
+import { uploadImageToCloudinary } from "../lib/cloudinary";
 
 export default function FeedScreen({ navigation }) {
   const { user } = useAuth();
@@ -67,16 +68,12 @@ export default function FeedScreen({ navigation }) {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: false,
-        quality: 0.6,
-        base64: true,
+        quality: 0.8,
+        base64: false,
       });
 
       if (!result.canceled && result.assets?.length > 0) {
-        const asset = result.assets[0];
-        const uri = asset.base64
-          ? `data:image/jpeg;base64,${asset.base64}`
-          : asset.uri;
-        setPostImage(uri);
+        setPostImage(result.assets[0].uri);
       }
     } catch (e) {
       console.warn("handlePickImage error:", e);
@@ -93,16 +90,21 @@ export default function FeedScreen({ navigation }) {
 
     try {
       setIsPosting(true);
+      let uploadedImageUrl = null;
+      if (postImage) {
+        // อัปโหลดรูปภาพขึ้น Cloudinary โฟลเดอร์ mindclick/feed ก่อนสร้างโพสต์
+        uploadedImageUrl = await uploadImageToCloudinary(postImage, { folder: "mindclick/feed" });
+      }
       await addPost({
         content: postText,
-        image: postImage,
+        image: uploadedImageUrl,
       });
       setPostText("");
       setPostImage(null);
       Alert.alert("สำเร็จ", "แชร์เรื่องราวของคุณเรียบร้อยแล้ว");
     } catch (e) {
       console.error("handleCreatePost error:", e);
-      Alert.alert("เกิดข้อผิดพลาด", "ไม่สามารถสร้างโพสต์ได้ กรุณาลองใหม่");
+      Alert.alert("เกิดข้อผิดพลาด", e.message || "ไม่สามารถสร้างโพสต์ได้ กรุณาลองใหม่");
     } finally {
       setIsPosting(false);
     }

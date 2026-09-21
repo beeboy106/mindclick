@@ -25,6 +25,7 @@ import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
 import ProfileViewsModal from "../components/ProfileViewsModal";
 import PaywallModal from "../components/PaywallModal";
 import { CAMPUS_FACULTIES } from "../lib/mindInsight";
+import { uploadImageToCloudinary } from "../lib/cloudinary";
 
 const genderOptions = [
   { value: "male", label: "ชาย", icon: "male" },
@@ -96,6 +97,8 @@ export default function ProfileScreen({ navigation }) {
   const [faculty, setFaculty] = useState(profile.faculty || "");
   const [bio, setBio] = useState(profile.bio || "");
   const [avatarUri, setAvatarUri] = useState(profile.image || user?.image || null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
   const [socialLinks, setSocialLinks] = useState({
     instagram: profile.socialLinks?.instagram || "",
     facebook: profile.socialLinks?.facebook || "",
@@ -169,27 +172,34 @@ export default function ProfileScreen({ navigation }) {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: false, // ปิด crop ทั้งหมดเพื่อรองรับหน้าต่างลอย / Samsung Pop-up view
-        quality: 0.5,
-        base64: true,
+        quality: 0.8,
+        base64: false,
       });
 
       if (!result.canceled && result.assets?.length > 0) {
         const asset = result.assets[0];
-        const permanentUri = asset.base64
-          ? `data:image/jpeg;base64,${asset.base64}`
-          : asset.uri;
-        setAvatarError(false);
-        setAvatarUri(permanentUri);
-        // บันทึกรูปโปรไฟล์ใหม่พร้อมรักษาสิ่งที่กำลังพิมพ์อยู่ไว้ด้วย
-        await updateProfile({
-          image: permanentUri,
-          name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
-          gender,
-          faculty,
-          bio,
-          socialLinks,
-        });
-        Alert.alert("สำเร็จ", "เปลี่ยนรูปโปรไฟล์เรียบร้อยแล้ว");
+        try {
+          setIsUploadingAvatar(true);
+          // อัปโหลดขึ้น Cloudinary รับ HTTPS CDN URL
+          const cdnUrl = await uploadImageToCloudinary(asset.uri, { folder: "mindclick/avatars" });
+          setAvatarError(false);
+          setAvatarUri(cdnUrl);
+          // บันทึกรูปโปรไฟล์ใหม่พร้อมรักษาสิ่งที่กำลังพิมพ์อยู่ไว้ด้วย
+          await updateProfile({
+            image: cdnUrl,
+            name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
+            gender,
+            faculty,
+            bio,
+            socialLinks,
+          });
+          Alert.alert("สำเร็จ", "เปลี่ยนรูปโปรไฟล์เรียบร้อยแล้ว");
+        } catch (uploadErr) {
+          console.error("handlePickAvatar upload error:", uploadErr);
+          Alert.alert("อัปโหลดไม่สำเร็จ", uploadErr.message || "ไม่สามารถอัปโหลดรูปภาพขึ้น Cloud ได้ กรุณาลองใหม่อีกครั้ง");
+        } finally {
+          setIsUploadingAvatar(false);
+        }
       }
     } catch (e) {
       console.warn("handlePickAvatar error:", e);
@@ -226,23 +236,30 @@ export default function ProfileScreen({ navigation }) {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
         allowsEditing: false, // ปิด crop ทั้งหมดเพื่อรองรับหน้าต่างลอย / Samsung Pop-up view
-        quality: 0.4,
-        base64: true,
+        quality: 0.8,
+        base64: false,
       });
 
       if (!result.canceled && result.assets?.length > 0) {
         const asset = result.assets[0];
-        const permanentUri = asset.base64
-          ? `data:image/jpeg;base64,${asset.base64}`
-          : asset.uri;
-        // บันทึกรูปภาพแกลเลอรีพร้อมรักษาสิ่งที่กำลังพิมพ์อยู่ไว้ด้วย
-        await addGalleryImage(permanentUri, {
-          name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
-          gender,
-          faculty,
-          bio,
-          socialLinks,
-        });
+        try {
+          setIsUploadingGallery(true);
+          // อัปโหลดขึ้น Cloudinary รับ HTTPS CDN URL
+          const cdnUrl = await uploadImageToCloudinary(asset.uri, { folder: "mindclick/gallery" });
+          // บันทึกรูปภาพแกลเลอรีพร้อมรักษาสิ่งที่กำลังพิมพ์อยู่ไว้ด้วย
+          await addGalleryImage(cdnUrl, {
+            name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
+            gender,
+            faculty,
+            bio,
+            socialLinks,
+          });
+        } catch (uploadErr) {
+          console.error("handleAddGalleryPhoto upload error:", uploadErr);
+          Alert.alert("อัปโหลดไม่สำเร็จ", uploadErr.message || "ไม่สามารถอัปโหลดรูปภาพขึ้น Cloud ได้ กรุณาลองใหม่อีกครั้ง");
+        } finally {
+          setIsUploadingGallery(false);
+        }
       }
     } catch (e) {
       console.warn("handleAddGalleryPhoto error:", e);
@@ -312,9 +329,15 @@ export default function ProfileScreen({ navigation }) {
                 </Text>
               </View>
             )}
+            {isUploadingAvatar && (
+              <View style={styles.avatarLoadingOverlay}>
+                <ActivityIndicator size="small" color={colors.white} />
+              </View>
+            )}
             <TouchableOpacity
               style={styles.editAvatarBtn}
               onPress={handlePickAvatar}
+              disabled={isUploadingAvatar}
             >
               <Ionicons name="pencil" size={14} color={colors.white} />
             </TouchableOpacity>
@@ -566,11 +589,19 @@ export default function ProfileScreen({ navigation }) {
               />
             ))}
 
+            {isUploadingGallery && (
+              <View style={[styles.galleryThumbWrapper, styles.galleryUploadingCard]}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.galleryUploadingText}>กำลังส่งรูป...</Text>
+              </View>
+            )}
+
             {profile.galleryImages.length < 9 && (
               <TouchableOpacity
                 style={styles.addThumbBtn}
                 activeOpacity={0.8}
                 onPress={handleAddGalleryPhoto}
+                disabled={isUploadingGallery}
               >
                 <Ionicons name="add" size={28} color={colors.primary} />
                 <Text style={styles.addThumbText}>เพิ่มรูป</Text>
@@ -819,6 +850,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 2,
     borderColor: colors.white,
+  },
+  avatarLoadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 45,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  galleryUploadingCard: {
+    backgroundColor: "#f8fafc",
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 4,
+  },
+  galleryUploadingText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: colors.primary,
   },
   userNameRow: {
     flexDirection: "row",
