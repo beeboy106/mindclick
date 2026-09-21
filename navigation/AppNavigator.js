@@ -9,6 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 import { useData } from "../context/DataContext";
+import { useFeed } from "../context/FeedContext";
 import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
 
 // Screens
@@ -28,6 +29,7 @@ const Tab = createBottomTabNavigator();
 // แท็บเมนูด้านล่าง 5 แท็บหลัก
 function MainTabNavigator() {
   const insets = useSafeAreaInsets();
+  const { totalUnreadCount } = useFeed();
 
   return (
     <Tab.Navigator
@@ -79,7 +81,15 @@ function MainTabNavigator() {
       <Tab.Screen
         name="FeedTab"
         component={FeedScreen}
-        options={{ tabBarLabel: "โพสต์" }}
+        options={{
+          tabBarLabel: "ฟีด & แชท",
+          tabBarBadge: totalUnreadCount > 0 ? totalUnreadCount : undefined,
+          tabBarBadgeStyle: {
+            backgroundColor: colors.primary,
+            fontSize: 10,
+            fontWeight: "900",
+          },
+        }}
       />
       <Tab.Screen
         name="FavoritesTab"

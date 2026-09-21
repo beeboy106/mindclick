@@ -6,6 +6,7 @@ import { mockUsers } from "../data/mockUsers";
 const POSTS_STORAGE_KEY = "@mindclick_feed_posts";
 const STATUS_STORAGE_PREFIX = "@mindclick_user_status_";
 const CHATS_STORAGE_PREFIX = "@mindclick_chats_";
+const FRIENDS_STORAGE_PREFIX = "@mindclick_friends_";
 
 // Mock โพสต์เริ่มต้น (อ้างอิงจากตัวอย่างหน้าจอ)
 const INITIAL_POSTS = [
@@ -124,7 +125,16 @@ export function FeedProvider({ children }) {
           setUserStatusState(storedStatus);
         }
 
-        // 3. โหลดประวัติแชท
+        // 3. โหลดรายชื่อเพื่อนและแชท
+        const storedFriends = await AsyncStorage.getItem(`${FRIENDS_STORAGE_PREFIX}${userId}`);
+        if (storedFriends) {
+          setFriends(JSON.parse(storedFriends));
+        } else {
+          setFriends(DEFAULT_FRIENDS);
+          await AsyncStorage.setItem(`${FRIENDS_STORAGE_PREFIX}${userId}`, JSON.stringify(DEFAULT_FRIENDS));
+        }
+
+        // 4. โหลดประวัติแชท
         const storedChats = await AsyncStorage.getItem(`${CHATS_STORAGE_PREFIX}${userId}`);
         if (storedChats) {
           setChats(JSON.parse(storedChats));
@@ -296,13 +306,17 @@ export function FeedProvider({ children }) {
       setChats(updatedChats);
 
       // อัปเดตข้อความล่าสุดในรายชื่อเพื่อน
-      setFriends((prevFriends) =>
-        prevFriends.map((f) =>
+      setFriends((prevFriends) => {
+        const updated = prevFriends.map((f) =>
           f.id === friendId
             ? { ...f, lastMessage: text.trim(), lastTime: timeStr, unread: 0 }
             : f
-        )
-      );
+        );
+        AsyncStorage.setItem(`${FRIENDS_STORAGE_PREFIX}${userId}`, JSON.stringify(updated)).catch(
+          (err) => console.error("Error saving friends in sendMessage:", err)
+        );
+        return updated;
+      });
 
       try {
         await AsyncStorage.setItem(
@@ -318,10 +332,89 @@ export function FeedProvider({ children }) {
 
   // 7. มาร์กแชทว่าอ่านแล้ว
   const markAsRead = useCallback((friendId) => {
-    setFriends((prev) =>
-      prev.map((f) => (f.id === friendId ? { ...f, unread: 0 } : f))
-    );
-  }, []);
+    setFriends((prev) => {
+      const updated = prev.map((f) => (f.id === friendId ? { ...f, unread: 0 } : f));
+      AsyncStorage.setItem(`${FRIENDS_STORAGE_PREFIX}${userId}`, JSON.stringify(updated)).catch(
+        (err) => console.error("Error saving friends in markAsRead:", err)
+      );
+      return updated;
+    });
+  }, [userId]);
+
+  // 8. เริ่มแชทกับคู่แมตช์ / บุคคลใหม่ (Spark Opener & Add to Friends)
+  const startChatWithUser = useCallback(
+    async (targetUser, initialMessage = null) => {
+      if (!targetUser) return null;
+      const targetId = targetUser.id || targetUser.visitorId;
+      if (!targetId) return null;
+
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+      const displayName = targetUser.name || targetUser.visitorName || "เพื่อน Mindclick";
+      const displayAvatar = targetUser.image || targetUser.avatar || targetUser.visitorAvatar || null;
+
+      let targetFriend;
+      let nextFriends = [...friends];
+      const existingIndex = nextFriends.findIndex((f) => f.id === targetId);
+
+      if (existingIndex >= 0) {
+        targetFriend = {
+          ...nextFriends[existingIndex],
+          name: displayName,
+          avatar: displayAvatar,
+          ...(initialMessage ? { lastMessage: initialMessage, lastTime: timeStr, unread: 0 } : {}),
+        };
+        // เลื่อนคนนี้ขึ้นมาบนสุดของรายการแชท
+        nextFriends.splice(existingIndex, 1);
+        nextFriends.unshift(targetFriend);
+      } else {
+        targetFriend = {
+          id: targetId,
+          name: displayName,
+          avatar: displayAvatar,
+          status: "online",
+          lastMessage: initialMessage || "เริ่มบทสนทนาใหม่",
+          lastTime: timeStr,
+          unread: 0,
+        };
+        nextFriends.unshift(targetFriend);
+      }
+
+      setFriends(nextFriends);
+
+      let nextChats = { ...chats };
+      if (initialMessage && initialMessage.trim()) {
+        const newMsg = {
+          id: `msg_${Date.now()}`,
+          senderId: userId,
+          text: initialMessage.trim(),
+          createdAt: timeStr,
+        };
+        const currentMsgs = nextChats[targetId] || [];
+        nextChats[targetId] = [...currentMsgs, newMsg];
+        setChats(nextChats);
+      }
+
+      try {
+        await AsyncStorage.setItem(
+          `${FRIENDS_STORAGE_PREFIX}${userId}`,
+          JSON.stringify(nextFriends)
+        );
+        if (initialMessage && initialMessage.trim()) {
+          await AsyncStorage.setItem(
+            `${CHATS_STORAGE_PREFIX}${userId}`,
+            JSON.stringify(nextChats)
+          );
+        }
+      } catch (err) {
+        console.error("Error saving startChatWithUser:", err);
+      }
+
+      return targetFriend;
+    },
+    [friends, chats, userId]
+  );
 
   // คำนวณจำนวนแจ้งเตือนแชทที่ยังไม่ได้อ่าน
   const totalUnreadCount = friends.reduce((sum, f) => sum + (f.unread || 0), 0);
@@ -341,6 +434,7 @@ export function FeedProvider({ children }) {
         chats,
         sendMessage,
         markAsRead,
+        startChatWithUser,
         totalUnreadCount,
       }}
     >

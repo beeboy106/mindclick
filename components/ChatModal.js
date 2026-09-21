@@ -10,14 +10,22 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, shadows } from "../lib/theme";
 import { useFeed } from "../context/FeedContext";
+import { getIcebreakerList } from "../lib/mindInsight";
 
-export default function ChatModal({ visible, onClose, initialFriendId = null }) {
-  const { friends, chats, sendMessage, markAsRead } = useFeed();
+export default function ChatModal({
+  visible,
+  onClose,
+  initialFriendId = null,
+  initialFriendData = null,
+  suggestedIcebreakers = [],
+}) {
+  const { friends, chats, sendMessage, markAsRead, startChatWithUser } = useFeed();
 
   // State: activeFriend (null = ดูหน้ารวมรายชื่อเพื่อน, object = อยู่ในห้องแชทเดี่ยว)
   const [activeFriend, setActiveFriend] = useState(null);
@@ -26,17 +34,26 @@ export default function ChatModal({ visible, onClose, initialFriendId = null }) 
 
   // เมื่อเปิด Modal ถ้ามี initialFriendId ให้เปิดห้องแชทของคนนั้นทันที
   useEffect(() => {
-    if (visible && initialFriendId) {
-      const found = friends.find((f) => f.id === initialFriendId);
-      if (found) {
-        setActiveFriend(found);
-        markAsRead(found.id);
+    if (visible) {
+      if (initialFriendId) {
+        const found = friends.find((f) => f.id === initialFriendId);
+        if (found) {
+          setActiveFriend(found);
+          markAsRead(found.id);
+        } else if (initialFriendData) {
+          // ถ้ายังไม่มีใน friends ให้เริ่มแชทและสร้าง record ทันที
+          startChatWithUser(initialFriendData).then((createdFriend) => {
+            if (createdFriend) {
+              setActiveFriend(createdFriend);
+            }
+          });
+        }
       }
-    } else if (!visible) {
+    } else {
       setActiveFriend(null);
       setInputText("");
     }
-  }, [visible, initialFriendId, friends, markAsRead]);
+  }, [visible, initialFriendId, initialFriendData, friends, markAsRead, startChatWithUser]);
 
   const handleSelectFriend = (friend) => {
     setActiveFriend(friend);
@@ -53,6 +70,12 @@ export default function ChatModal({ visible, onClose, initialFriendId = null }) 
   };
 
   const activeMessages = activeFriend ? chats[activeFriend.id] || [] : [];
+  const prompts =
+    suggestedIcebreakers && suggestedIcebreakers.length > 0
+      ? suggestedIcebreakers
+      : activeFriend
+      ? getIcebreakerList(null, activeFriend.name)
+      : [];
 
   return (
     <Modal
@@ -180,6 +203,34 @@ export default function ChatModal({ visible, onClose, initialFriendId = null }) 
                     </View>
                   }
                 />
+
+                {/* Icebreaker Suggestions when 0 or 1 message */}
+                {activeMessages.length <= 1 && prompts.length > 0 && (
+                  <View style={styles.icebreakerPromptSection}>
+                    <View style={styles.icebreakerPromptHeader}>
+                      <Ionicons name="sparkles" size={13} color={colors.primary} />
+                      <Text style={styles.icebreakerPromptTitle}>
+                        จุดร่วมที่ตอบตรงกัน (แตะข้อความเพื่อทัก):
+                      </Text>
+                    </View>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.icebreakerScroll}
+                    >
+                      {prompts.map((pText, pIdx) => (
+                        <TouchableOpacity
+                          key={pIdx}
+                          style={styles.icebreakerChip}
+                          activeOpacity={0.8}
+                          onPress={() => setInputText(pText)}
+                        >
+                          <Text style={styles.icebreakerChipText}>💬 {pText}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
 
                 {/* Input Bar */}
                 <View style={styles.inputBar}>
@@ -592,5 +643,42 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: "#cbd5e1",
+  },
+  icebreakerPromptSection: {
+    backgroundColor: "#FFFBEB",
+    borderTopWidth: 1.5,
+    borderTopColor: colors.darkBorder,
+    paddingTop: 8,
+    paddingBottom: 8,
+    paddingHorizontal: 12,
+  },
+  icebreakerPromptHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginBottom: 6,
+  },
+  icebreakerPromptTitle: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#92400E",
+  },
+  icebreakerScroll: {
+    gap: 8,
+    paddingRight: 12,
+  },
+  icebreakerChip: {
+    backgroundColor: colors.white,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    ...shadows.neoSm,
+  },
+  icebreakerChipText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.ink,
   },
 });

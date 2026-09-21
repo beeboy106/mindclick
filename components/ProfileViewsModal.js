@@ -13,8 +13,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, shadows } from "../lib/theme";
 import { usePremium } from "../context/PremiumContext";
+import { useFeed } from "../context/FeedContext";
 import { getRandomIcebreaker } from "../lib/mindInsight";
 import PaywallModal from "./PaywallModal";
+import ChatModal from "./ChatModal";
 
 function formatTimeAgo(isoString) {
   if (!isoString) return "เมื่อสักครู่";
@@ -43,12 +45,15 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
     toggleIncognito,
     addMockProfileView,
   } = usePremium();
+  const { startChatWithUser } = useFeed();
 
   const [paywallVisible, setPaywallVisible] = useState(false);
   const [icebreakerModalVisible, setIcebreakerModalVisible] = useState(false);
   const [activeVisitor, setActiveVisitor] = useState(null);
   const [icebreakerText, setIcebreakerText] = useState("");
   const [wavedUsers, setWavedUsers] = useState({});
+  const [chatVisible, setChatVisible] = useState(false);
+  const [chatTargetUser, setChatTargetUser] = useState(null);
 
   const handleOpenVisitor = (visitor) => {
     if (!isPremium) {
@@ -443,6 +448,14 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
         onClose={() => setPaywallVisible(false)}
       />
 
+      {/* Embedded Chat Modal */}
+      <ChatModal
+        visible={chatVisible}
+        onClose={() => setChatVisible(false)}
+        initialFriendId={chatTargetUser?.id}
+        initialFriendData={chatTargetUser}
+      />
+
       {/* Icebreaker Starter Modal */}
       <Modal
         visible={icebreakerModalVisible}
@@ -469,6 +482,27 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
             </View>
 
             {/* Buttons */}
+            <TouchableOpacity
+              style={styles.directChatBtn}
+              activeOpacity={0.88}
+              onPress={async () => {
+                if (activeVisitor) {
+                  setIcebreakerModalVisible(false);
+                  const targetObj = {
+                    id: activeVisitor.visitorId,
+                    name: activeVisitor.visitorName,
+                    image: activeVisitor.visitorAvatar,
+                  };
+                  await startChatWithUser(targetObj, icebreakerText);
+                  setChatTargetUser(targetObj);
+                  setChatVisible(true);
+                }
+              }}
+            >
+              <Ionicons name="chatbubbles" size={17} color={colors.white} style={{ marginRight: 6 }} />
+              <Text style={styles.directChatBtnText}>💬 ทักแชทคนนี้ทันที (เปิดคุยเลย)</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.copyStarterBtn}
               activeOpacity={0.85}
@@ -1101,6 +1135,23 @@ const styles = StyleSheet.create({
     color: colors.ink,
     lineHeight: 20,
     fontStyle: "italic",
+  },
+  directChatBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: colors.ink,
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginBottom: 10,
+    ...shadows.button,
+  },
+  directChatBtnText: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: colors.white,
   },
   copyStarterBtn: {
     flexDirection: "row",

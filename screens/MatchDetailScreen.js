@@ -18,6 +18,9 @@ import { useData } from "../context/DataContext";
 import { usePremium } from "../context/PremiumContext";
 import FavoriteButton from "../components/FavoriteButton";
 import GalleryViewer from "../components/GalleryViewer";
+import ChatModal from "../components/ChatModal";
+import { useFeed } from "../context/FeedContext";
+import { getSharedInsights, getIcebreakerList } from "../lib/mindInsight";
 
 function MatchGalleryThumb({ img, onPress }) {
   const [loadError, setLoadError] = useState(false);
@@ -44,9 +47,11 @@ export default function MatchDetailScreen({ route, navigation }) {
   const { userId } = route.params || {};
   const { getUserById, quizResponse } = useData();
   const { recordProfileView } = usePremium();
+  const { startChatWithUser } = useFeed();
 
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [avatarError, setAvatarError] = useState(false);
+  const [chatVisible, setChatVisible] = useState(false);
 
   const targetUser = getUserById(userId);
 
@@ -106,6 +111,19 @@ export default function MatchDetailScreen({ route, navigation }) {
 
   const overallPercent =
     commonCount > 0 ? Math.round(totalMatchScore / commonCount) : 0;
+
+  // วิเคราะห์จุดร่วมและประโยคเปิดบทสนทนา (Mind-Insight & Icebreakers)
+  const sharedTopics = targetUser
+    ? getSharedInsights(quizResponse.categoryAnswers, targetUser.categoryAnswers)
+    : [];
+  const icebreakerPrompts = targetUser
+    ? getIcebreakerList(sharedTopics, targetUser.name)
+    : [];
+
+  const handleStartSparkChat = async (starterText = null) => {
+    await startChatWithUser(targetUser, starterText);
+    setChatVisible(true);
+  };
 
   const handleOpenSocial = (platform, username) => {
     if (!username) return;
@@ -231,6 +249,57 @@ export default function MatchDetailScreen({ route, navigation }) {
             )}
         </View>
 
+        {/* Mind-Insight Section: จุดร่วมที่คุณทั้งสองตอบตรงกัน */}
+        {sharedTopics.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionEyebrow}>MIND-INSIGHT</Text>
+              <Text style={styles.sectionTitle}>💡 จุดร่วมที่คุณทั้งสองตอบตรงกัน</Text>
+            </View>
+
+            <View style={styles.insightCard}>
+              <View style={styles.insightTagList}>
+                {sharedTopics.map((topic, i) => (
+                  <View
+                    key={i}
+                    style={[styles.insightChip, { backgroundColor: topic.color || "#FEF08A" }]}
+                  >
+                    <Ionicons
+                      name={topic.icon || "sparkles"}
+                      size={14}
+                      color={colors.ink}
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text style={styles.insightChipText}>{topic.tag}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {icebreakerPrompts.length > 0 && (
+                <View style={styles.icebreakerOpenerBox}>
+                  <View style={styles.icebreakerPromptHeader}>
+                    <Ionicons name="chatbubble-ellipses" size={14} color={colors.primary} />
+                    <Text style={styles.icebreakerOpenerLabel}>
+                      ประเด็นเปิดบทสนทนาที่แนะนำ (ไม่เก้อเขิน):
+                    </Text>
+                  </View>
+                  <Text style={styles.icebreakerOpenerQuote}>
+                    "{icebreakerPrompts[0]}"
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.useOpenerBtn}
+                    activeOpacity={0.85}
+                    onPress={() => handleStartSparkChat(icebreakerPrompts[0])}
+                  >
+                    <Ionicons name="paper-plane" size={15} color={colors.white} style={{ marginRight: 6 }} />
+                    <Text style={styles.useOpenerBtnText}>ส่งทักทายด้วยประเด็นนี้ทันที</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
         {/* Category Breakdown */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -300,11 +369,35 @@ export default function MatchDetailScreen({ route, navigation }) {
         )}
       </ScrollView>
 
+      {/* Sticky Bottom Action Bar */}
+      <View style={styles.bottomActionBar}>
+        <TouchableOpacity
+          style={styles.sparkChatMainBtn}
+          activeOpacity={0.88}
+          onPress={() => handleStartSparkChat()}
+        >
+          <Ionicons name="chatbubbles" size={20} color={colors.white} style={{ marginRight: 8 }} />
+          <View>
+            <Text style={styles.sparkChatMainBtnText}>💬 เริ่มแชทด้วยจุดร่วม (Spark Chat)</Text>
+            <Text style={styles.sparkChatMainBtnSub}>เปิดห้องแชทพร้อมหัวข้อคุยแนะนำ</Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+
       {/* Image Fullscreen Viewer */}
       <GalleryViewer
         visible={Boolean(selectedPhoto)}
         imageUrl={selectedPhoto}
         onClose={() => setSelectedPhoto(null)}
+      />
+
+      {/* Embedded Chat Modal */}
+      <ChatModal
+        visible={chatVisible}
+        onClose={() => setChatVisible(false)}
+        initialFriendId={targetUser.id}
+        initialFriendData={targetUser}
+        suggestedIcebreakers={icebreakerPrompts}
       />
     </SafeAreaView>
   );
@@ -342,7 +435,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 95,
   },
   heroCard: {
     backgroundColor: colors.card,
@@ -538,5 +631,110 @@ const styles = StyleSheet.create({
   backBtnText: {
     color: colors.white,
     fontWeight: "800",
+  },
+  insightCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    padding: 16,
+    ...shadows.neo,
+  },
+  insightTagList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12,
+  },
+  insightChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  insightChipText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: colors.ink,
+  },
+  icebreakerOpenerBox: {
+    backgroundColor: "#FEF9C3",
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 4,
+  },
+  icebreakerPromptHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 6,
+  },
+  icebreakerOpenerLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#854D0E",
+  },
+  icebreakerOpenerQuote: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.ink,
+    lineHeight: 18,
+    marginBottom: 10,
+    fontStyle: "italic",
+  },
+  useOpenerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    ...shadows.neoSm,
+  },
+  useOpenerBtnText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  bottomActionBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: colors.card,
+    borderTopWidth: 1.5,
+    borderTopColor: colors.darkBorder,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    ...shadows.neo,
+  },
+  sparkChatMainBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    ...shadows.neo,
+  },
+  sparkChatMainBtnText: {
+    color: colors.white,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  sparkChatMainBtnSub: {
+    color: "rgba(255, 255, 255, 0.85)",
+    fontSize: 11,
+    fontWeight: "700",
   },
 });
