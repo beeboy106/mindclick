@@ -10,6 +10,7 @@ import { colors } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 import { useData } from "../context/DataContext";
 import { useFeed } from "../context/FeedContext";
+import { useCrossBubble } from "../context/CrossBubbleContext";
 import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
 
 // Screens
@@ -22,6 +23,7 @@ import FeedScreen from "../screens/FeedScreen";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import QuizScreen from "../screens/QuizScreen";
 import MatchDetailScreen from "../screens/MatchDetailScreen";
+import CrossBubbleTabNavigator from "./CrossBubbleTabNavigator";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -117,6 +119,7 @@ function MainTabNavigator() {
 export default function AppNavigator() {
   const { user, isLoading, signOut } = useAuth();
   const { hasAcceptedPolicy, acceptPolicy, isLoadingData } = useData();
+  const { isCrossBubbleMode } = useCrossBubble();
 
   if (isLoading) {
     return (
@@ -132,7 +135,19 @@ export default function AppNavigator() {
         {user ? (
           // เมื่อเข้าสู่ระบบแล้ว
           <Stack.Group>
-            <Stack.Screen name="Main" component={MainTabNavigator} />
+            {isCrossBubbleMode ? (
+              <Stack.Screen
+                name="CrossBubbleMain"
+                component={CrossBubbleTabNavigator}
+                options={{ animation: "fade" }}
+              />
+            ) : (
+              <Stack.Screen
+                name="Main"
+                component={MainTabNavigator}
+                options={{ animation: "fade" }}
+              />
+            )}
             <Stack.Screen
               name="Quiz"
               component={QuizScreen}

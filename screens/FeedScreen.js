@@ -19,6 +19,7 @@ import { colors, shadows } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 import { useData } from "../context/DataContext";
 import { useFeed, FORUM_TOPICS } from "../context/FeedContext";
+import { useCrossBubble } from "../context/CrossBubbleContext";
 import PostCard from "../components/PostCard";
 import ChatModal from "../components/ChatModal";
 import GalleryViewer from "../components/GalleryViewer";
@@ -46,6 +47,32 @@ export default function FeedScreen({ navigation }) {
   const [selectedFriendId, setSelectedFriendId] = useState(null);
   const [avatarError, setAvatarError] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+
+  const { toggleCrossBubbleMode } = useCrossBubble();
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isPullingTrigger, setIsPullingTrigger] = useState(false);
+
+  const handleScroll = (event) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    if (offsetY < -10) {
+      setPullDistance(Math.abs(offsetY));
+      setIsPullingTrigger(offsetY < -65);
+    } else {
+      if (pullDistance > 0) {
+        setPullDistance(0);
+        setIsPullingTrigger(false);
+      }
+    }
+  };
+
+  const handleScrollEndDrag = (event) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    if (offsetY < -65) {
+      toggleCrossBubbleMode(true);
+    }
+    setPullDistance(0);
+    setIsPullingTrigger(false);
+  };
 
   const currentTopic =
     FORUM_TOPICS.find((t) => t.id === selectedTopic) || FORUM_TOPICS[0];
@@ -164,26 +191,67 @@ export default function FeedScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Chat Notification Button */}
-        <TouchableOpacity
-          style={styles.chatIconBtn}
-          activeOpacity={0.8}
-          onPress={handleOpenChatList}
-        >
-          <Ionicons name="chatbubbles-outline" size={24} color={colors.ink} />
-          {totalUnreadCount > 0 && (
-            <View style={styles.badgeCount}>
-              <Text style={styles.badgeText}>{totalUnreadCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        {/* Right Header Controls */}
+        <View style={styles.headerRightControls}>
+          {/* Cross-Bubble Mode Quick Switcher */}
+          <TouchableOpacity
+            style={styles.crossBubbleSwitchBtn}
+            activeOpacity={0.8}
+            onPress={() => toggleCrossBubbleMode(true)}
+          >
+            <MaterialCommunityIcons name="moon-waning-crescent" size={15} color="#8b5cf6" />
+            <Text style={styles.crossBubbleSwitchText}>Cross-Bubble</Text>
+          </TouchableOpacity>
+
+          {/* Chat Notification Button */}
+          <TouchableOpacity
+            style={styles.chatIconBtn}
+            activeOpacity={0.8}
+            onPress={handleOpenChatList}
+          >
+            <Ionicons name="chatbubbles-outline" size={22} color={colors.ink} />
+            {totalUnreadCount > 0 && (
+              <View style={styles.badgeCount}>
+                <Text style={styles.badgeText}>{totalUnreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        onScrollEndDrag={handleScrollEndDrag}
+        scrollEventThrottle={16}
       >
+        {/* Pull-down Vanish Mode Indicator */}
+        {pullDistance > 12 && (
+          <View
+            style={[
+              styles.pullIndicatorBox,
+              isPullingTrigger && styles.pullIndicatorBoxTriggered,
+            ]}
+          >
+            <MaterialCommunityIcons
+              name={isPullingTrigger ? "lightning-bolt" : "arrow-down-circle-outline"}
+              size={18}
+              color={isPullingTrigger ? "#a3e635" : "#8b5cf6"}
+            />
+            <Text
+              style={[
+                styles.pullIndicatorText,
+                isPullingTrigger && styles.pullIndicatorTextTriggered,
+              ]}
+            >
+              {isPullingTrigger
+                ? "✨ ปล่อยนิ้วเพื่อเข้าสู่โหมดมืด Cross-Bubble 🌌"
+                : "⬇️ ลากลงอีกนิดเพื่อเข้าสู่ Cross-Bubble Mode"}
+            </Text>
+          </View>
+        )}
         {/* SECTION 1: Friends Online / Chat Quick Access Bar */}
         <View style={styles.friendsSection}>
           <View style={styles.friendsSectionHeader}>
@@ -510,6 +578,54 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     justifyContent: "center",
     alignItems: "center",
+  },
+  headerRightControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  crossBubbleSwitchBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#f5f3ff",
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "#ddd6fe",
+  },
+  crossBubbleSwitchText: {
+    color: "#7c3aed",
+    fontSize: 11,
+    fontWeight: "800",
+  },
+  pullIndicatorBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#f5f3ff",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    marginHorizontal: 20,
+    marginTop: 8,
+    marginBottom: 6,
+    borderWidth: 1.5,
+    borderColor: "#c084fc",
+  },
+  pullIndicatorBoxTriggered: {
+    backgroundColor: "#090d16",
+    borderColor: "#a3e635",
+  },
+  pullIndicatorText: {
+    color: "#7c3aed",
+    fontSize: 11.5,
+    fontWeight: "800",
+  },
+  pullIndicatorTextTriggered: {
+    color: "#a3e635",
   },
   chatIconBtn: {
     position: "relative",

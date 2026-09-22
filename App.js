@@ -9,6 +9,7 @@ import { DataProvider } from "./context/DataContext";
 import { FeedProvider } from "./context/FeedContext";
 import { DilemmaProvider } from "./context/DilemmaContext";
 import { PremiumProvider } from "./context/PremiumContext";
+import { CrossBubbleProvider } from "./context/CrossBubbleContext";
 import AppNavigator from "./navigation/AppNavigator";
 
 export default function App() {
@@ -19,8 +20,10 @@ export default function App() {
           <FeedProvider>
             <DilemmaProvider>
               <PremiumProvider>
-                <StatusBar style="dark" />
-                <AppNavigator />
+                <CrossBubbleProvider>
+                  <StatusBar style="dark" />
+                  <AppNavigator />
+                </CrossBubbleProvider>
               </PremiumProvider>
             </DilemmaProvider>
           </FeedProvider>
