@@ -18,7 +18,7 @@ import * as ImagePicker from "expo-image-picker";
 import { colors, shadows } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 import { useData } from "../context/DataContext";
-import { useFeed } from "../context/FeedContext";
+import { useFeed, FORUM_TOPICS } from "../context/FeedContext";
 import PostCard from "../components/PostCard";
 import ChatModal from "../components/ChatModal";
 import GalleryViewer from "../components/GalleryViewer";
@@ -38,6 +38,7 @@ export default function FeedScreen({ navigation }) {
     totalUnreadCount,
   } = useFeed();
 
+  const [selectedTopic, setSelectedTopic] = useState("all");
   const [postText, setPostText] = useState("");
   const [postImage, setPostImage] = useState(null);
   const [isPosting, setIsPosting] = useState(false);
@@ -45,6 +46,15 @@ export default function FeedScreen({ navigation }) {
   const [selectedFriendId, setSelectedFriendId] = useState(null);
   const [avatarError, setAvatarError] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+
+  const currentTopic =
+    FORUM_TOPICS.find((t) => t.id === selectedTopic) || FORUM_TOPICS[0];
+
+  // กรองโพสต์ตามกระทู้ที่เลือก
+  const filteredPosts = posts.filter((post) => {
+    if (selectedTopic === "all") return true;
+    return post.topicId === selectedTopic;
+  });
 
   // นำทางไปยังโปรไฟล์ของผู้โพสต์
   const handlePressAuthor = (authorId) => {
@@ -90,7 +100,7 @@ export default function FeedScreen({ navigation }) {
     }
   };
 
-  // สร้างโพสต์
+  // สร้างโพสต์ (รองรับการโพสต์ลงกระทู้ที่เลือก)
   const handleCreatePost = async () => {
     if (!postText.trim() && !postImage) {
       Alert.alert("แจ้งเตือน", "กรุณาพิมพ์ข้อความหรือเลือกรูปภาพก่อนโพสต์");
@@ -107,10 +117,16 @@ export default function FeedScreen({ navigation }) {
       await addPost({
         content: postText,
         image: uploadedImageUrl,
+        topicId: selectedTopic === "all" ? null : selectedTopic,
       });
       setPostText("");
       setPostImage(null);
-      Alert.alert("สำเร็จ", "แชร์เรื่องราวของคุณเรียบร้อยแล้ว");
+      Alert.alert(
+        "สำเร็จ",
+        selectedTopic === "all"
+          ? "แชร์เรื่องราวของคุณเรียบร้อยแล้ว"
+          : `แชร์ลงในกระทู้ "${currentTopic.label}" เรียบร้อยแล้ว`
+      );
     } catch (e) {
       console.error("handleCreatePost error:", e);
       Alert.alert("เกิดข้อผิดพลาด", e.message || "ไม่สามารถสร้างโพสต์ได้ กรุณาลองใหม่");
@@ -220,7 +236,22 @@ export default function FeedScreen({ navigation }) {
 
         {/* SECTION 3: Post Creator Card (Matching Top Box from Reference) */}
         <View style={styles.createCard}>
-          <Text style={styles.createCardHeader}>แชร์เรื่องราวของคุณ</Text>
+          <View style={styles.createCardHeaderRow}>
+            <Text style={styles.createCardHeader}>
+              {selectedTopic === "all"
+                ? "แชร์เรื่องราวของคุณ"
+                : `แชร์ในกระทู้: ${currentTopic.emoji} ${currentTopic.label}`}
+            </Text>
+            {selectedTopic !== "all" && (
+              <TouchableOpacity
+                style={styles.resetTopicBtn}
+                activeOpacity={0.7}
+                onPress={() => setSelectedTopic("all")}
+              >
+                <Text style={styles.resetTopicBtnText}>สลับไปโพสต์ทั่วไป</Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
           <View style={styles.createInputRow}>
             {displayImage && !avatarError ? (
@@ -239,7 +270,11 @@ export default function FeedScreen({ navigation }) {
 
             <TextInput
               style={styles.postTextInput}
-              placeholder="แชร์อะไรกับเพื่อนของคุณ..."
+              placeholder={
+                selectedTopic !== "all" && currentTopic.placeholder
+                  ? currentTopic.placeholder
+                  : "แชร์อะไรกับเพื่อนของคุณ..."
+              }
               placeholderTextColor="#9ca3af"
               multiline
               maxLength={1000}
@@ -297,11 +332,81 @@ export default function FeedScreen({ navigation }) {
           </View>
         </View>
 
-        {/* SECTION 4: Feed List */}
+        {/* SECTION: Forum Topic Choice Chips (แทรกระหว่างการ์ดโพสต์และปุ่มรีเฟรชฟีด) */}
+        <View style={styles.topicsSection}>
+          <View style={styles.topicsSectionHeader}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Ionicons name="chatbubbles" size={16} color={colors.primary} />
+              <Text style={styles.topicsTitle}>กระทู้พูดคุยตามความสนใจ</Text>
+            </View>
+            <Text style={styles.topicsHint}>แตะเพื่อเลือกกระทู้</Text>
+          </View>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.topicsScroll}
+          >
+            {FORUM_TOPICS.map((topic) => {
+              const isSelected = selectedTopic === topic.id;
+              const topicPostCount = posts.filter((p) =>
+                topic.id === "all" ? true : p.topicId === topic.id
+              ).length;
+
+              return (
+                <TouchableOpacity
+                  key={topic.id}
+                  style={[
+                    styles.topicChip,
+                    isSelected && styles.topicChipActive,
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={() => setSelectedTopic(topic.id)}
+                >
+                  <Text style={styles.topicChipEmoji}>{topic.emoji}</Text>
+                  <Text
+                    style={[
+                      styles.topicChipText,
+                      isSelected && styles.topicChipTextActive,
+                    ]}
+                  >
+                    {topic.label}
+                  </Text>
+                  <View
+                    style={[
+                      styles.topicCountBadge,
+                      isSelected && styles.topicCountBadgeActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.topicCountText,
+                        isSelected && styles.topicCountTextActive,
+                      ]}
+                    >
+                      {topicPostCount}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* SECTION 4: Feed List Header */}
         <View style={styles.feedHeaderRow}>
-          <Text style={styles.feedSectionTitle}>
-            เรื่องราวล่าสุดจากคนในวงของคุณ
-          </Text>
+          <View style={{ flex: 1, marginRight: 8 }}>
+            <Text style={styles.feedSectionTitle}>
+              {selectedTopic === "all"
+                ? "เรื่องราวล่าสุดจากคนในวงของคุณ"
+                : `${currentTopic.emoji} กระทู้: ${currentTopic.label}`}
+            </Text>
+            {selectedTopic !== "all" && Boolean(currentTopic.description) && (
+              <Text style={styles.feedSectionSubtitle}>
+                {currentTopic.description}
+              </Text>
+            )}
+          </View>
           <TouchableOpacity
             style={styles.refreshBtn}
             activeOpacity={0.8}
@@ -318,20 +423,26 @@ export default function FeedScreen({ navigation }) {
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
-        ) : posts.length === 0 ? (
+        ) : filteredPosts.length === 0 ? (
           <View style={styles.emptyFeed}>
             <Ionicons
-              name="newspaper-outline"
+              name={selectedTopic === "all" ? "newspaper-outline" : "chatbubbles-outline"}
               size={48}
               color={colors.mutedForeground}
             />
-            <Text style={styles.emptyFeedText}>ยังไม่มีเรื่องราวใหม่</Text>
+            <Text style={styles.emptyFeedText}>
+              {selectedTopic === "all"
+                ? "ยังไม่มีเรื่องราวใหม่"
+                : `ยังไม่มีโพสต์ในกระทู้ ${currentTopic.label}`}
+            </Text>
             <Text style={styles.emptyFeedSubtext}>
-              เป็นคนแรกที่เริ่มแชร์เรื่องราวให้กับเพื่อนๆ
+              {selectedTopic === "all"
+                ? "เป็นคนแรกที่เริ่มแชร์เรื่องราวให้กับเพื่อนๆ"
+                : "เป็นคนแรกที่เริ่มเปิดประเด็นในกระทู้นี้เลย!"}
             </Text>
           </View>
         ) : (
-          posts.map((post) => (
+          filteredPosts.map((post) => (
             <PostCard
               key={post.id}
               post={post}
@@ -341,6 +452,7 @@ export default function FeedScreen({ navigation }) {
               onAddComment={addComment}
               onPressAuthor={handlePressAuthor}
               onPressImage={(imgUri) => setSelectedPhoto(imgUri)}
+              onSelectTopic={(tId) => setSelectedTopic(tId)}
             />
           ))
         )}
@@ -637,11 +749,29 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     ...shadows.neo,
   },
+  createCardHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
   createCardHeader: {
     fontSize: 14,
     fontWeight: "800",
     color: colors.ink,
-    marginBottom: 12,
+  },
+  resetTopicBtn: {
+    backgroundColor: "#f3f4f6",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  resetTopicBtnText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.mutedForeground,
   },
   createInputRow: {
     flexDirection: "row",
@@ -749,6 +879,75 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontSize: 13,
   },
+  topicsSection: {
+    marginBottom: 18,
+  },
+  topicsSectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+    paddingHorizontal: 2,
+  },
+  topicsTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.ink,
+  },
+  topicsHint: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: colors.mutedForeground,
+  },
+  topicsScroll: {
+    gap: 8,
+    paddingVertical: 4,
+    paddingRight: 8,
+  },
+  topicChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: colors.card,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    ...shadows.neo,
+  },
+  topicChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.darkBorder,
+  },
+  topicChipEmoji: {
+    fontSize: 14,
+  },
+  topicChipText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.ink,
+  },
+  topicChipTextActive: {
+    color: colors.white,
+  },
+  topicCountBadge: {
+    backgroundColor: "#f3f4f6",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  topicCountBadgeActive: {
+    backgroundColor: "rgba(255, 255, 255, 0.25)",
+  },
+  topicCountText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: colors.ink,
+  },
+  topicCountTextActive: {
+    color: colors.white,
+  },
   feedHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -759,6 +958,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     color: colors.ink,
+  },
+  feedSectionSubtitle: {
+    fontSize: 11,
+    color: colors.mutedForeground,
+    marginTop: 2,
   },
   refreshBtn: {
     flexDirection: "row",

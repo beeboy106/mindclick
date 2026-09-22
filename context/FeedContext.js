@@ -8,7 +8,16 @@ const STATUS_STORAGE_PREFIX = "@mindclick_user_status_";
 const CHATS_STORAGE_PREFIX = "@mindclick_chats_";
 const FRIENDS_STORAGE_PREFIX = "@mindclick_friends_";
 
-// Mock โพสต์เริ่มต้น (อ้างอิงจากตัวอย่างหน้าจอ)
+// 4 หมวดกระทู้หลัก + แท็บทั้งหมด
+export const FORUM_TOPICS = [
+  { id: "all", label: "ทั้งหมด", icon: "apps-outline", emoji: "🌐", description: "เรื่องราวทั่วไปและทุกกระทู้รวมกัน" },
+  { id: "movies_series", label: "หนัง&ซีรีย์", icon: "film-outline", emoji: "🎬", description: "รีวิว แนะนำหนังและซีรีย์น่าดู", placeholder: "แชร์รีวิวหนัง ซีรีย์ที่น่าดู หรือฉากที่ชอบ..." },
+  { id: "hobbies", label: "งานอดิเรก", icon: "color-palette-outline", emoji: "🎨", description: "ศิลปะ ดนตรี ท่องเที่ยว งานอดิเรกสร้างสรรค์", placeholder: "แชร์งานอดิเรก ฝีมือดนตรี ศิลปะ หรือทริปท่องเที่ยว..." },
+  { id: "news", label: "ข่าวสาร", icon: "newspaper-outline", emoji: "📰", description: "สาระความรู้ ข่าวสารทันเหตุการณ์และเทคโนโลยี", placeholder: "แชร์ข่าวสาร สาระความรู้ หรือประเด็นน่าสนใจ..." },
+  { id: "boardgames", label: "บอร์ดเกม", icon: "game-controller-outline", emoji: "🎲", description: "แนะนำเกม นัดเล่นบอร์ดเกม แลกเปลี่ยนกลยุทธ์", placeholder: "ชวนเล่นบอร์ดเกม แนะนำเกมสนุกๆ หรือถามกติกา..." },
+];
+
+// Mock โพสต์เริ่มต้น (ครอบคลุมทั้งฟีดทั่วไปและ 4 หมวดกระทู้)
 const INITIAL_POSTS = [
   {
     id: "post_init_1",
@@ -16,6 +25,7 @@ const INITIAL_POSTS = [
     authorName: "Aphisak Phutsupha",
     authorAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
     authorEmail: "aphisak@example.com",
+    topicId: "hobbies",
     content: "สวัสดีเพื่อนๆ Mindclick ทุกคนครับ ใครที่ชอบด้านดนตรีหรือไปเที่ยววันหยุด ทักมาคุยแลกเปลี่ยนกันได้นะ 🎵⛺",
     image: null,
     createdAt: "16 ก.ย. 2569 15:38",
@@ -28,8 +38,92 @@ const INITIAL_POSTS = [
         userAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80",
         content: "สวัสดีค่ะ ไว้ชวนไปฟังดนตรีสดด้วยกันนะคะ",
         createdAt: "16 ก.ย. 2569 15:45",
+        replyTo: null,
+      },
+      {
+        id: "c_1_rep",
+        userId: "user_mock_aphisak",
+        userName: "Aphisak Phutsupha",
+        userAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
+        content: "ยินดีเลยครับ มีร้านแถวเอกมัยเล่นดีมาก ไว้ไปด้วยกันนะ",
+        createdAt: "16 ก.ย. 2569 15:50",
+        replyTo: {
+          commentId: "c_1",
+          userName: "ฟ้าใส ธนภัทร",
+        },
       },
     ],
+  },
+  {
+    id: "post_init_movie",
+    authorId: "user_mock_1",
+    authorName: "ฟ้าใส ธนภัทร",
+    authorAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80",
+    authorEmail: "fasai@example.com",
+    topicId: "movies_series",
+    content: "เพิ่งดูซีรีย์เรื่องใหม่จบไป เนื้อเรื่องลุ้นหักมุมมาก มีใครกำลังดูเรื่องนี้อยู่บ้าง มาคุยกันได้นะ! 🎬🍿",
+    image: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80",
+    createdAt: "16 ก.ย. 2569 16:20",
+    likes: ["user_mock_aphisak"],
+    comments: [
+      {
+        id: "c_m1",
+        userId: "user_mock_janon",
+        userName: "Janon Kingkohyao",
+        userAvatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=400&auto=format&fit=crop&q=80",
+        content: "เรื่องอะไรเหรอครับ กำลังหาซีรีย์ดูวันหยุดพอดีเลย แนะนำหน่อยครับ",
+        createdAt: "16 ก.ย. 2569 16:30",
+        replyTo: null,
+      },
+    ],
+  },
+  {
+    id: "post_init_boardgame",
+    authorId: "user_mock_kedtisak",
+    authorName: "KEDTISAK RAKRUAUG",
+    authorAvatar: null,
+    authorEmail: "kedtisak@example.com",
+    topicId: "boardgames",
+    content: "เสาร์-อาทิตย์นี้ มีใครสนใจเล่น Catan หรือ Dixit แถวสยามไหมครับ ขาดอีก 2 คน บอร์ดเกมเมอร์มือใหม่ยินดีต้อนรับครับ 🎲♟️",
+    image: "https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?w=800&auto=format&fit=crop&q=80",
+    createdAt: "16 ก.ย. 2569 10:45",
+    likes: ["user_mock_janon"],
+    comments: [
+      {
+        id: "c_b1",
+        userId: "user_mock_aphisak",
+        userName: "Aphisak Phutsupha",
+        userAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
+        content: "สนใจครับ! เล่น Catan ประจำเลย ว่างช่วงบ่ายครับ",
+        createdAt: "16 ก.ย. 2569 11:15",
+        replyTo: null,
+      },
+      {
+        id: "c_b2",
+        userId: "user_mock_kedtisak",
+        userName: "KEDTISAK RAKRUAUG",
+        userAvatar: null,
+        content: "ยอดเยี่ยมเลยครับ เดี๋ยวส่งโลเคชั่นร้านให้ในแชทนะ",
+        createdAt: "16 ก.ย. 2569 11:20",
+        replyTo: {
+          commentId: "c_b1",
+          userName: "Aphisak Phutsupha",
+        },
+      },
+    ],
+  },
+  {
+    id: "post_init_news",
+    authorId: "user_mock_sarawut",
+    authorName: "Sarawut Dara",
+    authorAvatar: null,
+    authorEmail: "sarawut@example.com",
+    topicId: "news",
+    content: "อัปเดตเทรนด์ AI และเทคโนโลยีในปี 2026 ตอนนี้มีเครื่องมือใหม่ๆ ช่วยพัฒนาแอปได้เร็วขึ้นเยอะมาก มีใครลองใช้ตัวไหนบ้างแล้วครับ 📰💡",
+    image: null,
+    createdAt: "16 ก.ย. 2569 12:00",
+    likes: ["user_mock_1", "user_mock_aphisak"],
+    comments: [],
   },
   {
     id: "post_init_2",
@@ -37,6 +131,7 @@ const INITIAL_POSTS = [
     authorName: "Janon Kingkohyao",
     authorAvatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=400&auto=format&fit=crop&q=80",
     authorEmail: "janon@example.com",
+    topicId: null,
     content: "วันนี้มีใครไปอ่านหนังสือหรือทำงานที่หอสมุดบ้างไหมครับ หาเพื่อนติวและพูดคุยเรื่องโปรเจกต์ 📚💻",
     image: null,
     createdAt: "16 ก.ย. 2569 14:10",
@@ -113,7 +208,16 @@ export function FeedProvider({ children }) {
         // 1. โหลดโพสต์
         const storedPosts = await AsyncStorage.getItem(POSTS_STORAGE_KEY);
         if (storedPosts) {
-          setPosts(JSON.parse(storedPosts));
+          const parsed = JSON.parse(storedPosts);
+          // ตรวจสอบว่ามีโพสต์กระทู้หรือไม่ หากยังไม่มีให้รวม INITIAL_POSTS ใหม่เข้าไปด้วย
+          const hasTopicPosts = parsed.some((p) => p.topicId);
+          if (!hasTopicPosts) {
+            const combined = [...parsed, ...INITIAL_POSTS.filter((ip) => ip.topicId)];
+            setPosts(combined);
+            await AsyncStorage.setItem(POSTS_STORAGE_KEY, JSON.stringify(combined));
+          } else {
+            setPosts(parsed);
+          }
         } else {
           setPosts(INITIAL_POSTS);
           await AsyncStorage.setItem(POSTS_STORAGE_KEY, JSON.stringify(INITIAL_POSTS));
@@ -187,9 +291,9 @@ export function FeedProvider({ children }) {
     }
   };
 
-  // 1. สร้างโพสต์ใหม่
+  // 1. สร้างโพสต์ใหม่ (รองรับ topicId สำหรับกระทู้)
   const addPost = useCallback(
-    async ({ content, image = null }) => {
+    async ({ content, image = null, topicId = null }) => {
       const now = new Date();
       const dateStr = `${now.getDate()} ${now.toLocaleString("th-TH", { month: "short" })} ${now.getFullYear() + 543} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
@@ -199,6 +303,7 @@ export function FeedProvider({ children }) {
         authorName: user?.name || "ฉัน",
         authorAvatar: user?.image || null,
         authorEmail: user?.email || "",
+        topicId: topicId || null,
         content: content.trim(),
         image: image || null,
         createdAt: dateStr,
@@ -238,9 +343,9 @@ export function FeedProvider({ children }) {
     [posts, userId]
   );
 
-  // 4. เพิ่มความคิดเห็น (Comment)
+  // 4. เพิ่มความคิดเห็น (Comment) และตอบกลับความคิดเห็น (Reply)
   const addComment = useCallback(
-    async (postId, commentText) => {
+    async (postId, commentText, replyTo = null) => {
       if (!commentText || !commentText.trim()) return;
 
       const now = new Date();
@@ -253,6 +358,12 @@ export function FeedProvider({ children }) {
         userAvatar: user?.image || null,
         content: commentText.trim(),
         createdAt: dateStr,
+        replyTo: replyTo
+          ? {
+              commentId: replyTo.id || replyTo.commentId,
+              userName: replyTo.userName,
+            }
+          : null,
       };
 
       const updated = posts.map((p) => {

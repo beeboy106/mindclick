@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,14 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { colors, shadows } from "../lib/theme";
 
+// ข้อมูลสีและไอคอนสำหรับแต่ละกระทู้
+const TOPIC_CONFIG = {
+  movies_series: { label: "หนัง&ซีรีย์", emoji: "🎬", color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
+  hobbies: { label: "งานอดิเรก", emoji: "🎨", color: "#db2777", bg: "#fdf2f8", border: "#fbcfe8" },
+  news: { label: "ข่าวสาร", emoji: "📰", color: "#0284c7", bg: "#f0f9ff", border: "#bae6fd" },
+  boardgames: { label: "บอร์ดเกม", emoji: "🎲", color: "#059669", bg: "#ecfdf5", border: "#a7f3d0" },
+};
+
 export default function PostCard({
   post,
   currentUserId,
@@ -19,15 +27,19 @@ export default function PostCard({
   onAddComment,
   onPressAuthor,
   onPressImage,
+  onSelectTopic,
 }) {
   const [commentText, setCommentText] = useState("");
+  const [replyingTo, setReplyingTo] = useState(null); // { id, userName }
   const [showComments, setShowComments] = useState(true);
   const [avatarError, setAvatarError] = useState(false);
+  const inputRef = useRef(null);
 
   const isLiked = (post.likes || []).includes(currentUserId);
   const likesCount = (post.likes || []).length;
   const commentsCount = (post.comments || []).length;
   const isAuthor = post.authorId === currentUserId;
+  const topicConfig = post.topicId ? TOPIC_CONFIG[post.topicId] : null;
 
   const handleDelete = () => {
     Alert.alert(
@@ -46,12 +58,34 @@ export default function PostCard({
 
   const handleSendComment = () => {
     if (!commentText.trim()) return;
-    onAddComment(post.id, commentText);
+    onAddComment(post.id, commentText, replyingTo);
     setCommentText("");
+    setReplyingTo(null);
   };
 
   return (
     <View style={styles.card}>
+      {/* Topic Badge if post belongs to a forum topic */}
+      {Boolean(topicConfig) && (
+        <TouchableOpacity
+          style={[
+            styles.topicBadge,
+            { backgroundColor: topicConfig.bg, borderColor: topicConfig.border },
+          ]}
+          activeOpacity={onSelectTopic ? 0.75 : 1}
+          onPress={() => onSelectTopic && onSelectTopic(post.topicId)}
+          disabled={!onSelectTopic}
+        >
+          <Text style={styles.topicBadgeEmoji}>{topicConfig.emoji}</Text>
+          <Text style={[styles.topicBadgeText, { color: topicConfig.color }]}>
+            {topicConfig.label}
+          </Text>
+          {onSelectTopic && (
+            <Ionicons name="chevron-forward" size={11} color={topicConfig.color} />
+          )}
+        </TouchableOpacity>
+      )}
+
       {/* Post Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -170,23 +204,76 @@ export default function PostCard({
                       {comment.userName ? comment.userName.charAt(0).toUpperCase() : "?"}
                     </Text>
                   </View>
-                  <View style={styles.commentBubble}>
-                    <View style={styles.commentTopRow}>
-                      <Text style={styles.commentAuthorName}>{comment.userName}</Text>
-                      <Text style={styles.commentTime}>{comment.createdAt}</Text>
+                  <View style={styles.commentMainCol}>
+                    <View style={styles.commentBubble}>
+                      <View style={styles.commentTopRow}>
+                        <Text style={styles.commentAuthorName}>{comment.userName}</Text>
+                        <Text style={styles.commentTime}>{comment.createdAt}</Text>
+                      </View>
+
+                      {/* Replying Tag if comment is replying to someone */}
+                      {Boolean(comment.replyTo) && (
+                        <View style={styles.replyRefBubble}>
+                          <Ionicons name="return-down-forward" size={11} color={colors.primary} />
+                          <Text style={styles.replyRefText}>
+                            ตอบกลับ <Text style={styles.replyRefUser}>@{comment.replyTo.userName}</Text>
+                          </Text>
+                        </View>
+                      )}
+
+                      <Text style={styles.commentContent}>{comment.content}</Text>
                     </View>
-                    <Text style={styles.commentContent}>{comment.content}</Text>
+
+                    {/* Reply Action Button */}
+                    <View style={styles.commentActionsRow}>
+                      <TouchableOpacity
+                        style={styles.replyBtn}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          setReplyingTo({
+                            id: comment.id,
+                            userName: comment.userName || "ผู้ใช้",
+                          });
+                          if (inputRef.current) {
+                            inputRef.current.focus();
+                          }
+                        }}
+                      >
+                        <Ionicons name="return-down-forward" size={12} color={colors.primary} />
+                        <Text style={styles.replyBtnText}>ตอบกลับ</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
               ))}
             </View>
           )}
 
+          {/* Replying Status Bar */}
+          {Boolean(replyingTo) && (
+            <View style={styles.replyingBar}>
+              <View style={styles.replyingBarLeft}>
+                <Ionicons name="return-down-forward" size={13} color={colors.primary} />
+                <Text style={styles.replyingBarText} numberOfLines={1}>
+                  กำลังตอบกลับ <Text style={styles.replyingBarUser}>@{replyingTo.userName}</Text>
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.cancelReplyBtn}
+                onPress={() => setReplyingTo(null)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close-circle" size={18} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Comment Input Bar */}
           <View style={styles.inputRow}>
             <TextInput
+              ref={inputRef}
               style={styles.commentInput}
-              placeholder="เขียนความคิดเห็น..."
+              placeholder={replyingTo ? `ตอบกลับ @${replyingTo.userName}...` : "เขียนความคิดเห็น..."}
               placeholderTextColor="#9ca3af"
               value={commentText}
               onChangeText={setCommentText}
@@ -212,6 +299,24 @@ export default function PostCard({
 }
 
 const styles = StyleSheet.create({
+  topicBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    alignSelf: "flex-start",
+    marginBottom: 10,
+  },
+  topicBadgeEmoji: {
+    fontSize: 13,
+  },
+  topicBadgeText: {
+    fontSize: 12,
+    fontWeight: "800",
+  },
   card: {
     backgroundColor: colors.card,
     borderRadius: 16,
@@ -349,8 +454,10 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: colors.primary,
   },
-  commentBubble: {
+  commentMainCol: {
     flex: 1,
+  },
+  commentBubble: {
     backgroundColor: "#f8fafc",
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -373,10 +480,75 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: colors.mutedForeground,
   },
+  replyRefBubble: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#e0e7ff",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    alignSelf: "flex-start",
+    marginBottom: 4,
+  },
+  replyRefText: {
+    fontSize: 11,
+    color: colors.primary,
+  },
+  replyRefUser: {
+    fontWeight: "800",
+  },
   commentContent: {
     fontSize: 13,
     color: colors.ink,
     lineHeight: 18,
+  },
+  commentActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 3,
+    marginLeft: 6,
+  },
+  replyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+  },
+  replyBtnText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.primary,
+  },
+  replyingBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#eff6ff",
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 8,
+  },
+  replyingBarLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flex: 1,
+  },
+  replyingBarText: {
+    fontSize: 12,
+    color: colors.ink,
+  },
+  replyingBarUser: {
+    fontWeight: "800",
+    color: colors.primary,
+  },
+  cancelReplyBtn: {
+    padding: 2,
   },
   inputRow: {
     flexDirection: "row",
