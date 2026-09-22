@@ -78,6 +78,24 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // อัปเดตข้อมูล Session ของ User ปัจจุบัน (เช่น เมื่อแก้ชื่อหรือรูปโปรไฟล์)
+  const updateUserSession = async (partialData) => {
+    try {
+      const currentStored = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
+      const baseUser = currentStored ? JSON.parse(currentStored) : user || {};
+      const updatedUser = {
+        ...baseUser,
+        ...partialData,
+      };
+      await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      return updatedUser;
+    } catch (e) {
+      console.error("Error updating user session:", e);
+    }
+  };
+
+
   // เข้าสู่ระบบแบบจำลอง (Demo Google Account)
   const signInWithDemo = async (customUser) => {
     let demoId = "118198207968490232896";
@@ -266,6 +284,7 @@ export function AuthProvider({ children }) {
         signInWithDemo,
         signOut,
         setUser,
+        updateUserSession,
       }}
     >
       {children}

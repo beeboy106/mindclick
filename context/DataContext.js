@@ -43,7 +43,7 @@ const defaultQuizResponse = {
 const DataContext = createContext();
 
 export function DataProvider({ children }) {
-  const { user } = useAuth();
+  const { user, updateUserSession } = useAuth();
 
   const [profile, setProfile] = useState(defaultProfile);
   const [quizResponse, setQuizResponse] = useState(defaultQuizResponse);
@@ -108,7 +108,14 @@ export function DataProvider({ children }) {
 
         if (isMounted) {
           if (localProfile) {
-            setProfile(JSON.parse(localProfile));
+            const parsed = JSON.parse(localProfile);
+            setProfile(parsed);
+            if (updateUserSession && (parsed.name || parsed.image) && (parsed.name !== user.name || parsed.image !== user.image)) {
+              updateUserSession({
+                name: parsed.name || user.name,
+                image: parsed.image || user.image,
+              });
+            }
           } else {
             // ถ้าเป็นบัญชีใหม่ในเครื่องนี้ ให้เริ่มด้วยข้อมูลเริ่มต้นของเขาเอง
             setProfile({
@@ -154,6 +161,12 @@ export function DataProvider({ children }) {
 
             setProfile(mergedProfile);
             await AsyncStorage.setItem(pKey, JSON.stringify(mergedProfile));
+            if (updateUserSession && (mergedProfile.name || mergedProfile.image)) {
+              updateUserSession({
+                name: mergedProfile.name || user.name,
+                image: mergedProfile.image || user.image,
+              });
+            }
 
             const cloudQuiz = {
               completedCategories: cloudUser.completedCategories || [],
@@ -279,6 +292,13 @@ export function DataProvider({ children }) {
 
       await AsyncStorage.setItem(getProfileKey(user.id), JSON.stringify(updated));
       setProfile(updated);
+
+      if (updateUserSession) {
+        await updateUserSession({
+          name: updated.name,
+          image: updated.image || user.image || null,
+        });
+      }
 
       // บันทึกขึ้น Cloud Firestore
       if (isFirebaseConfigured()) {

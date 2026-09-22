@@ -22,6 +22,7 @@ const TOPIC_CONFIG = {
 export default function PostCard({
   post,
   currentUserId,
+  currentUserProfile,
   onToggleLike,
   onDelete,
   onAddComment,
@@ -40,6 +41,30 @@ export default function PostCard({
   const commentsCount = (post.comments || []).length;
   const isAuthor = post.authorId === currentUserId;
   const topicConfig = post.topicId ? TOPIC_CONFIG[post.topicId] : null;
+
+  // โปรไฟล์ผู้โพสต์ (หากเป็นโพสต์ของตนเอง ให้ใช้โปรไฟล์ที่ตั้งไว้ล่าสุดเสมอ)
+  const authorDisplayName =
+    isAuthor && currentUserProfile?.name
+      ? currentUserProfile.name
+      : post.authorName || "ผู้ใช้งาน";
+  const authorDisplayAvatar =
+    isAuthor && currentUserProfile?.image !== undefined
+      ? currentUserProfile.image
+      : post.authorAvatar || null;
+
+  // ฟังก์ชันช่วยเหลือสำหรับแสดงชื่อและรูปคอมเมนต์
+  const getCommentAuthorInfo = (itemUserId, itemUserName, itemUserAvatar) => {
+    const isCurrentUser = itemUserId === currentUserId;
+    const name =
+      isCurrentUser && currentUserProfile?.name
+        ? currentUserProfile.name
+        : itemUserName || "ผู้ใช้งาน";
+    const avatar =
+      isCurrentUser && currentUserProfile?.image !== undefined
+        ? currentUserProfile.image
+        : itemUserAvatar || null;
+    return { name, avatar };
+  };
 
   const handleDelete = () => {
     Alert.alert(
@@ -118,23 +143,23 @@ export default function PostCard({
           onPress={() => onPressAuthor && onPressAuthor(post.authorId)}
           disabled={!onPressAuthor}
         >
-          {post.authorAvatar && !avatarError ? (
+          {authorDisplayAvatar && !avatarError ? (
             <Image
-              source={{ uri: post.authorAvatar }}
+              source={{ uri: authorDisplayAvatar }}
               style={styles.avatar}
               onError={() => setAvatarError(true)}
             />
           ) : (
             <View style={styles.avatarFallback}>
               <Text style={styles.avatarInitial}>
-                {post.authorName ? post.authorName.charAt(0).toUpperCase() : "U"}
+                {authorDisplayName ? authorDisplayName.charAt(0).toUpperCase() : "U"}
               </Text>
             </View>
           )}
 
           <View style={styles.authorMeta}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Text style={styles.authorName}>{post.authorName}</Text>
+              <Text style={styles.authorName}>{authorDisplayName}</Text>
               {onPressAuthor && (
                 <Ionicons name="chevron-forward" size={12} color={colors.mutedForeground} />
               )}
@@ -223,23 +248,25 @@ export default function PostCard({
             <View style={styles.commentsList}>
               {rootComments.map((root) => {
                 const rootReplies = repliesMap[root.id] || [];
+                const { name: rootDisplayName, avatar: rootDisplayAvatar } =
+                  getCommentAuthorInfo(root.userId, root.userName, root.userAvatar);
 
                 return (
                   <View key={root.id} style={styles.commentThreadWrapper}>
                     {/* Root Comment Row */}
                     <View style={styles.commentRow}>
                       <View style={styles.commentAvatar}>
-                        {root.userAvatar ? (
-                          <Image source={{ uri: root.userAvatar }} style={styles.avatarImg} />
+                        {rootDisplayAvatar ? (
+                          <Image source={{ uri: rootDisplayAvatar }} style={styles.avatarImg} />
                         ) : (
                           <Text style={styles.avatarInitial}>
-                            {root.userName ? root.userName.charAt(0).toUpperCase() : "?"}
+                            {rootDisplayName ? rootDisplayName.charAt(0).toUpperCase() : "?"}
                           </Text>
                         )}
                       </View>
                       <View style={styles.commentMainCol}>
                         <View style={styles.commentBubble}>
-                          <Text style={styles.commentAuthorName}>{root.userName}</Text>
+                          <Text style={styles.commentAuthorName}>{rootDisplayName}</Text>
                           <Text style={styles.commentContent}>{root.content}</Text>
                         </View>
                         {/* Meta Action Row: Time • Reply */}
@@ -252,7 +279,7 @@ export default function PostCard({
                               setReplyingTo({
                                 rootId: root.id,
                                 targetId: root.id,
-                                userName: root.userName || "ผู้ใช้",
+                                userName: rootDisplayName || "ผู้ใช้",
                               });
                               if (inputRef.current) {
                                 inputRef.current.focus();
@@ -268,52 +295,67 @@ export default function PostCard({
                     {/* Nested Replies with Left Connector Line (Facebook Style) */}
                     {rootReplies.length > 0 && (
                       <View style={styles.repliesThreadContainer}>
-                        {rootReplies.map((reply) => (
-                          <View key={reply.id} style={styles.replyRow}>
-                            <View style={styles.replyAvatar}>
-                              {reply.userAvatar ? (
-                                <Image source={{ uri: reply.userAvatar }} style={styles.replyAvatarImg} />
-                              ) : (
-                                <Text style={styles.replyAvatarInitial}>
-                                  {reply.userName ? reply.userName.charAt(0).toUpperCase() : "?"}
-                                </Text>
-                              )}
-                            </View>
-                            <View style={styles.commentMainCol}>
-                              <View style={styles.replyBubble}>
-                                <Text style={styles.commentAuthorName}>{reply.userName}</Text>
-                                <Text style={styles.commentContent}>
-                                  {reply.replyTo?.userName && reply.replyTo.userName !== reply.userName && (
-                                    <Text style={styles.replyMentionText}>
-                                      @{reply.replyTo.userName}{" "}
-                                    </Text>
-                                  )}
-                                  {reply.content}
-                                </Text>
+                        {rootReplies.map((reply) => {
+                          const { name: replyDisplayName, avatar: replyDisplayAvatar } =
+                            getCommentAuthorInfo(
+                              reply.userId,
+                              reply.userName,
+                              reply.userAvatar
+                            );
+
+                          return (
+                            <View key={reply.id} style={styles.replyRow}>
+                              <View style={styles.replyAvatar}>
+                                {replyDisplayAvatar ? (
+                                  <Image
+                                    source={{ uri: replyDisplayAvatar }}
+                                    style={styles.replyAvatarImg}
+                                  />
+                                ) : (
+                                  <Text style={styles.replyAvatarInitial}>
+                                    {replyDisplayName
+                                      ? replyDisplayName.charAt(0).toUpperCase()
+                                      : "?"}
+                                  </Text>
+                                )}
                               </View>
-                              {/* Reply Meta Action Row */}
-                              <View style={styles.commentMetaRow}>
-                                <Text style={styles.commentTime}>{reply.createdAt}</Text>
-                                <Text style={styles.commentDot}>•</Text>
-                                <TouchableOpacity
-                                  activeOpacity={0.7}
-                                  onPress={() => {
-                                    setReplyingTo({
-                                      rootId: root.id,
-                                      targetId: reply.id,
-                                      userName: reply.userName || "ผู้ใช้",
-                                    });
-                                    if (inputRef.current) {
-                                      inputRef.current.focus();
-                                    }
-                                  }}
-                                >
-                                  <Text style={styles.replyActionText}>ตอบกลับ</Text>
-                                </TouchableOpacity>
+                              <View style={styles.commentMainCol}>
+                                <View style={styles.replyBubble}>
+                                  <Text style={styles.commentAuthorName}>{replyDisplayName}</Text>
+                                  <Text style={styles.commentContent}>
+                                    {reply.replyTo?.userName &&
+                                      reply.replyTo.userName !== replyDisplayName && (
+                                        <Text style={styles.replyMentionText}>
+                                          @{reply.replyTo.userName}{" "}
+                                        </Text>
+                                      )}
+                                    {reply.content}
+                                  </Text>
+                                </View>
+                                {/* Reply Meta Action Row */}
+                                <View style={styles.commentMetaRow}>
+                                  <Text style={styles.commentTime}>{reply.createdAt}</Text>
+                                  <Text style={styles.commentDot}>•</Text>
+                                  <TouchableOpacity
+                                    activeOpacity={0.7}
+                                    onPress={() => {
+                                      setReplyingTo({
+                                        rootId: root.id,
+                                        targetId: reply.id,
+                                        userName: replyDisplayName || "ผู้ใช้",
+                                      });
+                                      if (inputRef.current) {
+                                        inputRef.current.focus();
+                                      }
+                                    }}
+                                  >
+                                    <Text style={styles.replyActionText}>ตอบกลับ</Text>
+                                  </TouchableOpacity>
+                                </View>
                               </View>
                             </View>
-                          </View>
-                        ))}
+                          );
+                        })}
                       </View>
                     )}
                   </View>

@@ -32,7 +32,10 @@ export default function HomeScreen({ navigation }) {
   const completed = quizResponse.completedCategories || [];
   const matches = getMatchList();
 
-  const firstName = user?.name ? user.name.split(" ")[0] : "คุณ";
+  const resolvedName = profile?.name || user?.name || "คุณ";
+  const firstName = resolvedName.includes("@")
+    ? resolvedName.split("@")[0]
+    : resolvedName.split(" ")[0];
   const profileReady = Boolean(
     profile?.bio ||
       (profile?.gender && profile.gender !== "prefer_not_to_say") ||

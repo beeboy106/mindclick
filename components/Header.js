@@ -3,14 +3,19 @@ import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
+import { useData } from "../context/DataContext";
 
 export default function Header({ rightComponent, onProfilePress }) {
   const { user } = useAuth();
+  const { profile } = useData();
   const [imgError, setImgError] = useState(false);
+
+  const displayImage = profile?.image || user?.image || null;
+  const displayName = profile?.name || user?.name || "ผู้ใช้งาน";
 
   useEffect(() => {
     setImgError(false);
-  }, [user?.image]);
+  }, [displayImage]);
 
   return (
     <View style={styles.container}>
@@ -34,21 +39,21 @@ export default function Header({ rightComponent, onProfilePress }) {
             activeOpacity={0.8}
             onPress={onProfilePress}
           >
-            {!imgError && user.image ? (
+            {!imgError && displayImage ? (
               <Image
-                source={{ uri: user.image }}
+                source={{ uri: displayImage }}
                 style={styles.avatarImage}
                 onError={() => setImgError(true)}
               />
             ) : (
               <View style={styles.avatarFallback}>
                 <Text style={styles.avatarInitial}>
-                  {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+                  {displayName ? displayName.charAt(0).toUpperCase() : "U"}
                 </Text>
               </View>
             )}
             <Text style={styles.userNameText} numberOfLines={1}>
-              {user.name || "ผู้ใช้งาน"}
+              {displayName}
             </Text>
           </TouchableOpacity>
         ) : null}

@@ -118,6 +118,8 @@ export default function FeedScreen({ navigation }) {
         content: postText,
         image: uploadedImageUrl,
         topicId: selectedTopic === "all" ? null : selectedTopic,
+        authorName: displayName,
+        authorAvatar: displayImage,
       });
       setPostText("");
       setPostImage(null);
@@ -443,6 +445,7 @@ export default function FeedScreen({ navigation }) {
               key={post.id}
               post={post}
               currentUserId={user?.id || "guest"}
+              currentUserProfile={profile}
               onToggleLike={toggleLike}
               onDelete={deletePost}
               onAddComment={addComment}

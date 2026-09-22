@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "./AuthContext";
+import { useData } from "./DataContext";
 import { mockUsers } from "../data/mockUsers";
 
 const POSTS_STORAGE_KEY = "@mindclick_feed_posts";
@@ -198,6 +199,7 @@ const FeedContext = createContext();
 
 export function FeedProvider({ children }) {
   const { user } = useAuth();
+  const { profile, usersPool } = useData();
   const userId = user?.id || "guest";
 
   const [posts, setPosts] = useState([]);
@@ -296,18 +298,21 @@ export function FeedProvider({ children }) {
     }
   };
 
-  // 1. สร้างโพสต์ใหม่ (รองรับ topicId สำหรับกระทู้)
+  // 1. สร้างโพสต์ใหม่ (รองรับ topicId สำหรับกระทู้ และข้อมูลโปรไฟล์ผู้โพสต์)
   const addPost = useCallback(
-    async ({ content, image = null, topicId = null }) => {
+    async ({ content, image = null, topicId = null, authorName = null, authorAvatar = null }) => {
       const now = new Date();
       const dateStr = `${now.getDate()} ${now.toLocaleString("th-TH", { month: "short" })} ${now.getFullYear() + 543} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+      const resolvedName = authorName || profile?.name || user?.name || "ผู้ใช้งาน";
+      const resolvedAvatar = authorAvatar !== undefined && authorAvatar !== null ? authorAvatar : (profile?.image || user?.image || null);
 
       const newPost = {
         id: `post_${Date.now()}`,
         authorId: userId,
-        authorName: user?.name || "ฉัน",
-        authorAvatar: user?.image || null,
-        authorEmail: user?.email || "",
+        authorName: resolvedName,
+        authorAvatar: resolvedAvatar,
+        authorEmail: user?.email || profile?.email || "",
         topicId: topicId || null,
         content: content.trim(),
         image: image || null,
@@ -320,7 +325,7 @@ export function FeedProvider({ children }) {
       await savePosts(updated);
       return newPost;
     },
-    [posts, user, userId]
+    [posts, user, userId, profile]
   );
 
   // 2. ลบโพสต์ (เฉพาะโพสต์ของตนเอง)
@@ -360,11 +365,14 @@ export function FeedProvider({ children }) {
       const targetCommentId = replyInfo?.targetId || replyInfo?.commentId || replyInfo?.id || null;
       const targetUserName = replyInfo?.userName || null;
 
+      const resolvedName = profile?.name || user?.name || "ผู้ใช้งาน";
+      const resolvedAvatar = profile?.image || user?.image || null;
+
       const newComment = {
         id: `c_${Date.now()}`,
         userId: userId,
-        userName: user?.name || "ฉัน",
-        userAvatar: user?.image || null,
+        userName: resolvedName,
+        userAvatar: resolvedAvatar,
         content: commentText.trim(),
         createdAt: dateStr,
         parentId: parentId,
@@ -386,8 +394,58 @@ export function FeedProvider({ children }) {
 
       await savePosts(updated);
     },
-    [posts, user, userId]
+    [posts, user, userId, profile]
   );
+
+  // ซิงค์โพสต์และคอมเมนต์ของผู้ใช้ปัจจุบันเมื่อมีการแก้ไขชื่อหรือรูปโปรไฟล์
+  useEffect(() => {
+    if (!userId || userId === "guest" || (!profile?.name && !profile?.image)) return;
+
+    const currentName = profile?.name || user?.name || "ผู้ใช้งาน";
+    const currentImage = profile?.image || user?.image || null;
+
+    let hasChanged = false;
+    const syncedPosts = posts.map((post) => {
+      let postChanged = false;
+      let updatedPost = post;
+
+      if (post.authorId === userId) {
+        if (post.authorName !== currentName || post.authorAvatar !== currentImage) {
+          updatedPost = {
+            ...updatedPost,
+            authorName: currentName,
+            authorAvatar: currentImage,
+          };
+          postChanged = true;
+        }
+      }
+
+      if (updatedPost.comments && updatedPost.comments.length > 0) {
+        let commentsChanged = false;
+        const updatedComments = updatedPost.comments.map((c) => {
+          if (c.userId === userId) {
+            if (c.userName !== currentName || c.userAvatar !== currentImage) {
+              commentsChanged = true;
+              return { ...c, userName: currentName, userAvatar: currentImage };
+            }
+          }
+          return c;
+        });
+
+        if (commentsChanged) {
+          updatedPost = { ...updatedPost, comments: updatedComments };
+          postChanged = true;
+        }
+      }
+
+      if (postChanged) hasChanged = true;
+      return updatedPost;
+    });
+
+    if (hasChanged) {
+      savePosts(syncedPosts);
+    }
+  }, [profile?.name, profile?.image, userId, user?.name, user?.image]);
 
   // 5. เปลี่ยนสถานะผู้ใช้ (ออนไลน์ / ห้ามรบกวน / ออฟไลน์)
   const setUserStatus = useCallback(
