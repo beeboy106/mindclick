@@ -22,12 +22,12 @@ export default function WhisperWallScreen() {
 
   const handlePost = () => {
     if (!whisperText.trim()) {
-      Alert.alert("แจ้งเตือน", "กรุณาพิมพ์ข้อความก่อนกระซิบ");
+      Alert.alert("แจ้งเตือน", "กรุณาพิมพ์ข้อความก่อนส่ง");
       return;
     }
     addWhisperPost(whisperText, selectedTag);
     setWhisperText("");
-    Alert.alert("สำเร็จ", "ส่งเสียงกระซิบขึ้นบอร์ดแล้ว 🫧");
+    Alert.alert("สำเร็จ", "ส่งข้อความขึ้นกระดานลับเรียบร้อยแล้ว");
   };
 
   return (
@@ -41,8 +41,8 @@ export default function WhisperWallScreen() {
             <MaterialCommunityIcons name="message-flash" size={18} color="#c084fc" />
           </View>
           <View>
-            <Text style={styles.headerTitle}>WHISPER WALL</Text>
-            <Text style={styles.headerSubtitle}>กระดานกระซิบข้ามคณะแบบนิรนาม</Text>
+            <Text style={styles.headerTitle}>กระดานลับ (WHISPER WALL)</Text>
+            <Text style={styles.headerSubtitle}>พื้นที่ฝากข้อความนิรนามข้ามคณะ</Text>
           </View>
         </View>
       </View>
@@ -96,17 +96,17 @@ export default function WhisperWallScreen() {
               onPress={handlePost}
             >
               <Ionicons name="paper-plane" size={13} color="#090d16" />
-              <Text style={styles.postBtnText}>กระซิบเลย</Text>
+              <Text style={styles.postBtnText}>ส่งข้อความ</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Whispers Feed */}
         <View style={styles.feedHeaderRow}>
-          <Text style={styles.feedTitle}>เสียงกระซิบล่าสุด</Text>
+          <Text style={styles.feedTitle}>ข้อความลับล่าสุด</Text>
           <View style={styles.onlineBadge}>
             <View style={styles.greenDot} />
-            <Text style={styles.onlineText}>กำลังซุบซิบ</Text>
+            <Text style={styles.onlineText}>กำลังเคลื่อนไหว</Text>
           </View>
         </View>
 
@@ -114,7 +114,11 @@ export default function WhisperWallScreen() {
           <View key={item.id} style={styles.whisperCard}>
             <View style={styles.whisperHeaderRow}>
               <View style={styles.facultyBadge}>
-                <Text style={styles.authorIcon}>{item.authorIcon}</Text>
+                <Ionicons
+                  name={item.authorIcon || "chatbubble-ellipses-outline"}
+                  size={12}
+                  color="#38bdf8"
+                />
                 <Text style={styles.facultyBadgeText}>{item.authorFaculty}</Text>
               </View>
               <Text style={styles.timeText}>{item.createdAt}</Text>
@@ -128,13 +132,13 @@ export default function WhisperWallScreen() {
                 activeOpacity={0.7}
                 onPress={() => toggleWhisperPop(item.id)}
               >
-                <MaterialCommunityIcons
-                  name={item.hasPopped ? "circle-slice-8" : "circle-outline"}
-                  size={16}
+                <Ionicons
+                  name={item.hasPopped ? "sparkles" : "sparkles-outline"}
+                  size={14}
                   color={item.hasPopped ? "#a3e635" : "#94a3b8"}
                 />
                 <Text style={[styles.popText, item.hasPopped && styles.popTextActive]}>
-                  {item.hasPopped ? "แตกฟองแล้ว 🫧" : "Bubble Pop"}
+                  {item.hasPopped ? "ส่งพลังแล้ว" : "ส่งพลัง"}
                 </Text>
                 <View style={styles.popCountBadge}>
                   <Text style={styles.popCountText}>{item.pops}</Text>

@@ -28,8 +28,8 @@ export default function BubbleRadarScreen() {
             <MaterialCommunityIcons name="radar" size={18} color="#38bdf8" />
           </View>
           <View>
-            <Text style={styles.headerTitle}>CROSS-FACULTY RADAR</Text>
-            <Text style={styles.headerSubtitle}>เรดาร์ส่องฟองสบู่ข้ามคณะที่เคมีตรงกัน</Text>
+            <Text style={styles.headerTitle}>เรดาร์คณะ (CROSS-FACULTY RADAR)</Text>
+            <Text style={styles.headerSubtitle}>วิเคราะห์ความเข้ากันได้ของไลฟ์สไตล์ต่างคณะ</Text>
           </View>
         </View>
       </View>
@@ -42,7 +42,7 @@ export default function BubbleRadarScreen() {
         {/* Radar Graphic Card */}
         <View style={styles.radarGraphicCard}>
           <View style={styles.radarHeaderRow}>
-            <Text style={styles.radarCardTitle}>แผนที่ทลาย Social Bubble</Text>
+            <Text style={styles.radarCardTitle}>แผนที่ทลายกรอบคณะ</Text>
             <View style={styles.livePulseBadge}>
               <View style={styles.pulseDot} />
               <Text style={styles.livePulseText}>ACTIVE SCAN</Text>
@@ -58,7 +58,11 @@ export default function BubbleRadarScreen() {
 
             {/* Center User Bubble */}
             <View style={styles.centerBubble}>
-              <Text style={styles.centerIcon}>{userAlias?.icon || "🤖"}</Text>
+              <Ionicons
+                name={userAlias?.icon || "finger-print-outline"}
+                size={22}
+                color="#a3e635"
+              />
               <Text style={styles.centerLabel}>คุณ ({userAlias?.shortFaculty || "ฉัน"})</Text>
             </View>
 
@@ -85,12 +89,12 @@ export default function BubbleRadarScreen() {
         {/* Score Card */}
         <View style={styles.scoreCard}>
           <View style={styles.scoreLeft}>
-            <Text style={styles.scoreLabel}>CROSS-BUBBLE SCORE</Text>
+            <Text style={styles.scoreLabel}>สถิติการทลายกรอบสังคม</Text>
             <Text style={styles.scoreValue}>
               {connectedCount} <Text style={styles.scoreUnit}>/ {totalCount} คณะ</Text>
             </Text>
             <Text style={styles.scoreDesc}>
-              คุณได้เชื่อมต่อและพูดคุยกับเพื่อนไปแล้ว {connectedCount} คณะจากทั้งหมด {totalCount} คณะ
+              คุณได้เปิดบทสนทนากับเพื่อนไปแล้ว {connectedCount} คณะจากทั้งหมด {totalCount} คณะ
             </Text>
           </View>
           <View style={styles.trophyBox}>
@@ -99,7 +103,7 @@ export default function BubbleRadarScreen() {
         </View>
 
         {/* Faculty Breakdown List */}
-        <Text style={styles.listSectionTitle}>คณะที่กำลังชนฟองสบู่กับคุณมากที่สุด:</Text>
+        <Text style={styles.listSectionTitle}>คณะที่ความสนใจตรงกับคุณมากที่สุด:</Text>
 
         {radarData.map((item, index) => (
           <View key={item.faculty} style={styles.facultyMatchRow}>

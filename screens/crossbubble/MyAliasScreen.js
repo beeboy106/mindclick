@@ -34,11 +34,11 @@ export default function MyAliasScreen() {
       <View style={styles.topHeader}>
         <View style={styles.titleRow}>
           <View style={styles.headerIconCircle}>
-            <MaterialCommunityIcons name="incognito" size={20} color="#a3e635" />
+            <MaterialCommunityIcons name="shield-account-outline" size={20} color="#a3e635" />
           </View>
           <View>
-            <Text style={styles.headerTitle}>MY ALIAS & IDENTITY</Text>
-            <Text style={styles.headerSubtitle}>ตัวตนนามแฝงของคุณในโหมดลับ</Text>
+            <Text style={styles.headerTitle}>โปรไฟล์ลับ (MY ALIAS)</Text>
+            <Text style={styles.headerSubtitle}>จัดการตัวตนนามแฝงและสัญลักษณ์ประจำตัว</Text>
           </View>
         </View>
       </View>
@@ -51,14 +51,18 @@ export default function MyAliasScreen() {
         {/* Big Persona Card */}
         <View style={styles.personaCard}>
           <View style={styles.mascotBigCircle}>
-            <Text style={styles.mascotBigEmoji}>{userAlias?.icon || "🤖"}</Text>
+            <Ionicons
+              name={userAlias?.icon || "finger-print-outline"}
+              size={38}
+              color="#a3e635"
+            />
           </View>
 
-          <Text style={styles.aliasNickname}>{userAlias?.nickname || "วิศวะชอบนอนดึก #402"}</Text>
+          <Text style={styles.aliasNickname}>{userAlias?.nickname || "นิรนาม"}</Text>
 
           <View style={styles.facultyBadge}>
-            <Ionicons name="school" size={12} color="#38bdf8" />
-            <Text style={styles.facultyBadgeText}>{userAlias?.faculty || "คณะวิศวกรรมศาสตร์"}</Text>
+            <Ionicons name="school-outline" size={12} color="#38bdf8" />
+            <Text style={styles.facultyBadgeText}>{userAlias?.faculty || "มหาวิทยาลัย"}</Text>
           </View>
 
           <View style={styles.maskedRealBox}>
@@ -81,8 +85,8 @@ export default function MyAliasScreen() {
 
         {/* Mascot Picker */}
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>เลือกมาสคอตประจำตัว</Text>
-          <Text style={styles.sectionSubtitle}>ไอคอนจะแสดงในห้องแชทกลุ่มและกระดานกระซิบ</Text>
+          <Text style={styles.sectionTitle}>เลือกสัญลักษณ์ประจำตัว</Text>
+          <Text style={styles.sectionSubtitle}>ไอคอนจะแสดงแทนตัวตนในแชทกลุ่มลับและกระดานลับ</Text>
 
           <View style={styles.mascotGrid}>
             {mascotOptions.map((icon) => {
@@ -94,7 +98,11 @@ export default function MyAliasScreen() {
                   activeOpacity={0.7}
                   onPress={() => changeMascot(icon)}
                 >
-                  <Text style={styles.mascotChoiceEmoji}>{icon}</Text>
+                  <Ionicons
+                    name={icon}
+                    size={20}
+                    color={isSelected ? "#a3e635" : "#94a3b8"}
+                  />
                 </TouchableOpacity>
               );
             })}
@@ -107,26 +115,26 @@ export default function MyAliasScreen() {
           <View style={styles.badgeRow}>
             <View style={styles.badgeItem}>
               <View style={styles.badgeIconCircle}>
-                <Text style={styles.badgeEmoji}>🌟</Text>
+                <Ionicons name="sparkles" size={18} color="#a3e635" />
               </View>
-              <Text style={styles.badgeName}>ผู้ทลาย Bubble</Text>
-              <Text style={styles.badgeDesc}>คุยข้ามมากกว่า 3 คณะ</Text>
+              <Text style={styles.badgeName}>ผู้ทลายกรอบ</Text>
+              <Text style={styles.badgeDesc}>สนทนาข้าม 3 คณะ</Text>
             </View>
 
             <View style={styles.badgeItem}>
               <View style={styles.badgeIconCircle}>
-                <Text style={styles.badgeEmoji}>☕</Text>
+                <Ionicons name="moon" size={18} color="#38bdf8" />
               </View>
               <Text style={styles.badgeName}>Night Owl</Text>
-              <Text style={styles.badgeDesc}>คุยในเลานจ์หลังเที่ยงคืน</Text>
+              <Text style={styles.badgeDesc}>คุยช่วงเที่ยงคืน</Text>
             </View>
 
             <View style={styles.badgeItem}>
               <View style={styles.badgeIconCircle}>
-                <Text style={styles.badgeEmoji}>🔓</Text>
+                <Ionicons name="key" size={18} color="#c084fc" />
               </View>
               <Text style={styles.badgeName}>Mutual Master</Text>
-              <Text style={styles.badgeDesc}>ปลดล็อกโปรไฟล์กลุ่มสำเร็จ</Text>
+              <Text style={styles.badgeDesc}>ปลดล็อกโปรไฟล์</Text>
             </View>
           </View>
         </View>
@@ -137,7 +145,7 @@ export default function MyAliasScreen() {
           activeOpacity={0.85}
           onPress={() => toggleCrossBubbleMode(false)}
         >
-          <Ionicons name="exit-outline" size={18} color="#f8fafc" />
+          <Ionicons name="log-out-outline" size={18} color="#f8fafc" />
           <Text style={styles.exitToNormalBtnText}>ออกจากโหมด Cross-Bubble กลับสู่โหมดปกติ</Text>
         </TouchableOpacity>
       </ScrollView>

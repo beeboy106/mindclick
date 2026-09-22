@@ -36,28 +36,28 @@ export default function CrossBubbleTabNavigator() {
           let iconName;
 
           if (route.name === "BlindLoungeTab") {
-            iconName = focused ? "cafe" : "cafe-outline";
+            iconName = focused ? "chatbubbles" : "chatbubbles-outline";
           } else if (route.name === "WhisperWallTab") {
-            iconName = focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline";
+            iconName = focused ? "newspaper" : "newspaper-outline";
           } else if (route.name === "BubbleRadarTab") {
-            iconName = focused ? "planet" : "planet-outline";
+            iconName = focused ? "radio" : "radio-outline";
           } else if (route.name === "MyAliasTab") {
-            iconName = focused ? "finger-print" : "finger-print-outline";
+            iconName = focused ? "shield-checkmark" : "shield-checkmark-outline";
           }
 
-          return <Ionicons name={iconName} size={22} color={color} />;
+          return <Ionicons name={iconName} size={21} color={color} />;
         },
       })}
     >
       <Tab.Screen
         name="BlindLoungeTab"
         component={BlindLoungeScreen}
-        options={{ tabBarLabel: "เลานจ์กลุ่ม" }}
+        options={{ tabBarLabel: "แชทกลุ่ม" }}
       />
       <Tab.Screen
         name="WhisperWallTab"
         component={WhisperWallScreen}
-        options={{ tabBarLabel: "กระดานกระซิบ" }}
+        options={{ tabBarLabel: "กระดานลับ" }}
       />
       <Tab.Screen
         name="BubbleRadarTab"
@@ -67,7 +67,7 @@ export default function CrossBubbleTabNavigator() {
       <Tab.Screen
         name="MyAliasTab"
         component={MyAliasScreen}
-        options={{ tabBarLabel: "ตัวตนลับ" }}
+        options={{ tabBarLabel: "โปรไฟล์ลับ" }}
       />
     </Tab.Navigator>
   );

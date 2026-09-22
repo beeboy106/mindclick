@@ -9,8 +9,19 @@ const CROSS_BUBBLE_ENERGY_KEY = "@mindclick_cross_bubble_energy";
 const CROSS_BUBBLE_CHATS_KEY = "@mindclick_cross_bubble_chats";
 const CROSS_BUBBLE_WHISPER_KEY = "@mindclick_cross_bubble_whispers";
 
-// สุ่มฉายาผสมคณะเริ่มต้น
-const MASCOT_ICONS = ["🤖", "🎧", "☕", "🌙", "🎨", "🎮", "🐱", "🦊", "🪐", "⚡"];
+// รายการไอคอนมาสคอต (Vector Icons จาก @expo/vector-icons Ionicons)
+const MASCOT_ICONS = [
+  "terminal-outline",
+  "headset-outline",
+  "cafe-outline",
+  "moon-outline",
+  "color-palette-outline",
+  "game-controller-outline",
+  "planet-outline",
+  "flash-outline",
+  "compass-outline",
+  "finger-print-outline",
+];
 
 const ALIAS_PREFIXES = [
   "สายชิล", "ชอบนอนดึก", "ติดกาแฟ", "ฟังเพลงอินดี้", "บ้าพลัง",
@@ -32,8 +43,8 @@ const INITIAL_WHISPERS = [
   {
     id: "wh_1",
     authorFaculty: "เด็กแพทย์",
-    authorIcon: "🩺",
-    content: "ใครบอกเด็กแพทย์อ่านแต่หนังสือ ตอนนี้อยากมีตี้เล่นบอร์ดเกมหรือไปนั่งฟังเพลงมาก มีใครว่างบ้างง",
+    authorIcon: "fitness-outline",
+    content: "ใครบอกเด็กแพทย์อ่านแต่หนังสือ ตอนนี้อยากมีตี้เล่นบอร์ดเกมหรือไปนั่งฟังเพลงมาก มีใครว่างบ้าง",
     createdAt: "10 นาทีที่แล้ว",
     pops: 14,
     hasPopped: false,
@@ -41,8 +52,8 @@ const INITIAL_WHISPERS = [
   {
     id: "wh_2",
     authorFaculty: "เด็กสถาปัตย์",
-    authorIcon: "📐",
-    content: "โปรเจกต์ส่งพรุ่งนี้เช้า เพิ่งขึ้นโมเดลเสร็จไป 30% กาแฟแก้วที่ 4 ต้องเข้าแล้ว สู้ชีวิตมากก",
+    authorIcon: "business-outline",
+    content: "โปรเจกต์ส่งพรุ่งนี้เช้า เพิ่งขึ้นโมเดลเสร็จไป 30% กาแฟแก้วที่ 4 ต้องเข้าแล้ว สู้ชีวิตมาก",
     createdAt: "25 นาทีที่แล้ว",
     pops: 28,
     hasPopped: true,
@@ -50,8 +61,8 @@ const INITIAL_WHISPERS = [
   {
     id: "wh_3",
     authorFaculty: "เด็กวิศวะ",
-    authorIcon: "⚙️",
-    content: "แอบมองเด็กอักษรที่โรงอาหารกลางมาทั้งเทอม คุยในกลุ่มนี้เผื่อจะเจอคนที่แอบมอง 5555",
+    authorIcon: "construct-outline",
+    content: "แอบมองเด็กอักษรที่โรงอาหารกลางมาทั้งเทอม คุยในกลุ่มนี้เผื่อจะเจอคนที่แอบมอง",
     createdAt: "1 ชั่วโมงที่แล้ว",
     pops: 45,
     hasPopped: false,
@@ -59,8 +70,8 @@ const INITIAL_WHISPERS = [
   {
     id: "wh_4",
     authorFaculty: "เด็กบัญชี",
-    authorIcon: "📊",
-    content: "งบการเงินไม่ดุลสักที ใครคิดว่าบัญชีง่ายขอให้มาลองนั่งทำตอนตีสองครึ่ง T_T",
+    authorIcon: "calculator-outline",
+    content: "งบการเงินไม่ดุลสักที ใครคิดว่าบัญชีง่ายขอให้มาลองนั่งทำตอนตีสองครึ่ง",
     createdAt: "2 ชั่วโมงที่แล้ว",
     pops: 21,
     hasPopped: false,
@@ -104,7 +115,8 @@ export function CrossBubbleProvider({ children }) {
     members: [
       {
         id: "member_nurse",
-        alias: "พยาบาลเวรดึกติดกาแฟ ☕",
+        alias: "พยาบาลเวรดึกติดกาแฟ",
+        icon: "cafe-outline",
         faculty: "พยาบาลศาสตร์",
         realName: "ฟ้าใส ธนภัทร",
         realAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80",
@@ -113,7 +125,8 @@ export function CrossBubbleProvider({ children }) {
       },
       {
         id: "member_arts",
-        alias: "อักษรฟังเพลงนอกกระแส 🎧",
+        alias: "อักษรฟังเพลงนอกกระแส",
+        icon: "headset-outline",
         faculty: "อักษรศาสตร์",
         realName: "Aphisak Phutsupha",
         realAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
@@ -122,7 +135,8 @@ export function CrossBubbleProvider({ children }) {
       },
       {
         id: "member_acc",
-        alias: "บัญชีเล่นบอร์ดเกมยันเช้า 🎲",
+        alias: "บัญชีเล่นบอร์ดเกมยันเช้า",
+        icon: "game-controller-outline",
         faculty: "พาณิชยศาสตร์และการบัญชี",
         realName: "Janon Kingkohyao",
         realAvatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=400&auto=format&fit=crop&q=80",
@@ -131,7 +145,8 @@ export function CrossBubbleProvider({ children }) {
       },
       {
         id: "member_arch",
-        alias: "สถาปัตย์ปั่นงานข้ามคืน 🎨",
+        alias: "สถาปัตย์ปั่นงานข้ามคืน",
+        icon: "color-palette-outline",
         faculty: "สถาปัตยกรรมศาสตร์",
         realName: "KEDTISAK RAKRUAUG",
         realAvatar: null,
@@ -145,28 +160,31 @@ export function CrossBubbleProvider({ children }) {
     {
       id: "msg_sys_1",
       isSystem: true,
-      text: "🌌 ยินดีต้อนรับสู่ Weekly Micro-Lounge: คุณและเพื่อนอีก 4 คนจากต่างคณะที่มีคำตอบไลฟ์สไตล์ตรงกันถูกจับคู่มารวมกันที่นี่! ร่วมพูดคุยและตอบโพลเพื่อสะสมพลัง Bubble Energy ปลดล็อกโปรไฟล์จริงกันนะ",
+      text: "ยินดีต้อนรับสู่แชทกลุ่มลับ (Blind Lounge): คุณและเพื่อนอีก 4 คนจากต่างคณะที่สไตล์ตรงกันถูกจัดกลุ่มมารวมกันที่นี่ พูดคุยและทำภารกิจเพื่อสะสมพลังกลุ่มสำหรับเปิดเผยตัวตนจริงร่วมกัน (Mutual Reveal)",
       createdAt: "22:00",
     },
     {
       id: "msg_lounge_1",
       senderId: "member_nurse",
-      senderAlias: "พยาบาลเวรดึกติดกาแฟ ☕",
-      text: "ฮัลโหลทุกคนน เพิ่งลงเวรมาพอดีเลยย ใครชอบฟังวง Dept หรือ Anatomy Rabbit บ้างง",
+      senderAlias: "พยาบาลเวรดึกติดกาแฟ",
+      senderIcon: "cafe-outline",
+      text: "สวัสดีทุกคน เพิ่งลงเวรมาพอดีเลย ใครชอบฟังวง Dept หรือ Anatomy Rabbit บ้าง",
       createdAt: "22:05",
     },
     {
       id: "msg_lounge_2",
       senderId: "member_arts",
-      senderAlias: "อักษรฟังเพลงนอกกระแส 🎧",
-      text: "เราชอบมากก! เพลง 'คงต้องบอกลา' ฟังวนทุกคืนเลย ยินดีที่ได้รู้จักเพื่อนๆ นะ",
+      senderAlias: "อักษรฟังเพลงนอกกระแส",
+      senderIcon: "headset-outline",
+      text: "เราชอบมาก เพลง 'คงต้องบอกลา' ฟังวนทุกคืนเลย ยินดีที่ได้รู้จักเพื่อนๆ นะ",
       createdAt: "22:08",
     },
     {
       id: "msg_lounge_3",
       senderId: "member_acc",
-      senderAlias: "บัญชีเล่นบอร์ดเกมยันเช้า 🎲",
-      text: "สวัสดีครับทุกคน เราเด็กบัญชีแต่วันนี้ขอหนีงบดุลมาฟังเพลงด้วยคน 555",
+      senderAlias: "บัญชีเล่นบอร์ดเกมยันเช้า",
+      senderIcon: "game-controller-outline",
+      text: "สวัสดีครับทุกคน เราเด็กบัญชีแต่วันนี้ขอหนีงบดุลมาฟังเพลงด้วยคน",
       createdAt: "22:12",
     },
   ]);
@@ -187,7 +205,7 @@ export function CrossBubbleProvider({ children }) {
       faculty: facultyName,
       shortFaculty,
       icon,
-      badge: "ผู้ทลาย Social Bubble 🌟",
+      badge: "ผู้ทลาย Social Bubble",
     };
   }, [profile?.faculty]);
 
@@ -202,7 +220,12 @@ export function CrossBubbleProvider({ children }) {
 
         const storedAlias = await AsyncStorage.getItem(CROSS_BUBBLE_ALIAS_KEY);
         if (storedAlias) {
-          setUserAlias(JSON.parse(storedAlias));
+          const parsed = JSON.parse(storedAlias);
+          if (!MASCOT_ICONS.includes(parsed.icon)) {
+            parsed.icon = MASCOT_ICONS[0];
+          }
+          parsed.badge = "ผู้ทลาย Social Bubble";
+          setUserAlias(parsed);
         } else {
           const newAlias = generateRandomAlias();
           setUserAlias(newAlias);
@@ -261,7 +284,8 @@ export function CrossBubbleProvider({ children }) {
     const newMsg = {
       id: `lounge_msg_${Date.now()}`,
       senderId: user?.id || "my_user",
-      senderAlias: `${userAlias?.nickname || "คุณ"} ${userAlias?.icon || "🤖"}`,
+      senderAlias: userAlias?.nickname || "คุณ",
+      senderIcon: userAlias?.icon || "finger-print-outline",
       text: text.trim(),
       createdAt: timeStr,
       isMe: true,
@@ -327,7 +351,7 @@ export function CrossBubbleProvider({ children }) {
     const newPost = {
       id: `wh_${Date.now()}`,
       authorFaculty: facultyTag || userAlias?.shortFaculty || "เด็กมหาวิทยาลัย",
-      authorIcon: userAlias?.icon || "🌙",
+      authorIcon: userAlias?.icon || "finger-print-outline",
       content: content.trim(),
       createdAt: "เมื่อสักครู่",
       pops: 1,

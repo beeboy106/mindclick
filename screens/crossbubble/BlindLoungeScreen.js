@@ -52,16 +52,16 @@ export default function BlindLoungeScreen({ navigation }) {
       <View style={styles.topHeader}>
         <View style={styles.headerTitleRow}>
           <View style={styles.loungeBadge}>
-            <MaterialCommunityIcons name="shield-account" size={14} color="#a3e635" />
-            <Text style={styles.loungeBadgeText}>BLIND GROUP LOUNGE</Text>
+            <Ionicons name="chatbubbles" size={13} color="#a3e635" />
+            <Text style={styles.loungeBadgeText}>แชทกลุ่มลับ (BLIND LOUNGE)</Text>
           </View>
           <TouchableOpacity
             style={styles.exitModeBtn}
             activeOpacity={0.8}
             onPress={() => toggleCrossBubbleMode(false)}
           >
-            <Ionicons name="sunny-outline" size={14} color="#f8fafc" />
-            <Text style={styles.exitModeText}>โหมดปกติ</Text>
+            <Ionicons name="log-out-outline" size={14} color="#cbd5e1" />
+            <Text style={styles.exitModeText}>กลับโหมดปกติ</Text>
           </TouchableOpacity>
         </View>
 
@@ -89,7 +89,7 @@ export default function BlindLoungeScreen({ navigation }) {
       <View style={styles.energyMeterContainer}>
         <View style={styles.energyMetaRow}>
           <View style={styles.energyTitleRow}>
-            <MaterialCommunityIcons name="lightning-bolt" size={16} color="#a3e635" />
+            <MaterialCommunityIcons name="lightning-bolt" size={15} color="#a3e635" />
             <Text style={styles.energyTitle}>พลังกลุ่ม (Bubble Energy)</Text>
           </View>
           <Text style={styles.energyPercentText}>{bubbleEnergy}%</Text>
@@ -116,14 +116,17 @@ export default function BlindLoungeScreen({ navigation }) {
             <Ionicons name="sparkles" size={14} color="#090d16" />
             <Text style={styles.unlockedRevealBtnText}>
               {mutualRevealState.allConsented
-                ? "ดูโปรไฟล์จริงของทุกคนแล้ว! 🔓"
+                ? "ดูโปรไฟล์จริงของทุกคนแล้ว (Mutual Reveal สำเร็จ)"
                 : "พลังเต็ม 100%! แตะเพื่อขอเปิดเผยตัวตนจริงร่วมกัน (Mutual Reveal)"}
             </Text>
           </TouchableOpacity>
         ) : (
-          <Text style={styles.energyHint}>
-            💡 ส่งข้อความ (+10%) หรือตอบโพล (+15%) เพื่อปลดล็อก Mutual Reveal
-          </Text>
+          <View style={styles.energyHintRow}>
+            <Ionicons name="flash-outline" size={12} color="#a3e635" />
+            <Text style={styles.energyHint}>
+              ส่งข้อความ (+10%) หรือตอบโพล (+15%) เพื่อปลดล็อก Mutual Reveal
+            </Text>
+          </View>
         )}
       </View>
 
@@ -215,7 +218,14 @@ export default function BlindLoungeScreen({ navigation }) {
                 ]}
               >
                 {!msg.isMe && (
-                  <Text style={styles.msgSenderAlias}>{msg.senderAlias}</Text>
+                  <View style={styles.msgSenderRow}>
+                    <Ionicons
+                      name={msg.senderIcon || "finger-print-outline"}
+                      size={11}
+                      color="#a3e635"
+                    />
+                    <Text style={styles.msgSenderAlias}>{msg.senderAlias}</Text>
+                  </View>
                 )}
                 <View
                   style={[
@@ -242,7 +252,7 @@ export default function BlindLoungeScreen({ navigation }) {
         <View style={styles.inputBar}>
           <TextInput
             style={styles.chatInput}
-            placeholder="พิมพ์ข้อความนิรนามในเลานจ์..."
+            placeholder="พิมพ์ข้อความในแชทกลุ่มลับ..."
             placeholderTextColor="#64748b"
             value={inputMsg}
             onChangeText={setInputMsg}
@@ -344,9 +354,24 @@ export default function BlindLoungeScreen({ navigation }) {
                         ? member.realName
                         : member.alias}
                     </Text>
-                    <Text style={styles.memberFaculty}>
-                      {member.faculty} • {member.consented ? "✅ ยินยอมแล้ว" : "⏳ รอกดยืนยัน"}
-                    </Text>
+                    <View style={styles.memberStatusRow}>
+                      <Text style={styles.memberFaculty}>{member.faculty}</Text>
+                      <View style={styles.memberStatusTag}>
+                        <Ionicons
+                          name={member.consented ? "checkmark-circle" : "time-outline"}
+                          size={11}
+                          color={member.consented ? "#a3e635" : "#94a3b8"}
+                        />
+                        <Text
+                          style={[
+                            styles.memberStatusTagText,
+                            member.consented && styles.memberStatusTagTextConsented,
+                          ]}
+                        >
+                          {member.consented ? "ยินยอมแล้ว" : "รอกดยืนยัน"}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
               ))}
@@ -840,6 +865,42 @@ const styles = StyleSheet.create({
   memberFaculty: {
     color: "#94a3b8",
     fontSize: 11,
+  },
+  energyHintRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 6,
+  },
+  msgSenderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginBottom: 3,
+    marginLeft: 4,
+  },
+  memberStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 3,
+  },
+  memberStatusTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "#0b0f17",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  memberStatusTagText: {
+    color: "#94a3b8",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  memberStatusTagTextConsented: {
+    color: "#a3e635",
   },
   closeModalBtn: {
     paddingVertical: 10,

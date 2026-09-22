@@ -54,9 +54,9 @@ export default function FeedScreen({ navigation }) {
 
   const handleScroll = (event) => {
     const offsetY = event.nativeEvent.contentOffset.y;
-    if (offsetY < -10) {
+    if (offsetY < -15) {
       setPullDistance(Math.abs(offsetY));
-      setIsPullingTrigger(offsetY < -65);
+      setIsPullingTrigger(offsetY < -80);
     } else {
       if (pullDistance > 0) {
         setPullDistance(0);
@@ -67,7 +67,7 @@ export default function FeedScreen({ navigation }) {
 
   const handleScrollEndDrag = (event) => {
     const offsetY = event.nativeEvent.contentOffset.y;
-    if (offsetY < -65) {
+    if (offsetY < -80) {
       toggleCrossBubbleMode(true);
     }
     setPullDistance(0);
@@ -193,16 +193,6 @@ export default function FeedScreen({ navigation }) {
 
         {/* Right Header Controls */}
         <View style={styles.headerRightControls}>
-          {/* Cross-Bubble Mode Quick Switcher */}
-          <TouchableOpacity
-            style={styles.crossBubbleSwitchBtn}
-            activeOpacity={0.8}
-            onPress={() => toggleCrossBubbleMode(true)}
-          >
-            <MaterialCommunityIcons name="moon-waning-crescent" size={15} color="#8b5cf6" />
-            <Text style={styles.crossBubbleSwitchText}>Cross-Bubble</Text>
-          </TouchableOpacity>
-
           {/* Chat Notification Button */}
           <TouchableOpacity
             style={styles.chatIconBtn}
@@ -227,17 +217,17 @@ export default function FeedScreen({ navigation }) {
         onScrollEndDrag={handleScrollEndDrag}
         scrollEventThrottle={16}
       >
-        {/* Pull-down Vanish Mode Indicator */}
-        {pullDistance > 12 && (
+        {/* Pull-down Vanish Mode Indicator (Pure Gesture) */}
+        {pullDistance > 15 && (
           <View
             style={[
               styles.pullIndicatorBox,
               isPullingTrigger && styles.pullIndicatorBoxTriggered,
             ]}
           >
-            <MaterialCommunityIcons
-              name={isPullingTrigger ? "lightning-bolt" : "arrow-down-circle-outline"}
-              size={18}
+            <Ionicons
+              name={isPullingTrigger ? "sparkles" : "arrow-down-circle-outline"}
+              size={16}
               color={isPullingTrigger ? "#a3e635" : "#8b5cf6"}
             />
             <Text
@@ -247,8 +237,8 @@ export default function FeedScreen({ navigation }) {
               ]}
             >
               {isPullingTrigger
-                ? "✨ ปล่อยนิ้วเพื่อเข้าสู่โหมดมืด Cross-Bubble 🌌"
-                : "⬇️ ลากลงอีกนิดเพื่อเข้าสู่ Cross-Bubble Mode"}
+                ? "ปล่อยนิ้วเพื่อเข้าสู่โหมด Cross-Bubble"
+                : "ดึงลงอีกนิดเพื่อเข้าสู่โหมด Cross-Bubble"}
             </Text>
           </View>
         )}
