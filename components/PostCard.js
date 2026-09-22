@@ -11,12 +11,12 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { colors, shadows } from "../lib/theme";
 
-// ข้อมูลสีและไอคอนสำหรับแต่ละกระทู้
+// ข้อมูลสีสำหรับแต่ละกระทู้ (ไม่มีไอคอน/อิโมจิ)
 const TOPIC_CONFIG = {
-  movies_series: { label: "หนัง&ซีรีย์", emoji: "🎬", color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
-  hobbies: { label: "งานอดิเรก", emoji: "🎨", color: "#db2777", bg: "#fdf2f8", border: "#fbcfe8" },
-  news: { label: "ข่าวสาร", emoji: "📰", color: "#0284c7", bg: "#f0f9ff", border: "#bae6fd" },
-  boardgames: { label: "บอร์ดเกม", emoji: "🎲", color: "#059669", bg: "#ecfdf5", border: "#a7f3d0" },
+  movies_series: { label: "หนัง&ซีรีย์", color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
+  hobbies: { label: "งานอดิเรก", color: "#db2777", bg: "#fdf2f8", border: "#fbcfe8" },
+  news: { label: "ข่าวสาร", color: "#0284c7", bg: "#f0f9ff", border: "#bae6fd" },
+  boardgames: { label: "บอร์ดเกม", color: "#059669", bg: "#ecfdf5", border: "#a7f3d0" },
 };
 
 export default function PostCard({
@@ -30,7 +30,7 @@ export default function PostCard({
   onSelectTopic,
 }) {
   const [commentText, setCommentText] = useState("");
-  const [replyingTo, setReplyingTo] = useState(null); // { id, userName }
+  const [replyingTo, setReplyingTo] = useState(null); // { rootId, targetId, userName }
   const [showComments, setShowComments] = useState(true);
   const [avatarError, setAvatarError] = useState(false);
   const inputRef = useRef(null);
@@ -63,9 +63,36 @@ export default function PostCard({
     setReplyingTo(null);
   };
 
+  // จัดระเบียบคอมเมนต์เป็น Root Comments และ Replies (สไตล์ Facebook)
+  const commentList = post.comments || [];
+  const rootComments = [];
+  const repliesMap = {};
+
+  const commentMap = new Map();
+  commentList.forEach((c) => commentMap.set(c.id, c));
+
+  commentList.forEach((c) => {
+    let parentId = c.parentId;
+    if (!parentId && c.replyTo?.commentId) {
+      const target = commentMap.get(c.replyTo.commentId);
+      if (target) {
+        parentId = target.parentId || target.id;
+      }
+    }
+
+    if (parentId && commentMap.has(parentId)) {
+      if (!repliesMap[parentId]) {
+        repliesMap[parentId] = [];
+      }
+      repliesMap[parentId].push(c);
+    } else {
+      rootComments.push(c);
+    }
+  });
+
   return (
     <View style={styles.card}>
-      {/* Topic Badge if post belongs to a forum topic */}
+      {/* Topic Badge if post belongs to a forum topic (#ชื่อกระทู้ คลีนๆ ไม่มีอิโมจิ) */}
       {Boolean(topicConfig) && (
         <TouchableOpacity
           style={[
@@ -76,13 +103,10 @@ export default function PostCard({
           onPress={() => onSelectTopic && onSelectTopic(post.topicId)}
           disabled={!onSelectTopic}
         >
-          <Text style={styles.topicBadgeEmoji}>{topicConfig.emoji}</Text>
+          <Text style={[styles.topicBadgeHash, { color: topicConfig.color }]}>#</Text>
           <Text style={[styles.topicBadgeText, { color: topicConfig.color }]}>
             {topicConfig.label}
           </Text>
-          {onSelectTopic && (
-            <Ionicons name="chevron-forward" size={11} color={topicConfig.color} />
-          )}
         </TouchableOpacity>
       )}
 
@@ -194,58 +218,107 @@ export default function PostCard({
       {/* Comments Section */}
       {showComments && (
         <View style={styles.commentsSection}>
-          {/* List of comments */}
+          {/* List of comments (สไตล์ Facebook: Root comments + Nested Replies) */}
           {commentsCount > 0 && (
             <View style={styles.commentsList}>
-              {post.comments.map((comment) => (
-                <View key={comment.id} style={styles.commentItem}>
-                  <View style={styles.commentAvatarMini}>
-                    <Text style={styles.commentInitial}>
-                      {comment.userName ? comment.userName.charAt(0).toUpperCase() : "?"}
-                    </Text>
-                  </View>
-                  <View style={styles.commentMainCol}>
-                    <View style={styles.commentBubble}>
-                      <View style={styles.commentTopRow}>
-                        <Text style={styles.commentAuthorName}>{comment.userName}</Text>
-                        <Text style={styles.commentTime}>{comment.createdAt}</Text>
-                      </View>
+              {rootComments.map((root) => {
+                const rootReplies = repliesMap[root.id] || [];
 
-                      {/* Replying Tag if comment is replying to someone */}
-                      {Boolean(comment.replyTo) && (
-                        <View style={styles.replyRefBubble}>
-                          <Ionicons name="return-down-forward" size={11} color={colors.primary} />
-                          <Text style={styles.replyRefText}>
-                            ตอบกลับ <Text style={styles.replyRefUser}>@{comment.replyTo.userName}</Text>
+                return (
+                  <View key={root.id} style={styles.commentThreadWrapper}>
+                    {/* Root Comment Row */}
+                    <View style={styles.commentRow}>
+                      <View style={styles.commentAvatar}>
+                        {root.userAvatar ? (
+                          <Image source={{ uri: root.userAvatar }} style={styles.avatarImg} />
+                        ) : (
+                          <Text style={styles.avatarInitial}>
+                            {root.userName ? root.userName.charAt(0).toUpperCase() : "?"}
                           </Text>
+                        )}
+                      </View>
+                      <View style={styles.commentMainCol}>
+                        <View style={styles.commentBubble}>
+                          <Text style={styles.commentAuthorName}>{root.userName}</Text>
+                          <Text style={styles.commentContent}>{root.content}</Text>
                         </View>
-                      )}
-
-                      <Text style={styles.commentContent}>{comment.content}</Text>
+                        {/* Meta Action Row: Time • Reply */}
+                        <View style={styles.commentMetaRow}>
+                          <Text style={styles.commentTime}>{root.createdAt}</Text>
+                          <Text style={styles.commentDot}>•</Text>
+                          <TouchableOpacity
+                            activeOpacity={0.7}
+                            onPress={() => {
+                              setReplyingTo({
+                                rootId: root.id,
+                                targetId: root.id,
+                                userName: root.userName || "ผู้ใช้",
+                              });
+                              if (inputRef.current) {
+                                inputRef.current.focus();
+                              }
+                            }}
+                          >
+                            <Text style={styles.replyActionText}>ตอบกลับ</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
                     </View>
 
-                    {/* Reply Action Button */}
-                    <View style={styles.commentActionsRow}>
-                      <TouchableOpacity
-                        style={styles.replyBtn}
-                        activeOpacity={0.7}
-                        onPress={() => {
-                          setReplyingTo({
-                            id: comment.id,
-                            userName: comment.userName || "ผู้ใช้",
-                          });
-                          if (inputRef.current) {
-                            inputRef.current.focus();
-                          }
-                        }}
-                      >
-                        <Ionicons name="return-down-forward" size={12} color={colors.primary} />
-                        <Text style={styles.replyBtnText}>ตอบกลับ</Text>
-                      </TouchableOpacity>
-                    </View>
+                    {/* Nested Replies with Left Connector Line (Facebook Style) */}
+                    {rootReplies.length > 0 && (
+                      <View style={styles.repliesThreadContainer}>
+                        {rootReplies.map((reply) => (
+                          <View key={reply.id} style={styles.replyRow}>
+                            <View style={styles.replyAvatar}>
+                              {reply.userAvatar ? (
+                                <Image source={{ uri: reply.userAvatar }} style={styles.replyAvatarImg} />
+                              ) : (
+                                <Text style={styles.replyAvatarInitial}>
+                                  {reply.userName ? reply.userName.charAt(0).toUpperCase() : "?"}
+                                </Text>
+                              )}
+                            </View>
+                            <View style={styles.commentMainCol}>
+                              <View style={styles.replyBubble}>
+                                <Text style={styles.commentAuthorName}>{reply.userName}</Text>
+                                <Text style={styles.commentContent}>
+                                  {reply.replyTo?.userName && reply.replyTo.userName !== reply.userName && (
+                                    <Text style={styles.replyMentionText}>
+                                      @{reply.replyTo.userName}{" "}
+                                    </Text>
+                                  )}
+                                  {reply.content}
+                                </Text>
+                              </View>
+                              {/* Reply Meta Action Row */}
+                              <View style={styles.commentMetaRow}>
+                                <Text style={styles.commentTime}>{reply.createdAt}</Text>
+                                <Text style={styles.commentDot}>•</Text>
+                                <TouchableOpacity
+                                  activeOpacity={0.7}
+                                  onPress={() => {
+                                    setReplyingTo({
+                                      rootId: root.id,
+                                      targetId: reply.id,
+                                      userName: reply.userName || "ผู้ใช้",
+                                    });
+                                    if (inputRef.current) {
+                                      inputRef.current.focus();
+                                    }
+                                  }}
+                                >
+                                  <Text style={styles.replyActionText}>ตอบกลับ</Text>
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    )}
                   </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
           )}
 
@@ -302,16 +375,17 @@ const styles = StyleSheet.create({
   topicBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
     borderWidth: 1.5,
     alignSelf: "flex-start",
     marginBottom: 10,
   },
-  topicBadgeEmoji: {
-    fontSize: 13,
+  topicBadgeHash: {
+    fontSize: 12,
+    fontWeight: "900",
   },
   topicBadgeText: {
     fontSize: 12,
@@ -427,30 +501,39 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   commentsSection: {
-    marginTop: 4,
+    marginTop: 6,
   },
   commentsList: {
     marginBottom: 12,
-    gap: 10,
+    gap: 12,
   },
-  commentItem: {
+  commentThreadWrapper: {
+    gap: 6,
+  },
+  commentRow: {
     flexDirection: "row",
     gap: 8,
     alignItems: "flex-start",
   },
-  commentAvatarMini: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  commentAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: "#e0e7ff",
     borderWidth: 1,
     borderColor: colors.darkBorder,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 2,
+    marginTop: 1,
+    overflow: "hidden",
   },
-  commentInitial: {
-    fontSize: 12,
+  avatarImg: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 16,
+  },
+  avatarInitial: {
+    fontSize: 13,
     fontWeight: "800",
     color: colors.primary,
   },
@@ -458,67 +541,89 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   commentBubble: {
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#f1f5f9",
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: "#e2e8f0",
   },
-  commentTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 2,
+  replyBubble: {
+    backgroundColor: "#f8fafc",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
   commentAuthorName: {
     fontSize: 12,
     fontWeight: "800",
     color: colors.ink,
-  },
-  commentTime: {
-    fontSize: 10,
-    color: colors.mutedForeground,
-  },
-  replyRefBubble: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#e0e7ff",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    alignSelf: "flex-start",
-    marginBottom: 4,
-  },
-  replyRefText: {
-    fontSize: 11,
-    color: colors.primary,
-  },
-  replyRefUser: {
-    fontWeight: "800",
+    marginBottom: 2,
   },
   commentContent: {
     fontSize: 13,
     color: colors.ink,
     lineHeight: 18,
   },
-  commentActionsRow: {
+  replyMentionText: {
+    fontWeight: "800",
+    color: colors.primary,
+  },
+  commentMetaRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 6,
     marginTop: 3,
     marginLeft: 6,
   },
-  replyBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingVertical: 2,
-    paddingHorizontal: 4,
+  commentTime: {
+    fontSize: 11,
+    color: colors.mutedForeground,
   },
-  replyBtnText: {
+  commentDot: {
+    fontSize: 10,
+    color: "#94a3b8",
+  },
+  replyActionText: {
     fontSize: 11,
     fontWeight: "700",
+    color: colors.primary,
+  },
+  repliesThreadContainer: {
+    marginLeft: 16,
+    borderLeftWidth: 2,
+    borderLeftColor: "#cbd5e1",
+    paddingLeft: 12,
+    marginTop: 4,
+    gap: 10,
+  },
+  replyRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "flex-start",
+  },
+  replyAvatar: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#e0e7ff",
+    borderWidth: 1,
+    borderColor: colors.darkBorder,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 1,
+    overflow: "hidden",
+  },
+  replyAvatarImg: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 13,
+  },
+  replyAvatarInitial: {
+    fontSize: 11,
+    fontWeight: "800",
     color: colors.primary,
   },
   replyingBar: {

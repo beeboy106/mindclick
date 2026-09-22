@@ -8,13 +8,13 @@ const STATUS_STORAGE_PREFIX = "@mindclick_user_status_";
 const CHATS_STORAGE_PREFIX = "@mindclick_chats_";
 const FRIENDS_STORAGE_PREFIX = "@mindclick_friends_";
 
-// 4 หมวดกระทู้หลัก + แท็บทั้งหมด
+// 4 หมวดกระทู้หลัก + แท็บฟีด
 export const FORUM_TOPICS = [
-  { id: "all", label: "ทั้งหมด", icon: "apps-outline", emoji: "🌐", description: "เรื่องราวทั่วไปและทุกกระทู้รวมกัน" },
-  { id: "movies_series", label: "หนัง&ซีรีย์", icon: "film-outline", emoji: "🎬", description: "รีวิว แนะนำหนังและซีรีย์น่าดู", placeholder: "แชร์รีวิวหนัง ซีรีย์ที่น่าดู หรือฉากที่ชอบ..." },
-  { id: "hobbies", label: "งานอดิเรก", icon: "color-palette-outline", emoji: "🎨", description: "ศิลปะ ดนตรี ท่องเที่ยว งานอดิเรกสร้างสรรค์", placeholder: "แชร์งานอดิเรก ฝีมือดนตรี ศิลปะ หรือทริปท่องเที่ยว..." },
-  { id: "news", label: "ข่าวสาร", icon: "newspaper-outline", emoji: "📰", description: "สาระความรู้ ข่าวสารทันเหตุการณ์และเทคโนโลยี", placeholder: "แชร์ข่าวสาร สาระความรู้ หรือประเด็นน่าสนใจ..." },
-  { id: "boardgames", label: "บอร์ดเกม", icon: "game-controller-outline", emoji: "🎲", description: "แนะนำเกม นัดเล่นบอร์ดเกม แลกเปลี่ยนกลยุทธ์", placeholder: "ชวนเล่นบอร์ดเกม แนะนำเกมสนุกๆ หรือถามกติกา..." },
+  { id: "all", label: "ฟีด", description: "เรื่องราวทั่วไปและทุกกระทู้รวมกัน" },
+  { id: "movies_series", label: "หนัง&ซีรีย์", description: "รีวิว แนะนำหนังและซีรีย์น่าดู", placeholder: "แชร์รีวิวหนัง ซีรีย์ที่น่าดู หรือฉากที่ชอบ..." },
+  { id: "hobbies", label: "งานอดิเรก", description: "ศิลปะ ดนตรี ท่องเที่ยว งานอดิเรกสร้างสรรค์", placeholder: "แชร์งานอดิเรก ฝีมือดนตรี ศิลปะ หรือทริปท่องเที่ยว..." },
+  { id: "news", label: "ข่าวสาร", description: "สาระความรู้ ข่าวสารทันเหตุการณ์และเทคโนโลยี", placeholder: "แชร์ข่าวสาร สาระความรู้ หรือประเด็นน่าสนใจ..." },
+  { id: "boardgames", label: "บอร์ดเกม", description: "แนะนำเกม นัดเล่นบอร์ดเกม แลกเปลี่ยนกลยุทธ์", placeholder: "ชวนเล่นบอร์ดเกม แนะนำเกมสนุกๆ หรือถามกติกา..." },
 ];
 
 // Mock โพสต์เริ่มต้น (ครอบคลุมทั้งฟีดทั่วไปและ 4 หมวดกระทู้)
@@ -26,7 +26,7 @@ const INITIAL_POSTS = [
     authorAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
     authorEmail: "aphisak@example.com",
     topicId: "hobbies",
-    content: "สวัสดีเพื่อนๆ Mindclick ทุกคนครับ ใครที่ชอบด้านดนตรีหรือไปเที่ยววันหยุด ทักมาคุยแลกเปลี่ยนกันได้นะ 🎵⛺",
+    content: "สวัสดีเพื่อนๆ Mindclick ทุกคนครับ ใครที่ชอบด้านดนตรีหรือไปเที่ยววันหยุด ทักมาคุยแลกเปลี่ยนกันได้นะ",
     image: null,
     createdAt: "16 ก.ย. 2569 15:38",
     likes: ["user_mock_1"],
@@ -38,6 +38,7 @@ const INITIAL_POSTS = [
         userAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80",
         content: "สวัสดีค่ะ ไว้ชวนไปฟังดนตรีสดด้วยกันนะคะ",
         createdAt: "16 ก.ย. 2569 15:45",
+        parentId: null,
         replyTo: null,
       },
       {
@@ -47,6 +48,7 @@ const INITIAL_POSTS = [
         userAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
         content: "ยินดีเลยครับ มีร้านแถวเอกมัยเล่นดีมาก ไว้ไปด้วยกันนะ",
         createdAt: "16 ก.ย. 2569 15:50",
+        parentId: "c_1",
         replyTo: {
           commentId: "c_1",
           userName: "ฟ้าใส ธนภัทร",
@@ -61,7 +63,7 @@ const INITIAL_POSTS = [
     authorAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80",
     authorEmail: "fasai@example.com",
     topicId: "movies_series",
-    content: "เพิ่งดูซีรีย์เรื่องใหม่จบไป เนื้อเรื่องลุ้นหักมุมมาก มีใครกำลังดูเรื่องนี้อยู่บ้าง มาคุยกันได้นะ! 🎬🍿",
+    content: "เพิ่งดูซีรีย์เรื่องใหม่จบไป เนื้อเรื่องลุ้นหักมุมมาก มีใครกำลังดูเรื่องนี้อยู่บ้าง มาคุยกันได้นะ",
     image: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80",
     createdAt: "16 ก.ย. 2569 16:20",
     likes: ["user_mock_aphisak"],
@@ -73,6 +75,7 @@ const INITIAL_POSTS = [
         userAvatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=400&auto=format&fit=crop&q=80",
         content: "เรื่องอะไรเหรอครับ กำลังหาซีรีย์ดูวันหยุดพอดีเลย แนะนำหน่อยครับ",
         createdAt: "16 ก.ย. 2569 16:30",
+        parentId: null,
         replyTo: null,
       },
     ],
@@ -84,7 +87,7 @@ const INITIAL_POSTS = [
     authorAvatar: null,
     authorEmail: "kedtisak@example.com",
     topicId: "boardgames",
-    content: "เสาร์-อาทิตย์นี้ มีใครสนใจเล่น Catan หรือ Dixit แถวสยามไหมครับ ขาดอีก 2 คน บอร์ดเกมเมอร์มือใหม่ยินดีต้อนรับครับ 🎲♟️",
+    content: "เสาร์-อาทิตย์นี้ มีใครสนใจเล่น Catan หรือ Dixit แถวสยามไหมครับ ขาดอีก 2 คน บอร์ดเกมเมอร์มือใหม่ยินดีต้อนรับครับ",
     image: "https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?w=800&auto=format&fit=crop&q=80",
     createdAt: "16 ก.ย. 2569 10:45",
     likes: ["user_mock_janon"],
@@ -94,8 +97,9 @@ const INITIAL_POSTS = [
         userId: "user_mock_aphisak",
         userName: "Aphisak Phutsupha",
         userAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
-        content: "สนใจครับ! เล่น Catan ประจำเลย ว่างช่วงบ่ายครับ",
+        content: "สนใจครับ เล่น Catan ประจำเลย ว่างช่วงบ่ายครับ",
         createdAt: "16 ก.ย. 2569 11:15",
+        parentId: null,
         replyTo: null,
       },
       {
@@ -105,6 +109,7 @@ const INITIAL_POSTS = [
         userAvatar: null,
         content: "ยอดเยี่ยมเลยครับ เดี๋ยวส่งโลเคชั่นร้านให้ในแชทนะ",
         createdAt: "16 ก.ย. 2569 11:20",
+        parentId: "c_b1",
         replyTo: {
           commentId: "c_b1",
           userName: "Aphisak Phutsupha",
@@ -119,7 +124,7 @@ const INITIAL_POSTS = [
     authorAvatar: null,
     authorEmail: "sarawut@example.com",
     topicId: "news",
-    content: "อัปเดตเทรนด์ AI และเทคโนโลยีในปี 2026 ตอนนี้มีเครื่องมือใหม่ๆ ช่วยพัฒนาแอปได้เร็วขึ้นเยอะมาก มีใครลองใช้ตัวไหนบ้างแล้วครับ 📰💡",
+    content: "อัปเดตเทรนด์ AI และเทคโนโลยีในปี 2026 ตอนนี้มีเครื่องมือใหม่ๆ ช่วยพัฒนาแอปได้เร็วขึ้นเยอะมาก มีใครลองใช้ตัวไหนบ้างแล้วครับ",
     image: null,
     createdAt: "16 ก.ย. 2569 12:00",
     likes: ["user_mock_1", "user_mock_aphisak"],
@@ -132,7 +137,7 @@ const INITIAL_POSTS = [
     authorAvatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=400&auto=format&fit=crop&q=80",
     authorEmail: "janon@example.com",
     topicId: null,
-    content: "วันนี้มีใครไปอ่านหนังสือหรือทำงานที่หอสมุดบ้างไหมครับ หาเพื่อนติวและพูดคุยเรื่องโปรเจกต์ 📚💻",
+    content: "วันนี้มีใครไปอ่านหนังสือหรือทำงานที่หอสมุดบ้างไหมครับ หาเพื่อนติวและพูดคุยเรื่องโปรเจกต์",
     image: null,
     createdAt: "16 ก.ย. 2569 14:10",
     likes: ["user_mock_2", "user_mock_aphisak"],
@@ -343,13 +348,17 @@ export function FeedProvider({ children }) {
     [posts, userId]
   );
 
-  // 4. เพิ่มความคิดเห็น (Comment) และตอบกลับความคิดเห็น (Reply)
+  // 4. เพิ่มความคิดเห็น (Comment) และตอบกลับความคิดเห็น (Reply แบบซ้อน)
   const addComment = useCallback(
-    async (postId, commentText, replyTo = null) => {
+    async (postId, commentText, replyInfo = null) => {
       if (!commentText || !commentText.trim()) return;
 
       const now = new Date();
       const dateStr = `${now.getDate()} ${now.toLocaleString("th-TH", { month: "short" })} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+      const parentId = replyInfo?.rootId || replyInfo?.parentId || null;
+      const targetCommentId = replyInfo?.targetId || replyInfo?.commentId || replyInfo?.id || null;
+      const targetUserName = replyInfo?.userName || null;
 
       const newComment = {
         id: `c_${Date.now()}`,
@@ -358,10 +367,11 @@ export function FeedProvider({ children }) {
         userAvatar: user?.image || null,
         content: commentText.trim(),
         createdAt: dateStr,
-        replyTo: replyTo
+        parentId: parentId,
+        replyTo: targetUserName
           ? {
-              commentId: replyTo.id || replyTo.commentId,
-              userName: replyTo.userName,
+              commentId: targetCommentId,
+              userName: targetUserName,
             }
           : null,
       };

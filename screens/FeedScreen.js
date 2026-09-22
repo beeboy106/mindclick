@@ -124,7 +124,7 @@ export default function FeedScreen({ navigation }) {
       Alert.alert(
         "สำเร็จ",
         selectedTopic === "all"
-          ? "แชร์เรื่องราวของคุณเรียบร้อยแล้ว"
+          ? "แชร์เรื่องราวลงในฟีดเรียบร้อยแล้ว"
           : `แชร์ลงในกระทู้ "${currentTopic.label}" เรียบร้อยแล้ว`
       );
     } catch (e) {
@@ -240,7 +240,7 @@ export default function FeedScreen({ navigation }) {
             <Text style={styles.createCardHeader}>
               {selectedTopic === "all"
                 ? "แชร์เรื่องราวของคุณ"
-                : `แชร์ในกระทู้: ${currentTopic.emoji} ${currentTopic.label}`}
+                : `แชร์ในกระทู้: ${currentTopic.label}`}
             </Text>
             {selectedTopic !== "all" && (
               <TouchableOpacity
@@ -248,7 +248,7 @@ export default function FeedScreen({ navigation }) {
                 activeOpacity={0.7}
                 onPress={() => setSelectedTopic("all")}
               >
-                <Text style={styles.resetTopicBtnText}>สลับไปโพสต์ทั่วไป</Text>
+                <Text style={styles.resetTopicBtnText}>สลับไปฟีดปกติ</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -332,13 +332,10 @@ export default function FeedScreen({ navigation }) {
           </View>
         </View>
 
-        {/* SECTION: Forum Topic Choice Chips (แทรกระหว่างการ์ดโพสต์และปุ่มรีเฟรชฟีด) */}
+        {/* SECTION: Forum Topic Choice Chips (ไม่มีไอคอน/อิโมจิ เพื่อความคลีนและเป็นมืออาชีพ) */}
         <View style={styles.topicsSection}>
           <View style={styles.topicsSectionHeader}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-              <Ionicons name="chatbubbles" size={16} color={colors.primary} />
-              <Text style={styles.topicsTitle}>กระทู้พูดคุยตามความสนใจ</Text>
-            </View>
+            <Text style={styles.topicsTitle}>กระทู้พูดคุย</Text>
             <Text style={styles.topicsHint}>แตะเพื่อเลือกกระทู้</Text>
           </View>
 
@@ -363,7 +360,6 @@ export default function FeedScreen({ navigation }) {
                   activeOpacity={0.8}
                   onPress={() => setSelectedTopic(topic.id)}
                 >
-                  <Text style={styles.topicChipEmoji}>{topic.emoji}</Text>
                   <Text
                     style={[
                       styles.topicChipText,
@@ -398,8 +394,8 @@ export default function FeedScreen({ navigation }) {
           <View style={{ flex: 1, marginRight: 8 }}>
             <Text style={styles.feedSectionTitle}>
               {selectedTopic === "all"
-                ? "เรื่องราวล่าสุดจากคนในวงของคุณ"
-                : `${currentTopic.emoji} กระทู้: ${currentTopic.label}`}
+                ? "เรื่องราวล่าสุดในฟีด"
+                : `กระทู้: ${currentTopic.label}`}
             </Text>
             {selectedTopic !== "all" && Boolean(currentTopic.description) && (
               <Text style={styles.feedSectionSubtitle}>
@@ -432,13 +428,13 @@ export default function FeedScreen({ navigation }) {
             />
             <Text style={styles.emptyFeedText}>
               {selectedTopic === "all"
-                ? "ยังไม่มีเรื่องราวใหม่"
+                ? "ยังไม่มีเรื่องราวใหม่ในฟีด"
                 : `ยังไม่มีโพสต์ในกระทู้ ${currentTopic.label}`}
             </Text>
             <Text style={styles.emptyFeedSubtext}>
               {selectedTopic === "all"
                 ? "เป็นคนแรกที่เริ่มแชร์เรื่องราวให้กับเพื่อนๆ"
-                : "เป็นคนแรกที่เริ่มเปิดประเด็นในกระทู้นี้เลย!"}
+                : "เป็นคนแรกที่เริ่มเปิดประเด็นในกระทู้นี้เลย"}
             </Text>
           </View>
         ) : (
@@ -919,9 +915,6 @@ const styles = StyleSheet.create({
   topicChipActive: {
     backgroundColor: colors.primary,
     borderColor: colors.darkBorder,
-  },
-  topicChipEmoji: {
-    fontSize: 14,
   },
   topicChipText: {
     fontSize: 13,
