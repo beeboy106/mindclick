@@ -30,8 +30,6 @@ export default function FeedScreen({ navigation }) {
   const {
     posts,
     isLoading,
-    userStatus,
-    setUserStatus,
     addPost,
     deletePost,
     toggleLike,
@@ -61,7 +59,6 @@ export default function FeedScreen({ navigation }) {
   // ข้อมูลโปรไฟล์ของผู้ใช้ปัจจุบัน
   const displayImage = profile?.image || user?.image || null;
   const displayName = profile?.name || user?.name || "ผู้ใช้งาน";
-  const displayEmail = user?.email || "user@mindclick.app";
 
   // เลือกรูปภาพสำหรับโพสต์
   const handlePickImage = async () => {
@@ -169,104 +166,7 @@ export default function FeedScreen({ navigation }) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* SECTION 1: User Profile & Status Card (Matching Left Card from Reference) */}
-        <View style={styles.userCard}>
-          <View style={styles.userCardCover} />
-          <View style={styles.userCardAvatarRow}>
-            {displayImage && !avatarError ? (
-              <Image
-                source={{ uri: displayImage }}
-                style={styles.userAvatar}
-                onError={() => setAvatarError(true)}
-              />
-            ) : (
-              <View style={styles.userAvatarFallback}>
-                <Text style={styles.userAvatarInitial}>
-                  {displayName.charAt(0).toUpperCase()}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.userCardInfo}>
-            <Text style={styles.userNameText}>{displayName}</Text>
-            <Text style={styles.userEmailText}>{displayEmail}</Text>
-
-            {/* Status Switcher Buttons */}
-            <View style={styles.statusRow}>
-              <TouchableOpacity
-                style={[
-                  styles.statusPill,
-                  userStatus === "online" && styles.statusPillActiveGreen,
-                ]}
-                activeOpacity={0.8}
-                onPress={() => setUserStatus("online")}
-              >
-                <View style={[styles.statusDot, { backgroundColor: "#22c55e" }]} />
-                <Text
-                  style={[
-                    styles.statusPillText,
-                    userStatus === "online" && styles.statusTextActive,
-                  ]}
-                >
-                  online
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.statusPill,
-                  userStatus === "busy" && styles.statusPillActiveRed,
-                ]}
-                activeOpacity={0.8}
-                onPress={() => setUserStatus("busy")}
-              >
-                <View style={[styles.statusDot, { backgroundColor: "#ef4444" }]} />
-                <Text
-                  style={[
-                    styles.statusPillText,
-                    userStatus === "busy" && styles.statusTextActive,
-                  ]}
-                >
-                  ห้ามรบกวน
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.statusPill,
-                  userStatus === "offline" && styles.statusPillActiveGray,
-                ]}
-                activeOpacity={0.8}
-                onPress={() => setUserStatus("offline")}
-              >
-                <View style={[styles.statusDot, { backgroundColor: "#9ca3af" }]} />
-                <Text
-                  style={[
-                    styles.statusPillText,
-                    userStatus === "offline" && styles.statusTextActive,
-                  ]}
-                >
-                  offline
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Sub-status badges (Minimal Space / Live Status) */}
-            <View style={styles.metaPillsRow}>
-              <View style={styles.metaPill}>
-                <Text style={styles.metaPillTitle}>Community</Text>
-                <Text style={styles.metaPillSubtitle}>Space</Text>
-              </View>
-              <View style={styles.metaPill}>
-                <Text style={styles.metaPillTitle}>Live</Text>
-                <Text style={styles.metaPillSubtitle}>Status</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* SECTION 2: Friends Online / Chat Quick Access Bar */}
+        {/* SECTION 1: Friends Online / Chat Quick Access Bar */}
         <View style={styles.friendsSection}>
           <View style={styles.friendsSectionHeader}>
             <Text style={styles.sectionTitle}>เพื่อนที่เคยคุยด้วย (Friends)</Text>

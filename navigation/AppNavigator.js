@@ -41,13 +41,14 @@ function MainTabNavigator() {
           backgroundColor: colors.card,
           borderTopWidth: 1.5,
           borderTopColor: colors.darkBorder,
-          height: 58 + insets.bottom,
-          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
-          paddingTop: 8,
+          height: 62 + insets.bottom,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
+          paddingTop: 6,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10.5,
           fontWeight: "800",
+          marginTop: 2,
         },
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
@@ -85,9 +86,16 @@ function MainTabNavigator() {
           tabBarLabel: "ฟีด & แชท",
           tabBarBadge: totalUnreadCount > 0 ? totalUnreadCount : undefined,
           tabBarBadgeStyle: {
-            backgroundColor: colors.primary,
-            fontSize: 10,
+            backgroundColor: colors.coral,
+            color: colors.white,
+            fontSize: 9.5,
             fontWeight: "900",
+            minWidth: 16,
+            height: 16,
+            borderRadius: 8,
+            lineHeight: 15,
+            top: 1,
+            paddingHorizontal: 3,
           },
         }}
       />

@@ -19,6 +19,7 @@ import { colors } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 import { useData } from "../context/DataContext";
 import { usePremium } from "../context/PremiumContext";
+import { useFeed } from "../context/FeedContext";
 import Header from "../components/Header";
 import GalleryViewer from "../components/GalleryViewer";
 import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
@@ -88,6 +89,8 @@ export default function ProfileScreen({ navigation }) {
     toggleIncognito,
     addMockProfileView,
   } = usePremium();
+
+  const { userStatus, setUserStatus } = useFeed();
 
   const [viewsModalVisible, setViewsModalVisible] = useState(false);
   const [paywallVisible, setPaywallVisible] = useState(false);
@@ -360,6 +363,50 @@ export default function ProfileScreen({ navigation }) {
             <Ionicons name="pencil" size={14} color={colors.mutedForeground} />
           </View>
           <Text style={styles.userEmail}>{user?.email || profile?.email || "อีเมล Google"}</Text>
+
+          {/* Status Switcher (ออนไลน์ / ห้ามรบกวน) */}
+          <View style={styles.statusSection}>
+            <Text style={styles.statusSectionLabel}>สถานะของคุณ</Text>
+            <View style={styles.statusRow}>
+              <TouchableOpacity
+                style={[
+                  styles.statusPill,
+                  userStatus !== "busy" && styles.statusPillActiveGreen,
+                ]}
+                activeOpacity={0.8}
+                onPress={() => setUserStatus("online")}
+              >
+                <View style={[styles.statusDot, { backgroundColor: "#22c55e" }]} />
+                <Text
+                  style={[
+                    styles.statusPillText,
+                    userStatus !== "busy" && styles.statusTextActive,
+                  ]}
+                >
+                  ออนไลน์
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.statusPill,
+                  userStatus === "busy" && styles.statusPillActiveRed,
+                ]}
+                activeOpacity={0.8}
+                onPress={() => setUserStatus("busy")}
+              >
+                <View style={[styles.statusDot, { backgroundColor: "#ef4444" }]} />
+                <Text
+                  style={[
+                    styles.statusPillText,
+                    userStatus === "busy" && styles.statusTextActive,
+                  ]}
+                >
+                  ห้ามรบกวน
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           <TouchableOpacity
             style={styles.publicProfileLink}
@@ -1367,6 +1414,53 @@ const styles = StyleSheet.create({
   },
   facultyChipTextSelected: {
     fontWeight: "900",
+    color: colors.ink,
+  },
+  statusSection: {
+    marginTop: 12,
+    marginBottom: 8,
+    alignItems: "center",
+  },
+  statusSectionLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.mutedForeground,
+    marginBottom: 8,
+  },
+  statusRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    backgroundColor: colors.card,
+  },
+  statusPillActiveGreen: {
+    backgroundColor: "#dcfce7",
+    borderColor: "#22c55e",
+  },
+  statusPillActiveRed: {
+    backgroundColor: "#fee2e2",
+    borderColor: "#ef4444",
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusPillText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: colors.mutedForeground,
+  },
+  statusTextActive: {
     color: colors.ink,
   },
 });

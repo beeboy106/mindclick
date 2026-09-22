@@ -12,15 +12,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors, categoryColors } from "../lib/theme";
 import { categories } from "../data/questions";
 import { useData } from "../context/DataContext";
-import { useFeed } from "../context/FeedContext";
 import Header from "../components/Header";
 import MatchCard from "../components/MatchCard";
-import ChatModal from "../components/ChatModal";
 
 export default function ResultsScreen({ navigation }) {
   const { quizResponse, getMatchList } = useData();
-  const { totalUnreadCount } = useFeed();
-  const [chatModalVisible, setChatModalVisible] = useState(false);
 
   const completed = quizResponse.completedCategories || [];
   const matches = getMatchList();
@@ -32,22 +28,7 @@ export default function ResultsScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
-      <Header
-        rightComponent={
-          <TouchableOpacity
-            style={styles.headerChatBtn}
-            activeOpacity={0.8}
-            onPress={() => setChatModalVisible(true)}
-          >
-            <Ionicons name="chatbubbles-outline" size={22} color={colors.ink} />
-            {totalUnreadCount > 0 && (
-              <View style={styles.badgeCount}>
-                <Text style={styles.badgeText}>{totalUnreadCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        }
-      />
+      <Header onProfilePress={() => navigation.navigate("ProfileTab")} />
 
       <ScrollView
         style={styles.container}
@@ -138,12 +119,6 @@ export default function ResultsScreen({ navigation }) {
           </View>
         )}
       </ScrollView>
-
-      {/* Embedded Chat Modal */}
-      <ChatModal
-        visible={chatModalVisible}
-        onClose={() => setChatModalVisible(false)}
-      />
     </SafeAreaView>
   );
 }
@@ -270,33 +245,5 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: "800",
     fontSize: 15,
-  },
-  headerChatBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    backgroundColor: colors.card,
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
-  },
-  badgeCount: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: colors.primary,
-    borderRadius: 10,
-    minWidth: 16,
-    height: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 3,
-  },
-  badgeText: {
-    color: colors.white,
-    fontSize: 9,
-    fontWeight: "900",
   },
 });
