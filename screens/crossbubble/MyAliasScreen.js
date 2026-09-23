@@ -176,7 +176,7 @@ export default function MyAliasScreen() {
           <Text style={styles.sectionCount}>({unlockedAvatars.length} แบบ)</Text>
         </View>
         <Text style={styles.sectionSubtitle}>
-          แตะไอคอนเพื่อเปลี่ยนอวาตารที่คุณต้องการใช้แสดงในห้องสังสรรค์และกระดานลับ
+          แตะไอคอนเพื่อเปลี่ยนอวาตารที่คุณต้องการใช้แสดงในห้องสังสรรค์และห้องมืด
         </Text>
 
         <View style={styles.avatarsGrid}>

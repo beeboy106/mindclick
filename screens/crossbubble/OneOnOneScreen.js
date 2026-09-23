@@ -112,7 +112,7 @@ export default function OneOnOneScreen() {
               <Ionicons name="chatbubble-ellipses-outline" size={48} color="#cbd5e1" />
               <Text style={styles.emptyTitle}>ยังไม่มีคู่สนทนาในห้องมืด</Text>
               <Text style={styles.emptyDesc}>
-                เข้าร่วมห้องสังสรรค์เวลา 19:00 เพื่อจับคู่มาคุยต่อ หรือตอบกลับโน้ตในกระดานลับ
+                เข้าร่วมห้องสังสรรค์เวลา 19:00 เพื่อทำภารกิจและจับคู่มาคุยต่อแบบตัวต่อตัว
               </Text>
             </View>
           ) : (

@@ -7,7 +7,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import BlindLoungeScreen from "../screens/crossbubble/BlindLoungeScreen";
 import OneOnOneScreen from "../screens/crossbubble/OneOnOneScreen";
 import MissionsScreen from "../screens/crossbubble/MissionsScreen";
-import WhisperWallScreen from "../screens/crossbubble/WhisperWallScreen";
 import MyAliasScreen from "../screens/crossbubble/MyAliasScreen";
 
 const Tab = createBottomTabNavigator();
@@ -43,8 +42,6 @@ export default function CrossBubbleTabNavigator() {
             iconName = focused ? "moon" : "moon-outline";
           } else if (route.name === "MissionsTab") {
             iconName = focused ? "flame" : "flame-outline";
-          } else if (route.name === "WhisperWallTab") {
-            iconName = focused ? "newspaper" : "newspaper-outline";
           } else if (route.name === "MyAliasTab") {
             iconName = focused ? "person-circle" : "person-circle-outline";
           }
@@ -72,11 +69,6 @@ export default function CrossBubbleTabNavigator() {
         name="MissionsTab"
         component={MissionsScreen}
         options={{ tabBarLabel: "ภารกิจ" }}
-      />
-      <Tab.Screen
-        name="WhisperWallTab"
-        component={WhisperWallScreen}
-        options={{ tabBarLabel: "กระดานลับ" }}
       />
       <Tab.Screen
         name="MyAliasTab"
