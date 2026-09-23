@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "./AuthContext";
 import { useData } from "./DataContext";
+import { useFeed } from "./FeedContext";
 
 const CROSS_BUBBLE_STORAGE_KEY = "@mindclick_cross_bubble_active";
 const CROSS_BUBBLE_ALIAS_KEY = "@mindclick_cross_bubble_alias";
@@ -110,10 +111,11 @@ const DAILY_TOPICS = [
   },
 ];
 
-// รายการเพื่อนจำลอง 4 คนในห้องสังสรรค์
+// รายการเพื่อนจำลอง 4 คนในห้องสังสรรค์ เชื่อมโยงกับผู้ใช้ในหน้าหลัก (FeedContext / mockUsers)
 const SIMULATED_CLASSMATES = [
   {
     id: "member_med",
+    feedUserId: "user_mock_1",
     alias: "เด็กแพทย์สายลุย",
     icon: "fitness-outline",
     faculty: "แพทยศาสตร์",
@@ -122,11 +124,11 @@ const SIMULATED_CLASSMATES = [
       q1: "ชุดปฐมพยาบาลเบื้องต้นและยารักษาโรค",
       q2: "ห้องผ่าตัดบนตึกชั้น 7 ประตูล็อคแน่นหนา",
     },
-    realName: "นันทิภัทร โชคอนันต์ (หมอนัน)",
-    realAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80",
+    realName: "ฟ้าใส ธนภัทร",
+    realAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80",
     realFaculty: "แพทยศาสตร์ ปี 3",
-    instagram: "@nan.md_chula",
-    lineId: "nan_med99",
+    instagram: "@fasai.med_chula",
+    lineId: "fasai_med",
     realBio: "นักศึกษาแพทย์ปี 3 ชอบฟังดนตรีสดและวิ่งมาราธอนช่วงวันหยุด",
     chatLinesStage1: [
       "สวัสดีเพื่อนๆ ทุกคน เราเด็กแพทย์นะ คืนนี้แวะมาคุยด้วย",
@@ -139,6 +141,7 @@ const SIMULATED_CLASSMATES = [
   },
   {
     id: "member_eng",
+    feedUserId: "user_mock_aphisak",
     alias: "เด็กวิศวะสายแฮก",
     icon: "terminal-outline",
     faculty: "วิศวกรรมศาสตร์",
@@ -147,12 +150,12 @@ const SIMULATED_CLASSMATES = [
       q1: "ไขควงมัลติทูลและพาวเวอร์แบงก์ 30000mAh",
       q2: "ช็อปวิศวะเครื่องกล มีเครื่องมือช่างและเหล็กกล้า",
     },
-    realName: "ธนกฤต ศิริพงษ์ (กฤต)",
-    realAvatar: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400&auto=format&fit=crop&q=80",
+    realName: "Aphisak Phutsupha",
+    realAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
     realFaculty: "วิศวกรรมศาสตร์ (คอมพิวเตอร์) ปี 2",
-    instagram: "@krit_engr",
-    lineId: "krit_code",
-    realBio: "วิศวะคอมฯ สนใจเรื่อง Smart City และระบบความปลอดภัยไซเบอร์",
+    instagram: "@aphisak_engr",
+    lineId: "aphisak_code",
+    realBio: "วิศวะคอมฯ ชอบงานอดิเรก ดนตรี และระบบความปลอดภัยไซเบอร์",
     chatLinesStage1: [
       "หวัดดีครับทุกคน เราเด็กวิศวะคอม ใครเน็ตช้าบอกเราได้นะ",
       "เรามีไขควงมัลติทูลกับพาวเวอร์แบงก์ยักษ์พร้อมลุยเสมอ",
@@ -164,6 +167,7 @@ const SIMULATED_CLASSMATES = [
   },
   {
     id: "member_arts",
+    feedUserId: "user_mock_janon",
     alias: "เด็กอักษรชวนคุย",
     icon: "headset-outline",
     faculty: "อักษรศาสตร์",
@@ -172,12 +176,12 @@ const SIMULATED_CLASSMATES = [
       q1: "สมุดบันทึกและปากกาหมึกซึมคู่ใจ",
       q2: "ดาดฟ้าตึกเทวาลัย ลมเย็นและมองเห็นวิวเมืองรอบด้าน",
     },
-    realName: "วริศรา เจริญสุข (ใบเฟิร์น)",
-    realAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
+    realName: "Janon Kingkohyao",
+    realAvatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=400&auto=format&fit=crop&q=80",
     realFaculty: "อักษรศาสตร์ (ภาษาอังกฤษ) ปี 3",
-    instagram: "@fern_arts.chula",
-    lineId: "fern_indie",
-    realBio: "เด็กอักษรเอกวรรณกรรม ชอบถ่ายรูปฟิล์มและดูภาพยนตร์อินดี้",
+    instagram: "@janon_arts",
+    lineId: "janon_boardgame",
+    realBio: "เด็กอักษรเอกวรรณกรรม ชอบเล่นบอร์ดเกมและดูภาพยนตร์อินดี้",
     chatLinesStage1: [
       "สวัสดีเพื่อนๆ เราเด็กอักษรจ้า ยินดีที่ได้คุยกันในห้องนี้นะ",
       "แม้โลกภายนอกจะวุ่นวาย แต่ในแชทนี้เราสัมผัสได้ถึงมิตรภาพอบอุ่น",
@@ -189,6 +193,7 @@ const SIMULATED_CLASSMATES = [
   },
   {
     id: "member_arch",
+    feedUserId: "user_mock_kedtisak",
     alias: "เด็กสถาปัตย์ปั้นโมเดล",
     icon: "color-palette-outline",
     faculty: "สถาปัตยกรรมศาสตร์",
@@ -197,11 +202,11 @@ const SIMULATED_CLASSMATES = [
       q1: "มีดพับอเนกประสงค์และไฟแช็ก",
       q2: "โรงอาหารใต้ตึกเรียน แหล่งรวมเสบียงและเตาแก๊ส",
     },
-    realName: "จิรัฏฐ์ อนันตศิลป์ (กันต์)",
+    realName: "KEDTISAK RAKRUAUG",
     realAvatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&auto=format&fit=crop&q=80",
     realFaculty: "สถาปัตยกรรมศาสตร์ (สถาปัตย์หลัก) ปี 4",
-    instagram: "@jiratt_arch",
-    lineId: "jiratt_space",
+    instagram: "@kedtisak_arch",
+    lineId: "kedtisak_space",
     realBio: "นอนเช้าตื่นบ่าย โมเดลคืองานศิลปะ ชอบดื่มชาเขียวมัทฉะเข้มข้น",
     chatLinesStage1: [
       "โย่วทุกคน เราเด็กสถาปัตย์ เพิ่งส่งงานเสร็จสดๆ ร้อนๆ ตาจะปิดแล้ว",
@@ -218,6 +223,7 @@ const SIMULATED_CLASSMATES = [
 const INITIAL_WHISPERS = [
   {
     id: "wh_1",
+    feedUserId: "user_mock_1",
     authorFaculty: "เด็กแพทย์",
     authorIcon: "fitness-outline",
     content: "ใครบอกเด็กแพทย์อ่านแต่หนังสือ ตอนนี้อยากมีตี้เล่นบอร์ดเกมหรือไปนั่งฟังเพลงมาก มีใครว่างบ้าง",
@@ -225,16 +231,17 @@ const INITIAL_WHISPERS = [
     pops: 18,
     hasPopped: false,
     authorRealInfo: {
-      name: "นันทิภัทร โชคอนันต์ (หมอนัน)",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80",
+      name: "ฟ้าใส ธนภัทร",
+      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80",
       faculty: "แพทยศาสตร์ ปี 3",
-      instagram: "@nan.md_chula",
-      lineId: "nan_med99",
+      instagram: "@fasai.med_chula",
+      lineId: "fasai_med",
       bio: "ชอบบอร์ดเกมและวิ่งมาราธอน",
     },
   },
   {
     id: "wh_2",
+    feedUserId: "user_mock_kedtisak",
     authorFaculty: "เด็กสถาปัตย์",
     authorIcon: "color-palette-outline",
     content: "โปรเจกต์ส่งพรุ่งนี้เช้า เพิ่งขึ้นโมเดลเสร็จไป 30% กาแฟแก้วที่ 4 ต้องเข้าแล้ว สู้ชีวิตมาก",
@@ -242,16 +249,17 @@ const INITIAL_WHISPERS = [
     pops: 34,
     hasPopped: true,
     authorRealInfo: {
-      name: "จิรัฏฐ์ อนันตศิลป์ (กันต์)",
+      name: "KEDTISAK RAKRUAUG",
       avatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&auto=format&fit=crop&q=80",
       faculty: "สถาปัตยกรรมศาสตร์ ปี 4",
-      instagram: "@jiratt_arch",
-      lineId: "jiratt_space",
+      instagram: "@kedtisak_arch",
+      lineId: "kedtisak_space",
       bio: "เด็กสถาปัตย์ชอบดื่มชาเขียวและถ่ายภาพ Street",
     },
   },
   {
     id: "wh_3",
+    feedUserId: "user_mock_aphisak",
     authorFaculty: "เด็กวิศวะ",
     authorIcon: "construct-outline",
     content: "แอบมองเด็กอักษรที่โรงอาหารกลางมาทั้งเทอม คุยในกลุ่มนี้เผื่อจะเจอคนที่แอบมอง",
@@ -259,16 +267,17 @@ const INITIAL_WHISPERS = [
     pops: 52,
     hasPopped: false,
     authorRealInfo: {
-      name: "ธนกฤต ศิริพงษ์ (กฤต)",
-      avatar: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400&auto=format&fit=crop&q=80",
+      name: "Aphisak Phutsupha",
+      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
       faculty: "วิศวกรรมศาสตร์ ปี 2",
-      instagram: "@krit_engr",
-      lineId: "krit_code",
-      bio: "วิศวะคอมฯ เขียนโค้ดหาเพื่อนใหม่",
+      instagram: "@aphisak_engr",
+      lineId: "aphisak_code",
+      bio: "วิศวะคอมฯ ชอบงานอดิเรกและดนตรีสด",
     },
   },
   {
     id: "wh_4",
+    feedUserId: "user_mock_janon",
     authorFaculty: "เด็กบัญชี",
     authorIcon: "calculator-outline",
     content: "งบการเงินไม่ดุลสักที ใครคิดว่าบัญชีง่ายขอให้มาลองนั่งทำตอนตีสองครึ่ง",
@@ -276,11 +285,11 @@ const INITIAL_WHISPERS = [
     pops: 26,
     hasPopped: false,
     authorRealInfo: {
-      name: "กานต์ธิดา เลิศวิริยะ (กานต์)",
-      avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80",
+      name: "Janon Kingkohyao",
+      avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=400&auto=format&fit=crop&q=80",
       faculty: "พาณิชยศาสตร์และการบัญชี ปี 3",
-      instagram: "@karn_acc",
-      lineId: "karn_balance",
+      instagram: "@janon_arts",
+      lineId: "janon_boardgame",
       bio: "ชอบแมวและชาบูปลอบใจงบดุล",
     },
   },
@@ -340,33 +349,36 @@ const INITIAL_DAILY_MISSIONS = [
   },
 ];
 
-// ห้องมืดเริ่มต้น
+// ห้องมืดเริ่มต้น (เริ่มต้นแบบนิรนาม ยังไม่เปิดเผยตัวตนจริง)
 const INITIAL_DARK_ROOMS = [
   {
     id: "dark_default_1",
     partnerId: "member_arts",
+    feedUserId: "user_mock_janon",
     partnerAlias: "เด็กอักษรชวนคุย",
     partnerIcon: "headset-outline",
-    partnerRealName: "วริศรา เจริญสุข (ใบเฟิร์น)",
-    partnerRealAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
+    partnerRealName: "Janon Kingkohyao",
+    partnerRealAvatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=400&auto=format&fit=crop&q=80",
     partnerRealFaculty: "อักษรศาสตร์ (ภาษาอังกฤษ) ปี 3",
-    instagram: "@fern_arts.chula",
-    lineId: "fern_indie",
+    instagram: "@janon_arts",
+    lineId: "janon_boardgame",
     partnerBio: "ชอบดูดาว ถ่ายรูปฟิล์ม และอ่านวรรณกรรมอินดี้",
-    lastMessage: "ยินดีที่ได้แมตช์กันนะ แอดไอจีมาคุยเรื่องเพลย์ลิสต์เพลงได้เลยนะ!",
+    friendStatus: "none", // 'none' | 'pending' | 'accepted'
+    isRealIdentityRevealed: false,
+    lastMessage: "คุยกันสบายๆ ก่อนได้เลยนะ ไม่ต้องเกร็ง หากคุยถูกคอกดเพิ่มเพื่อนได้เลยจ้า",
     lastMessageTime: "เมื่อสักครู่",
     messages: [
       {
         id: "dm_1",
         senderId: "member_arts",
-        text: "สวัสดีจ้า! ยินดีที่ได้แมตช์กันหลังห้องสังสรรค์นะ",
+        text: "สวัสดีจ้า! ยินดีที่ได้คุยกันในห้องมืดนะ",
         createdAt: "20:00",
         isMe: false,
       },
       {
         id: "dm_2",
         senderId: "member_arts",
-        text: "แอดไอจีมาคุยเรื่องเพลย์ลิสต์เพลงหรือชวนไปนั่งชิลที่คณะได้เลยนะ!",
+        text: "คุยกันสบายๆ ก่อนได้เลยนะ ไม่ต้องเกร็ง หากคุยถูกคอกดเพิ่มเพื่อนได้เลยจ้า",
         createdAt: "20:01",
         isMe: false,
       },
@@ -379,6 +391,7 @@ const CrossBubbleContext = createContext();
 export function CrossBubbleProvider({ children }) {
   const { user } = useAuth();
   const { profile } = useData();
+  const { startChatWithUser, posts: feedPosts } = useFeed();
 
   // โหมดเปิดใช้งาน Cross-Bubble
   const [isCrossBubbleMode, setIsCrossBubbleMode] = useState(false);
@@ -597,7 +610,6 @@ export function CrossBubbleProvider({ children }) {
   // ห้องสังสรรค์ (Social Lounge Controls)
   // ====================================================
 
-  // สลับเข้าสู่ห้องสังสรรค์ในโหมดทดสอบ (Dev / Demo Mode) หรือเมื่อถึง 19:00
   const enterLoungeDevMode = useCallback(() => {
     setLoungeStage("pre_input");
     setUserVotedSkip(false);
@@ -610,20 +622,17 @@ export function CrossBubbleProvider({ children }) {
     setLoungeMessages([]);
   }, []);
 
-  // ส่งข้อมูล Pre-input คำถามนำ
   const submitPreAnswers = useCallback((answers) => {
     setUserPreAnswers(answers);
     setLoungeStage("mission_brief");
   }, []);
 
-  // เริ่มต้นการแชท (Stage 1 - แนะนำตัว 5 นาที)
   const startStage1 = useCallback(() => {
     setLoungeStage("stage1");
-    setStageSecondsLeft(300); // 5 นาที
+    setStageSecondsLeft(300);
     setUserVotedSkip(false);
     setSkipVotesCount(0);
 
-    // ข้อความต้อนรับระบบ
     const sysMsg = {
       id: "sys_start",
       isSystem: true,
@@ -632,7 +641,6 @@ export function CrossBubbleProvider({ children }) {
     };
     setLoungeMessages([sysMsg]);
 
-    // จำลองเพื่อนส่งข้อความแนะนำตัวตามจังหวะ
     setTimeout(() => {
       const m1 = SIMULATED_CLASSMATES[0];
       setLoungeMessages((prev) => [
@@ -678,14 +686,12 @@ export function CrossBubbleProvider({ children }) {
       ]);
     }, 6000);
 
-    // อัปเดตภารกิจรายวัน: เข้าร่วมห้องสังสรรค์
     updateMissionProgress("m_lounge", 1);
   }, [updateMissionProgress]);
 
-  // เริ่มต้นสเตจที่ 2 (ถกหัวข้อ 10 นาที)
   const startStage2 = useCallback(() => {
     setLoungeStage("stage2");
-    setStageSecondsLeft(600); // 10 นาที
+    setStageSecondsLeft(600);
     setUserVotedSkip(false);
     setSkipVotesCount(0);
 
@@ -697,7 +703,6 @@ export function CrossBubbleProvider({ children }) {
     };
     setLoungeMessages((prev) => [...prev, sysMsg]);
 
-    // จำลองเพื่อนร่วมถกหัวข้อตามบทบาทโรลเพลย์
     setTimeout(() => {
       const m1 = SIMULATED_CLASSMATES[0];
       setLoungeMessages((prev) => [
@@ -729,7 +734,6 @@ export function CrossBubbleProvider({ children }) {
     }, 5000);
   }, [todayTopic.title]);
 
-  // ส่งข้อความแชทในห้องสังสรรค์
   const sendLoungeMessage = useCallback((text) => {
     if (!text.trim()) return;
     const newMsg = {
@@ -743,7 +747,6 @@ export function CrossBubbleProvider({ children }) {
     };
     setLoungeMessages((prev) => [...prev, newMsg]);
 
-    // จำลองเพื่อนตอบโต้แบบสุ่มตามบทบาทโรลเพลย์
     const randomClassmate = SIMULATED_CLASSMATES[Math.floor(Math.random() * SIMULATED_CLASSMATES.length)];
     const replyLine =
       loungeStage === "stage1"
@@ -766,7 +769,6 @@ export function CrossBubbleProvider({ children }) {
     }, 1800);
   }, [loungeStage, userAlias]);
 
-  // ตัวนับเวลาถอยหลังของสเตจ
   useEffect(() => {
     if (loungeStage !== "stage1" && loungeStage !== "stage2") {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -793,13 +795,11 @@ export function CrossBubbleProvider({ children }) {
     };
   }, [loungeStage, startStage2]);
 
-  // โหวตข้ามสเตจ
   const voteSkipStage = useCallback(() => {
     if (userVotedSkip) return;
     setUserVotedSkip(true);
     setSkipVotesCount(1);
 
-    // จำลองเพื่อนในกลุ่มช่วยกดโหวตข้ามให้ครบ 5 คน
     setTimeout(() => setSkipVotesCount(2), 500);
     setTimeout(() => setSkipVotesCount(3), 1000);
     setTimeout(() => setSkipVotesCount(4), 1600);
@@ -813,7 +813,6 @@ export function CrossBubbleProvider({ children }) {
     }, 2200);
   }, [loungeStage, startStage2, userVotedSkip]);
 
-  // ส่งคำตอบควิซและตรวจคะแนน
   const submitQuizAnswers = useCallback((answers) => {
     let score = 0;
     const details = [];
@@ -854,19 +853,16 @@ export function CrossBubbleProvider({ children }) {
     setQuizSubmitted(true);
     setLoungeStage("vote_close");
 
-    // อัปเดตภารกิจรายวัน: ทายโรลเพลย์ถูก
     if (score >= 25) {
       updateMissionProgress("m_quiz_guess", 1);
     }
   }, [updateMissionProgress]);
 
-  // โหวตปิดห้องหลังจบสเตจควิซ
   const voteCloseRoom = useCallback(() => {
     if (userVotedClose) return;
     setUserVotedClose(true);
     setCloseVotesCount(1);
 
-    // เพื่อนทุกคนโหวตปิดห้องพร้อมกัน
     setTimeout(() => setCloseVotesCount(3), 600);
     setTimeout(() => {
       setCloseVotesCount(5);
@@ -874,49 +870,63 @@ export function CrossBubbleProvider({ children }) {
     }, 1400);
   }, [userVotedClose]);
 
-  // แมตช์เพื่อนเพื่อเปิดแชทในห้องมืด
+  // แมตช์เพื่อนเพื่อเปิดแชทในห้องมืด (เริ่มต้นแบบนิรนาม ยังไม่เปิดเผยตัวตนจริง)
   const matchWithMember = useCallback((memberId) => {
-    if (matchedMemberIds.includes(memberId)) return;
-    setMatchedMemberIds((prev) => [...prev, memberId]);
-
     const member = SIMULATED_CLASSMATES.find((m) => m.id === memberId);
-    if (!member) return;
+    if (!member) return null;
 
-    // สร้างห้องมืด 1-on-1 พร้อมเปิดเผยตัวตนจริงทันที
-    const newDarkRoom = {
-      id: `dark_${member.id}_${Date.now()}`,
-      partnerId: member.id,
-      partnerAlias: member.alias,
-      partnerIcon: member.icon,
-      partnerRealName: member.realName,
-      partnerRealAvatar: member.realAvatar,
-      partnerRealFaculty: member.realFaculty,
-      instagram: member.instagram,
-      lineId: member.lineId,
-      partnerBio: member.realBio,
-      lastMessage: "แมตช์สำเร็จแล้ว เริ่มต้นพูดคุยและนัดเจอกันได้เลย!",
-      lastMessageTime: "เมื่อสักครู่",
-      messages: [
-        {
-          id: `msg_m_${Date.now()}`,
-          senderId: member.id,
-          text: `สวัสดี! ยินดีที่ได้แมตช์กันจากห้องสังสรรค์นะ เราชื่อ ${member.realName} อยู่ ${member.realFaculty} ยินดีที่ได้รู้จักตัวจริงนะ!`,
-          createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          isMe: false,
-        },
-      ],
-    };
+    if (!matchedMemberIds.includes(memberId)) {
+      setMatchedMemberIds((prev) => [...prev, memberId]);
+    }
+
+    const roomId = `dark_${member.id}`;
+    let targetRoom = null;
 
     setDarkRooms((prev) => {
-      const exists = prev.some((r) => r.partnerId === member.id);
-      if (exists) return prev;
+      const existing = prev.find((r) => r.partnerId === member.id || r.id === roomId);
+      if (existing) {
+        targetRoom = existing;
+        return prev;
+      }
+
+      // สร้างห้องมืดใหม่ เริ่มต้นด้วย isRealIdentityRevealed: false และ friendStatus: 'none'
+      const newDarkRoom = {
+        id: roomId,
+        partnerId: member.id,
+        feedUserId: member.feedUserId,
+        partnerAlias: member.alias,
+        partnerIcon: member.icon,
+        partnerRealName: member.realName,
+        partnerRealAvatar: member.realAvatar,
+        partnerRealFaculty: member.realFaculty,
+        instagram: member.instagram,
+        lineId: member.lineId,
+        partnerBio: member.realBio,
+        friendStatus: "none", // 'none' | 'pending' | 'accepted'
+        isRealIdentityRevealed: false,
+        lastMessage: "เริ่มการสนทนาแบบนิรนาม กดเพิ่มเพื่อนเมื่อพร้อมเปิดเผยตัวจริง",
+        lastMessageTime: "เมื่อสักครู่",
+        messages: [
+          {
+            id: `msg_m_${Date.now()}`,
+            senderId: member.id,
+            text: `สวัสดีครับ! ยินดีที่ได้จับคู่มาคุยต่อในห้องมืดนะ คุยกันชิลๆ ได้เลยครับ`,
+            createdAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            isMe: false,
+          },
+        ],
+      };
+
+      targetRoom = newDarkRoom;
       const next = [newDarkRoom, ...prev];
       AsyncStorage.setItem(CROSS_BUBBLE_DARK_ROOMS_KEY, JSON.stringify(next));
       return next;
     });
+
+    setActiveDarkRoomId(roomId);
+    return roomId;
   }, [matchedMemberIds]);
 
-  // รีเซ็ตเซสชันห้องสังสรรค์เพื่อเริ่มใหม่
   const resetLoungeSession = useCallback(() => {
     setLoungeStage("countdown");
     setUserVotedSkip(false);
@@ -927,13 +937,100 @@ export function CrossBubbleProvider({ children }) {
     setQuizScore(0);
     setMatchedMemberIds([]);
     setLoungeMessages([]);
-    // สลับหัวข้อประจำวันถัดไป
     setTodayTopicIndex((prev) => (prev + 1) % DAILY_TOPICS.length);
   }, []);
 
   // ====================================================
-  // ห้องมืด (Dark Room Controls)
+  // ห้องมืด (Dark Room Controls & Add Friend Flow)
   // ====================================================
+
+  // ส่งคำขอเพิ่มเพื่อนในห้องมืด -> เพื่อนจำลองตอบรับอัตโนมัติ -> ซิงค์เข้าแชทหน้าหลัก
+  const sendFriendRequest = useCallback((roomId) => {
+    setDarkRooms((prev) => {
+      const room = prev.find((r) => r.id === roomId);
+      if (!room || room.friendStatus === "accepted") return prev;
+
+      const timeNow = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+      const requestSysMsg = {
+        id: `sys_fr_${Date.now()}`,
+        isSystem: true,
+        text: "คุณได้ส่งคำขอเพิ่มเพื่อนแล้ว รอการตอบรับจากคู่สนทนา...",
+        createdAt: timeNow,
+      };
+
+      const updatedWithPending = prev.map((r) => {
+        if (r.id === roomId) {
+          return {
+            ...r,
+            friendStatus: "pending",
+            messages: [...r.messages, requestSysMsg],
+          };
+        }
+        return r;
+      });
+
+      AsyncStorage.setItem(CROSS_BUBBLE_DARK_ROOMS_KEY, JSON.stringify(updatedWithPending));
+
+      // เพื่อนตอบรับคำขออัตโนมัติหลัง 2 วินาที
+      setTimeout(() => {
+        setDarkRooms((current) => {
+          const target = current.find((r) => r.id === roomId);
+          if (!target) return current;
+
+          const acceptTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          const acceptMsg = {
+            id: `msg_accept_${Date.now()}`,
+            senderId: target.partnerId,
+            text: `เราตอบรับคำขอเป็นเพื่อนแล้วนะ! ยินดีที่ได้รู้จักตัวจริงนะ เราชื่อ ${target.partnerRealName} อยู่ ${target.partnerRealFaculty} คอนแทกต์จริงเปิดเผยแล้ว และเราจะคุยกันต่อในแชทหน้าหลักได้ด้วย!`,
+            createdAt: acceptTime,
+            isMe: false,
+          };
+
+          const sysRevealedMsg = {
+            id: `sys_revealed_${Date.now()}`,
+            isSystem: true,
+            text: "เป็นเพื่อนกันแล้ว! ตัวตนจริงและช่องทางติดต่อของทั้งสองฝ่ายถูกเปิดเผยเรียบร้อยแล้ว และเพื่อนคนนี้จะแสดงในแชทหน้าหลัก",
+            createdAt: acceptTime,
+          };
+
+          const updatedWithAccepted = current.map((r) => {
+            if (r.id === roomId) {
+              return {
+                ...r,
+                friendStatus: "accepted",
+                isRealIdentityRevealed: true,
+                lastMessage: acceptMsg.text,
+                lastMessageTime: acceptTime,
+                messages: [...r.messages, acceptMsg, sysRevealedMsg],
+              };
+            }
+            return r;
+          });
+
+          AsyncStorage.setItem(CROSS_BUBBLE_DARK_ROOMS_KEY, JSON.stringify(updatedWithAccepted));
+
+          // ซิงค์เพื่อนคนนี้เข้าสู่แชทหน้าหลัก (FeedContext)
+          if (startChatWithUser) {
+            startChatWithUser(
+              {
+                id: target.feedUserId || target.partnerId,
+                name: target.partnerRealName,
+                avatar: target.partnerRealAvatar,
+                faculty: target.partnerRealFaculty,
+                status: "online",
+              },
+              `สวัสดีครับ เป็นเพื่อนกันจากห้องมืดในโหมด Cross-Bubble แล้วนะ!`
+            );
+          }
+
+          return updatedWithAccepted;
+        });
+      }, 2200);
+
+      return updatedWithPending;
+    });
+  }, [startChatWithUser]);
 
   // ส่งข้อความในห้องมืด
   const sendDarkRoomMessage = useCallback((roomId, text) => {
@@ -962,15 +1059,39 @@ export function CrossBubbleProvider({ children }) {
       return next;
     });
 
-    // อัปเดตภารกิจรายวัน: แชทกับเพื่อนในห้องมืด
     updateMissionProgress("m_darkroom", 1);
   }, [updateMissionProgress]);
+
+  // ดึงรายการโพสต์ของเพื่อนคนนี้ (จากฟีดหลัก)
+  const getFriendPosts = useCallback((feedUserId, partnerRealName) => {
+    if (!feedPosts || feedPosts.length === 0) return [];
+    const matchedPosts = feedPosts.filter(
+      (p) =>
+        (feedUserId && p.authorId === feedUserId) ||
+        (partnerRealName && p.authorName === partnerRealName)
+    );
+
+    // หากไม่พบโพสต์ตรงตัว ให้แสดงโพสต์ตัวอย่างของเพื่อนคนนั้น
+    if (matchedPosts.length === 0) {
+      return [
+        {
+          id: `sample_post_${feedUserId || "1"}`,
+          authorName: partnerRealName || "เพื่อนใน Mindclick",
+          content: "ยินดีที่ได้แลกเปลี่ยนมิตรภาพและก้าวข้าม Social Bubble มารู้จักกันในรั้วมหาวิทยาลัยนะ!",
+          createdAt: "วันนี้",
+          likes: ["me"],
+          topicId: "hobbies",
+        },
+      ];
+    }
+
+    return matchedPosts;
+  }, [feedPosts]);
 
   // ====================================================
   // กระดานลับ (Secret Board Controls)
   // ====================================================
 
-  // กดปุ่ม Bubble ป๊อปเพิ่มคะแนนถูกใจ
   const popNoteBubble = useCallback((noteId) => {
     setWhisperNotes((prev) => {
       const next = prev.map((n) => {
@@ -988,15 +1109,14 @@ export function CrossBubbleProvider({ children }) {
       return next;
     });
 
-    // อัปเดตภารกิจรายวัน: กด Bubble 2 ครั้ง
     updateMissionProgress("m_bubble_pop", 1);
   }, [updateMissionProgress]);
 
-  // โพสต์โน้ตใหม่บนกระดานลับ (สวมบทบาทคณะ)
   const postSecretNote = useCallback((facultyRole, content) => {
     if (!content.trim()) return;
     const newNote = {
       id: `wh_${Date.now()}`,
+      feedUserId: user?.id || "my_user",
       authorFaculty: facultyRole || "เด็กนิรนาม",
       authorIcon: userAlias?.icon || "finger-print-outline",
       content: content.trim(),
@@ -1019,11 +1139,10 @@ export function CrossBubbleProvider({ children }) {
       return next;
     });
 
-    // อัปเดตภารกิจรายวัน: โพสต์โน้ตสวมบทบาท
     updateMissionProgress("m_post_note", 1);
-  }, [profile?.bio, profile?.faculty, profile?.imageUri, profile?.name, updateMissionProgress, user?.name, userAlias?.icon]);
+  }, [profile?.bio, profile?.faculty, profile?.imageUri, profile?.name, updateMissionProgress, user?.id, user?.name, userAlias?.icon]);
 
-  // ส่ง Direct Message จากกระดานลับไปยังห้องมืด
+  // ส่ง Direct Message จากกระดานลับไปยังห้องมืด (เริ่มต้นแบบนิรนาม)
   const sendDirectFromNote = useCallback((note, messageText) => {
     if (!messageText.trim()) return;
     const partnerInfo = note.authorRealInfo || {
@@ -1035,9 +1154,12 @@ export function CrossBubbleProvider({ children }) {
       bio: "เพื่อนจากกระดานลับ",
     };
 
+    const roomId = `dark_note_${note.id}`;
+
     const newDarkRoom = {
-      id: `dark_note_${note.id}_${Date.now()}`,
+      id: roomId,
       partnerId: note.id,
+      feedUserId: note.feedUserId || "user_mock_aphisak",
       partnerAlias: note.authorFaculty,
       partnerIcon: note.authorIcon,
       partnerRealName: partnerInfo.name,
@@ -1046,13 +1168,15 @@ export function CrossBubbleProvider({ children }) {
       instagram: partnerInfo.instagram,
       lineId: partnerInfo.lineId,
       partnerBio: partnerInfo.bio,
+      friendStatus: "none",
+      isRealIdentityRevealed: false,
       lastMessage: messageText.trim(),
       lastMessageTime: "เมื่อสักครู่",
       messages: [
         {
           id: `msg_ref_${Date.now()}`,
           senderId: "system",
-          text: `ตอบกลับโน้ตกระดานลับ: "${note.content}"`,
+          text: `ตอบกลับโน้ตกระดานลับ: "${note.content}" (แชทแบบนิรนาม กดเพิ่มเพื่อนเมื่อพร้อมเปิดเผยตัวจริง)`,
           createdAt: "เมื่อสักครู่",
           isSystem: true,
         },
@@ -1067,11 +1191,22 @@ export function CrossBubbleProvider({ children }) {
     };
 
     setDarkRooms((prev) => {
-      const next = [newDarkRoom, ...prev];
+      const existing = prev.find((r) => r.id === roomId);
+      let next;
+      if (existing) {
+        next = prev.map((r) =>
+          r.id === roomId
+            ? { ...r, messages: [...r.messages, newDarkRoom.messages[1]], lastMessage: messageText.trim() }
+            : r
+        );
+      } else {
+        next = [newDarkRoom, ...prev];
+      }
       AsyncStorage.setItem(CROSS_BUBBLE_DARK_ROOMS_KEY, JSON.stringify(next));
       return next;
     });
 
+    setActiveDarkRoomId(roomId);
     updateMissionProgress("m_darkroom", 1);
   }, [updateMissionProgress]);
 
@@ -1102,6 +1237,8 @@ export function CrossBubbleProvider({ children }) {
         activeDarkRoomId,
         setActiveDarkRoomId,
         sendDarkRoomMessage,
+        sendFriendRequest,
+        getFriendPosts,
         // Social Lounge
         loungeStage,
         todayTopic,

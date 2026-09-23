@@ -11,6 +11,8 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,10 +24,13 @@ export default function OneOnOneScreen() {
     activeDarkRoomId,
     setActiveDarkRoomId,
     sendDarkRoomMessage,
+    sendFriendRequest,
+    getFriendPosts,
     toggleCrossBubbleMode,
   } = useCrossBubble();
 
   const [inputMsg, setInputMsg] = useState("");
+  const [showPostsModal, setShowPostsModal] = useState(false);
   const scrollViewRef = useRef(null);
 
   const currentRoom = darkRooms.find((r) => r.id === activeDarkRoomId) || null;
@@ -44,9 +49,19 @@ export default function OneOnOneScreen() {
     setInputMsg("");
   };
 
+  const handleAddFriend = () => {
+    if (!currentRoom) return;
+    sendFriendRequest(currentRoom.id);
+  };
+
   const handleCopyContact = (type, val) => {
     Alert.alert("คัดลอกสำเร็จ", `${type}: ${val} (นำไปค้นหาและเพิ่มเพื่อนในแอปพลิเคชันได้ทันที)`);
   };
+
+  // ดึงโพสต์ของเพื่อนคนนี้
+  const friendPosts = currentRoom
+    ? getFriendPosts(currentRoom.feedUserId, currentRoom.partnerRealName)
+    : [];
 
   // ==========================================
   // VIEW 1: LOBBY VIEW (หน้ารวมแชทห้องมืด)
@@ -83,9 +98,9 @@ export default function OneOnOneScreen() {
               <Ionicons name="moon" size={20} color="#17171c" />
             </View>
             <View style={styles.infoTextCol}>
-              <Text style={styles.infoTitle}>พื้นที่สานต่อมิตรภาพ 1-on-1</Text>
+              <Text style={styles.infoTitle}>พื้นที่สนทนาแบบนิรนามเพื่อความสบายใจ</Text>
               <Text style={styles.infoDesc}>
-                พูดคุยส่วนตัวกับเพื่อนที่แมตช์ได้จากห้องสังสรรค์หรือตอบกลับจากกระดานลับ เปิดเผยโปรไฟล์จริงและคอนแทกต์ทันทีเพื่อต่อยอดสู่โลกจริง
+                พูดคุยตัวต่อตัวโดยยังไม่เปิดเผยตัวตนจริง เมื่อคุยแล้วถูกคอ สามารถกดปุ่ม "เพิ่มเพื่อน" ภายในแชทเพื่อเปิดเผยตัวตนจริงและแสดงในแชทหน้าหลัก
               </Text>
             </View>
           </View>
@@ -100,39 +115,62 @@ export default function OneOnOneScreen() {
               <Ionicons name="chatbubble-ellipses-outline" size={48} color="#cbd5e1" />
               <Text style={styles.emptyTitle}>ยังไม่มีคู่สนทนาในห้องมืด</Text>
               <Text style={styles.emptyDesc}>
-                เข้าร่วมห้องสังสรรค์เวลา 19:00 เพื่อสุ่มกลุ่ม ตอบควิซ และกดแมตช์เพื่อน หรือตอบกลับโน้ตในกระดานลับ
+                เข้าร่วมห้องสังสรรค์เวลา 19:00 เพื่อจับคู่มาคุยต่อ หรือตอบกลับโน้ตในกระดานลับ
               </Text>
             </View>
           ) : (
-            darkRooms.map((room) => (
-              <TouchableOpacity
-                key={room.id}
-                style={styles.roomCard}
-                activeOpacity={0.85}
-                onPress={() => setActiveDarkRoomId(room.id)}
-              >
-                {room.partnerRealAvatar ? (
-                  <Image source={{ uri: room.partnerRealAvatar }} style={styles.roomAvatar} />
-                ) : (
-                  <View style={styles.roomAvatarFallback}>
-                    <Ionicons name={room.partnerIcon || "person"} size={22} color="#17171c" />
-                  </View>
-                )}
+            darkRooms.map((room) => {
+              const isRevealed = room.isRealIdentityRevealed;
 
-                <View style={styles.roomInfoCol}>
-                  <View style={styles.roomNameRow}>
-                    <Text style={styles.roomPartnerName}>{room.partnerRealName}</Text>
-                    <Text style={styles.roomTimeText}>{room.lastMessageTime}</Text>
-                  </View>
-                  <Text style={styles.roomFacultyText}>{room.partnerRealFaculty}</Text>
-                  <Text style={styles.roomLastMsg} numberOfLines={1}>
-                    {room.lastMessage}
-                  </Text>
-                </View>
+              return (
+                <TouchableOpacity
+                  key={room.id}
+                  style={styles.roomCard}
+                  activeOpacity={0.85}
+                  onPress={() => setActiveDarkRoomId(room.id)}
+                >
+                  {isRevealed && room.partnerRealAvatar ? (
+                    <Image source={{ uri: room.partnerRealAvatar }} style={styles.roomAvatar} />
+                  ) : (
+                    <View style={styles.roomAvatarFallback}>
+                      <Ionicons name={room.partnerIcon || "person"} size={22} color="#17171c" />
+                    </View>
+                  )}
 
-                <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
-              </TouchableOpacity>
-            ))
+                  <View style={styles.roomInfoCol}>
+                    <View style={styles.roomNameRow}>
+                      <Text style={styles.roomPartnerName}>
+                        {isRevealed ? room.partnerRealName : room.partnerAlias}
+                      </Text>
+                      <Text style={styles.roomTimeText}>{room.lastMessageTime}</Text>
+                    </View>
+
+                    <View style={styles.roomSubRow}>
+                      <Text style={styles.roomFacultyText}>
+                        {isRevealed ? room.partnerRealFaculty : "โหมดนิรนาม"}
+                      </Text>
+                      {isRevealed ? (
+                        <View style={styles.friendBadge}>
+                          <Ionicons name="checkmark-circle" size={10} color="#15803d" />
+                          <Text style={styles.friendBadgeText}>เป็นเพื่อนแล้ว</Text>
+                        </View>
+                      ) : (
+                        <View style={styles.anonBadge}>
+                          <Ionicons name="lock-closed" size={10} color="#64748b" />
+                          <Text style={styles.anonBadgeText}>นิรนาม</Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <Text style={styles.roomLastMsg} numberOfLines={1}>
+                      {room.lastMessage}
+                    </Text>
+                  </View>
+
+                  <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+                </TouchableOpacity>
+              );
+            })
           )}
 
           <View style={{ height: 40 }} />
@@ -144,6 +182,9 @@ export default function OneOnOneScreen() {
   // ==========================================
   // VIEW 2: ACTIVE 1-ON-1 CHAT
   // ==========================================
+  const isRevealed = currentRoom.isRealIdentityRevealed;
+  const isPending = currentRoom.friendStatus === "pending";
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={true} />
@@ -157,7 +198,7 @@ export default function OneOnOneScreen() {
           <Ionicons name="arrow-back" size={20} color="#17171c" />
         </TouchableOpacity>
 
-        {currentRoom.partnerRealAvatar ? (
+        {isRevealed && currentRoom.partnerRealAvatar ? (
           <Image source={{ uri: currentRoom.partnerRealAvatar }} style={styles.chatHeaderAvatar} />
         ) : (
           <View style={styles.chatHeaderAvatarFallback}>
@@ -166,49 +207,93 @@ export default function OneOnOneScreen() {
         )}
 
         <View style={styles.chatHeaderInfo}>
-          <Text style={styles.chatPartnerName}>{currentRoom.partnerRealName}</Text>
-          <Text style={styles.chatPartnerSub}>{currentRoom.partnerRealFaculty}</Text>
-        </View>
-      </View>
-
-      {/* Disclosed Real Profile & Social Handles Card */}
-      <View style={styles.realProfileCard}>
-        <View style={styles.profileBadgeRow}>
-          <View style={styles.verifiedBadge}>
-            <Ionicons name="shield-checkmark" size={12} color="#17171c" />
-            <Text style={styles.verifiedBadgeText}>VERIFIED MATCH</Text>
-          </View>
-          <Text style={styles.profileBioText} numberOfLines={1}>
-            {currentRoom.partnerBio || "ยินดีที่ได้รู้จักนะ"}
+          <Text style={styles.chatPartnerName}>
+            {isRevealed ? currentRoom.partnerRealName : currentRoom.partnerAlias}
+          </Text>
+          <Text style={styles.chatPartnerSub}>
+            {isRevealed ? currentRoom.partnerRealFaculty : "โหมดนิรนาม (คุยสบายๆ ไม่เกร็ง)"}
           </Text>
         </View>
-
-        <View style={styles.contactsRow}>
-          {currentRoom.instagram && (
-            <TouchableOpacity
-              style={styles.contactChip}
-              activeOpacity={0.8}
-              onPress={() => handleCopyContact("Instagram", currentRoom.instagram)}
-            >
-              <Ionicons name="logo-instagram" size={13} color="#17171c" />
-              <Text style={styles.contactChipText}>{currentRoom.instagram}</Text>
-              <Ionicons name="copy-outline" size={11} color="#64748b" />
-            </TouchableOpacity>
-          )}
-
-          {currentRoom.lineId && (
-            <TouchableOpacity
-              style={styles.contactChip}
-              activeOpacity={0.8}
-              onPress={() => handleCopyContact("Line ID", currentRoom.lineId)}
-            >
-              <Ionicons name="chatbubble-ellipses-outline" size={13} color="#17171c" />
-              <Text style={styles.contactChipText}>Line: {currentRoom.lineId}</Text>
-              <Ionicons name="copy-outline" size={11} color="#64748b" />
-            </TouchableOpacity>
-          )}
-        </View>
       </View>
+
+      {/* State A: Not Revealed Yet (Anonymous Mode Banner + Add Friend Action) */}
+      {!isRevealed ? (
+        <View style={styles.anonymousActionCard}>
+          <View style={styles.anonCardTextRow}>
+            <Ionicons name="shield-outline" size={16} color="#17171c" />
+            <Text style={styles.anonCardNoticeText}>
+              แชทนี้ยังคงเป็นแบบนิรนามเพื่อไม่ให้เคอะเขินกัน เมื่อคุยถูกคอสามารถกดเพิ่มเพื่อนเพื่อเปิดเผยตัวจริงได้
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.addFriendBtn, isPending && styles.addFriendBtnPending]}
+            activeOpacity={0.85}
+            disabled={isPending}
+            onPress={handleAddFriend}
+          >
+            {isPending ? (
+              <>
+                <ActivityIndicator size="small" color="#17171c" />
+                <Text style={styles.addFriendBtnText}>ส่งคำขอแล้ว (รอเพื่อนตอบรับ...)</Text>
+              </>
+            ) : (
+              <>
+                <Ionicons name="person-add-outline" size={16} color="#17171c" />
+                <Text style={styles.addFriendBtnText}>เพิ่มเพื่อน (เปิดเผยตัวตนจริง)</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      ) : (
+        /* State B: Real Identity Revealed Card (Friends Confirmed) */
+        <View style={styles.realProfileCard}>
+          <View style={styles.profileBadgeRow}>
+            <View style={styles.verifiedBadge}>
+              <Ionicons name="checkmark-circle" size={12} color="#17171c" />
+              <Text style={styles.verifiedBadgeText}>เป็นเพื่อนกันแล้ว (แสดงในแชทหน้าหลัก)</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.viewPostsBtn}
+              activeOpacity={0.8}
+              onPress={() => setShowPostsModal(true)}
+            >
+              <Ionicons name="newspaper-outline" size={12} color="#17171c" />
+              <Text style={styles.viewPostsBtnText}>ดูสิ่งที่เพื่อนเคยโพสต์</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.profileBioText}>
+            {currentRoom.partnerBio || "ยินดีที่ได้รู้จักตัวจริงนะ"}
+          </Text>
+
+          <View style={styles.contactsRow}>
+            {currentRoom.instagram && (
+              <TouchableOpacity
+                style={styles.contactChip}
+                activeOpacity={0.8}
+                onPress={() => handleCopyContact("Instagram", currentRoom.instagram)}
+              >
+                <Ionicons name="logo-instagram" size={13} color="#17171c" />
+                <Text style={styles.contactChipText}>{currentRoom.instagram}</Text>
+                <Ionicons name="copy-outline" size={11} color="#64748b" />
+              </TouchableOpacity>
+            )}
+
+            {currentRoom.lineId && (
+              <TouchableOpacity
+                style={styles.contactChip}
+                activeOpacity={0.8}
+                onPress={() => handleCopyContact("Line ID", currentRoom.lineId)}
+              >
+                <Ionicons name="chatbubble-ellipses-outline" size={13} color="#17171c" />
+                <Text style={styles.contactChipText}>Line: {currentRoom.lineId}</Text>
+                <Ionicons name="copy-outline" size={11} color="#64748b" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
 
       {/* Messages Scroll Area */}
       <ScrollView
@@ -221,7 +306,7 @@ export default function OneOnOneScreen() {
           if (msg.isSystem) {
             return (
               <View key={msg.id} style={styles.sysMsgContainer}>
-                <Ionicons name="git-branch-outline" size={14} color="#64748b" />
+                <Ionicons name="information-circle-outline" size={14} color="#64748b" />
                 <Text style={styles.sysMsgText}>{msg.text}</Text>
               </View>
             );
@@ -257,7 +342,11 @@ export default function OneOnOneScreen() {
             style={styles.chatInput}
             value={inputMsg}
             onChangeText={setInputMsg}
-            placeholder={`ส่งข้อความหา ${currentRoom.partnerRealName}...`}
+            placeholder={
+              isRevealed
+                ? `ส่งข้อความหา ${currentRoom.partnerRealName}...`
+                : `ส่งข้อความแบบนิรนาม...`
+            }
             placeholderTextColor="#94a3b8"
             onSubmitEditing={handleSend}
             returnKeyType="send"
@@ -271,6 +360,68 @@ export default function OneOnOneScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* MODAL: VIEW POSTS PREVIOUSLY SHARED BY THIS FRIEND */}
+      <Modal
+        visible={showPostsModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowPostsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalSubtitle}>FRIEND POSTS ARCHIVE</Text>
+                <Text style={styles.modalTitle}>
+                  สิ่งที่ {currentRoom.partnerRealName} เคยโพสต์
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowPostsModal(false)}>
+                <Ionicons name="close" size={22} color="#17171c" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {friendPosts.length === 0 ? (
+                <View style={styles.emptyPostsBox}>
+                  <Ionicons name="document-text-outline" size={36} color="#cbd5e1" />
+                  <Text style={styles.emptyPostsText}>เพื่อนคนนี้ยังไม่มีโพสต์ในระบบฟีด</Text>
+                </View>
+              ) : (
+                friendPosts.map((post) => (
+                  <View key={post.id} style={styles.friendPostCard}>
+                    <View style={styles.postTopRow}>
+                      <View style={styles.postTopicBadge}>
+                        <Text style={styles.postTopicBadgeText}>
+                          {post.topicId ? "กระทู้พูดคุย" : "ฟีดทั่วไป"}
+                        </Text>
+                      </View>
+                      <Text style={styles.postDateText}>{post.createdAt}</Text>
+                    </View>
+
+                    <Text style={styles.postContentText}>{post.content}</Text>
+
+                    {post.image && (
+                      <Image source={{ uri: post.image }} style={styles.postImage} />
+                    )}
+
+                    <View style={styles.postFooterRow}>
+                      <View style={styles.postStatItem}>
+                        <Ionicons name="heart" size={14} color="#17171c" />
+                        <Text style={styles.postStatText}>
+                          {(post.likes || []).length} ถูกใจ
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ))
+              )}
+              <View style={{ height: 30 }} />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -426,11 +577,44 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     color: "#94a3b8",
   },
+  roomSubRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 2,
+  },
   roomFacultyText: {
     fontSize: 11.5,
     fontWeight: "600",
     color: "#64748b",
-    marginTop: 2,
+  },
+  friendBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0fdf4",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    gap: 3,
+  },
+  friendBadgeText: {
+    fontSize: 9.5,
+    fontWeight: "700",
+    color: "#15803d",
+  },
+  anonBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    gap: 3,
+  },
+  anonBadgeText: {
+    fontSize: 9.5,
+    fontWeight: "700",
+    color: "#64748b",
   },
   roomLastMsg: {
     fontSize: 12,
@@ -482,6 +666,45 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: "#64748b",
   },
+  anonymousActionCard: {
+    backgroundColor: "#f8fafc",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+  },
+  anonCardTextRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginBottom: 10,
+  },
+  anonCardNoticeText: {
+    flex: 1,
+    fontSize: 11.5,
+    color: "#64748b",
+    lineHeight: 16,
+  },
+  addFriendBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#c7f65a",
+    borderRadius: 10,
+    paddingVertical: 9,
+    borderWidth: 1.5,
+    borderColor: "#17171c",
+    gap: 6,
+  },
+  addFriendBtnPending: {
+    backgroundColor: "#f1f5f9",
+    borderColor: "#cbd5e1",
+  },
+  addFriendBtnText: {
+    fontSize: 12.5,
+    fontWeight: "800",
+    color: "#17171c",
+  },
   realProfileCard: {
     backgroundColor: "#f8fafc",
     paddingHorizontal: 16,
@@ -491,8 +714,8 @@ const styles = StyleSheet.create({
   },
   profileBadgeRow: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: 8,
     marginBottom: 8,
   },
   verifiedBadge: {
@@ -500,7 +723,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#c7f65a",
     paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 4,
     gap: 4,
   },
@@ -508,12 +731,27 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     fontWeight: "800",
     color: "#17171c",
-    letterSpacing: 0.5,
+  },
+  viewPostsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#17171c",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    gap: 4,
+  },
+  viewPostsBtnText: {
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: "#17171c",
   },
   profileBioText: {
-    flex: 1,
-    fontSize: 11,
+    fontSize: 11.5,
     color: "#64748b",
+    marginBottom: 8,
   },
   contactsRow: {
     flexDirection: "row",
@@ -629,5 +867,99 @@ const styles = StyleSheet.create({
     backgroundColor: "#c7f65a",
     justifyContent: "center",
     alignItems: "center",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalCard: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: "85%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 16,
+  },
+  modalSubtitle: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#64748b",
+    letterSpacing: 0.8,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#17171c",
+    marginTop: 2,
+  },
+  emptyPostsBox: {
+    alignItems: "center",
+    paddingVertical: 40,
+  },
+  emptyPostsText: {
+    fontSize: 13,
+    color: "#64748b",
+    marginTop: 8,
+  },
+  friendPostCard: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    marginBottom: 12,
+  },
+  postTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  postTopicBadge: {
+    backgroundColor: "#c7f65a",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  postTopicBadgeText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#17171c",
+  },
+  postDateText: {
+    fontSize: 10.5,
+    color: "#94a3b8",
+  },
+  postContentText: {
+    fontSize: 13,
+    color: "#17171c",
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  postImage: {
+    width: "100%",
+    height: 140,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  postFooterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  postStatItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  postStatText: {
+    fontSize: 11,
+    color: "#64748b",
+    fontWeight: "600",
   },
 });

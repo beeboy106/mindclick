@@ -683,7 +683,7 @@ export default function BlindLoungeScreen() {
   }
 
   // ====================================================
-  // VIEW 8: REVEALED (เปิดเผยตัวตนและกดแมตช์)
+  // VIEW 8: REVEALED (เฉลยภารกิจและทักคุยแบบนิรนามในห้องมืด)
   // ====================================================
   if (loungeStage === "revealed") {
     return (
@@ -692,8 +692,8 @@ export default function BlindLoungeScreen() {
 
         <View style={styles.topHeader}>
           <View style={styles.headerLeft}>
-            <Text style={styles.headerSubtitle}>MUTUAL REVEAL & MATCH</Text>
-            <Text style={styles.headerTitle}>เปิดเผยตัวตนจริง</Text>
+            <Text style={styles.headerSubtitle}>SESSION SUMMARY</Text>
+            <Text style={styles.headerTitle}>เฉลยภารกิจลับ</Text>
           </View>
           <TouchableOpacity
             style={styles.exitBtn}
@@ -710,14 +710,14 @@ export default function BlindLoungeScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.revealedBanner}>
-            <Ionicons name="people" size={24} color="#17171c" />
-            <Text style={styles.revealedBannerTitle}>ยินดีด้วย! ทุกคนเปิดเผยตัวตนสำเร็จ</Text>
+            <Ionicons name="shield-checkmark" size={24} color="#17171c" />
+            <Text style={styles.revealedBannerTitle}>จบเซสชันห้องสังสรรค์แล้ว</Text>
             <Text style={styles.revealedBannerSub}>
-              หากคุณประทับใจใครในห้องนี้ สามารถกดแมตช์เพื่อเปิดห้องสนทนา 1-on-1 ในห้องมืด และแลกเปลี่ยนช่องทางติดต่อจริงได้ทันที
+              บทบาทโรลเพลย์และคำตอบของทุกคนถูกเฉลยแล้ว คุณสามารถกดทักคุย 1-on-1 แบบนิรนามในห้องมืดได้ทันที โดยตัวตนจริงจะเปิดเผยเมื่อทั้งคู่กดเพิ่มเพื่อนในแชท
             </Text>
           </View>
 
-          {/* Member Profile Cards */}
+          {/* Member Anonymous Cards */}
           {loungeMembers.map((member) => {
             const isMatched = matchedMemberIds.includes(member.id);
 
@@ -728,25 +728,20 @@ export default function BlindLoungeScreen() {
                     <Ionicons name={member.icon} size={28} color="#17171c" />
                   </View>
                   <View style={styles.revealInfoCol}>
-                    <Text style={styles.revealRealName}>{member.realName}</Text>
-                    <Text style={styles.revealFaculty}>{member.realFaculty}</Text>
-                    <Text style={styles.revealAlias}>ฉายาในห้อง: {member.alias}</Text>
+                    <Text style={styles.revealRealName}>{member.alias}</Text>
+                    <Text style={styles.revealFaculty}>{member.faculty}</Text>
+                    <View style={styles.anonymousBadge}>
+                      <Ionicons name="lock-closed" size={10} color="#64748b" />
+                      <Text style={styles.anonymousBadgeText}>โหมดนิรนาม</Text>
+                    </View>
                   </View>
                 </View>
 
                 <View style={styles.revealBioBox}>
-                  <Text style={styles.revealBioText}>{member.realBio}</Text>
-                </View>
-
-                <View style={styles.revealContactRow}>
-                  <View style={styles.contactItem}>
-                    <Ionicons name="logo-instagram" size={14} color="#64748b" />
-                    <Text style={styles.contactText}>{member.instagram}</Text>
-                  </View>
-                  <View style={styles.contactItem}>
-                    <Ionicons name="chatbubble-ellipses-outline" size={14} color="#64748b" />
-                    <Text style={styles.contactText}>Line: {member.lineId}</Text>
-                  </View>
+                  <Text style={styles.roleplaySummaryLabel}>บทบาทโรลเพลย์จริง:</Text>
+                  <Text style={styles.revealBioText}>{member.roleplay}</Text>
+                  <Text style={[styles.roleplaySummaryLabel, { marginTop: 6 }]}>คำตอบของโจทย์:</Text>
+                  <Text style={styles.revealBioText}>{member.preAnswers.q1}</Text>
                 </View>
 
                 {/* Match Action Button */}
@@ -754,28 +749,17 @@ export default function BlindLoungeScreen() {
                   style={[styles.matchBtn, isMatched && styles.matchBtnMatched]}
                   activeOpacity={0.85}
                   onPress={() => {
-                    if (isMatched) {
-                      navigation.navigate("DarkRoomTab");
-                    } else {
-                      matchWithMember(member.id);
-                      Alert.alert(
-                        "แมตช์สำเร็จ",
-                        `คุณได้แมตช์กับ ${member.realName} แล้ว สามารถไปคุยต่อที่แท็บ 'ห้องมืด' ได้ทันที`,
-                        [
-                          { text: "อยู่หน้านี้ต่อ", style: "cancel" },
-                          { text: "ไปห้องมืด", onPress: () => navigation.navigate("DarkRoomTab") },
-                        ]
-                      );
-                    }
+                    matchWithMember(member.id);
+                    navigation.navigate("DarkRoomTab");
                   }}
                 >
                   <Ionicons
-                    name={isMatched ? "chatbubbles" : "heart"}
+                    name={isMatched ? "chatbubbles" : "chatbubble-ellipses"}
                     size={16}
                     color="#17171c"
                   />
                   <Text style={styles.matchBtnText}>
-                    {isMatched ? "แมตช์แล้ว (ไปคุยต่อในห้องมืด)" : "กดแมตช์คุยต่อในห้องมืด"}
+                    {isMatched ? "เปิดห้องมืดแล้ว (ไปคุยต่อ)" : "ทักคุย 1-on-1 ในห้องมืด (แบบนิรนาม)"}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1668,6 +1652,27 @@ const styles = StyleSheet.create({
   },
   matchBtnText: {
     fontSize: 13,
+    fontWeight: "800",
+    color: "#17171c",
+  },
+  anonymousBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 3,
+    alignSelf: "flex-start",
+    gap: 3,
+  },
+  anonymousBadgeText: {
+    fontSize: 9.5,
+    fontWeight: "700",
+    color: "#64748b",
+  },
+  roleplaySummaryLabel: {
+    fontSize: 11,
     fontWeight: "800",
     color: "#17171c",
   },
