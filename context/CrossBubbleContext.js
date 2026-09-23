@@ -396,6 +396,9 @@ export function CrossBubbleProvider({ children }) {
   // โหมดเปิดใช้งาน Cross-Bubble
   const [isCrossBubbleMode, setIsCrossBubbleMode] = useState(false);
 
+  // แท็บปลายทางในหน้าหลักเมื่อกลับจากโหมด Cross-Bubble (ค่าเริ่มต้นเปิดแอปเป็น HomeTab)
+  const [targetMainTab, setTargetMainTab] = useState("HomeTab");
+
   // โปรไฟล์นามแฝงของผู้ใช้
   const [userAlias, setUserAlias] = useState(null);
 
@@ -573,8 +576,13 @@ export function CrossBubbleProvider({ children }) {
     return true;
   }, [bubblePoints]);
 
-  // สลับโหมด Cross-Bubble
-  const toggleCrossBubbleMode = useCallback(async (active) => {
+  // สลับโหมด Cross-Bubble (สามารถระบุแท็บปลายทางเมื่อกลับสู่โหมดปกติได้ ค่าเริ่มต้นคือ "FeedTab")
+  const toggleCrossBubbleMode = useCallback(async (active, targetTab = "FeedTab") => {
+    if (!active) {
+      setTargetMainTab(targetTab || "FeedTab");
+    } else {
+      setTargetMainTab(null);
+    }
     setIsCrossBubbleMode(active);
     await AsyncStorage.setItem(CROSS_BUBBLE_STORAGE_KEY, active ? "true" : "false");
   }, []);
@@ -1215,6 +1223,8 @@ export function CrossBubbleProvider({ children }) {
       value={{
         isCrossBubbleMode,
         toggleCrossBubbleMode,
+        targetMainTab,
+        setTargetMainTab,
         userAlias,
         updateUserAliasName,
         changeMascot,

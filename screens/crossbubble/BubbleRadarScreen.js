@@ -5,13 +5,14 @@ import {
   StyleSheet,
   ScrollView,
   StatusBar,
+  TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useCrossBubble } from "../../context/CrossBubbleContext";
 
 export default function BubbleRadarScreen() {
-  const { radarData, userAlias } = useCrossBubble();
+  const { radarData, userAlias, toggleCrossBubbleMode } = useCrossBubble();
 
   const connectedCount = radarData.filter((r) => r.isConnected).length;
   const totalCount = radarData.length;
@@ -31,6 +32,15 @@ export default function BubbleRadarScreen() {
             <Text style={styles.headerSubtitle}>วิเคราะห์ความเข้ากันได้ของไลฟ์สไตล์ต่างคณะ</Text>
           </View>
         </View>
+
+        <TouchableOpacity
+          style={styles.exitBtn}
+          activeOpacity={0.8}
+          onPress={() => toggleCrossBubbleMode(false)}
+        >
+          <Ionicons name="log-out-outline" size={15} color="#94A3B8" />
+          <Text style={styles.exitBtnText}>กลับสู่โหมดปกติ</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -174,11 +184,31 @@ const styles = StyleSheet.create({
     backgroundColor: "#0F172A",
     borderBottomWidth: 1,
     borderBottomColor: "#1E293B",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    flex: 1,
+  },
+  exitBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: "#1E293B",
+    borderWidth: 1,
+    borderColor: "#334155",
+    gap: 4,
+  },
+  exitBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#94A3B8",
   },
   headerIconCircle: {
     width: 36,

@@ -164,6 +164,7 @@ export default function WhisperWallScreen() {
             onPress={() => toggleCrossBubbleMode(false)}
           >
             <Ionicons name="log-out-outline" size={15} color="#64748b" />
+            <Text style={styles.exitBtnText}>กลับสู่โหมดปกติ</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -436,9 +437,18 @@ const styles = StyleSheet.create({
     color: "#17171c",
   },
   exitBtn: {
-    padding: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 8,
     borderRadius: 8,
     backgroundColor: "#f1f5f9",
+    gap: 4,
+  },
+  exitBtnText: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "#64748b",
   },
   container: {
     flex: 1,

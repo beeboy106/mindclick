@@ -80,7 +80,7 @@ export default function OneOnOneScreen() {
             onPress={() => toggleCrossBubbleMode(false)}
           >
             <Ionicons name="log-out-outline" size={15} color="#64748b" />
-            <Text style={styles.exitBtnText}>โหมดปกติ</Text>
+            <Text style={styles.exitBtnText}>กลับสู่โหมดปกติ</Text>
           </TouchableOpacity>
         </View>
 
@@ -350,6 +350,19 @@ export default function OneOnOneScreen() {
                 >
                   <Ionicons name="newspaper-outline" size={15} color="#17171c" />
                   <Text style={styles.viewPostsMenuBtnText}>ดูสิ่งที่เพื่อนคนนี้เคยโพสต์</Text>
+                </TouchableOpacity>
+
+                {/* Return to normal mode button straight to Feed & Chat */}
+                <TouchableOpacity
+                  style={styles.exitToFeedMenuBtn}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    setShowMenuModal(false);
+                    toggleCrossBubbleMode(false, "FeedTab");
+                  }}
+                >
+                  <Ionicons name="chatbubbles-outline" size={15} color="#17171c" />
+                  <Text style={styles.exitToFeedMenuBtnText}>กลับสู่โหมดปกติ (ไปหน้า ฟีด & แชท)</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -874,6 +887,23 @@ const styles = StyleSheet.create({
   viewPostsMenuBtnText: {
     fontSize: 11.5,
     fontWeight: "700",
+    color: "#17171c",
+  },
+  exitToFeedMenuBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#c7f65a",
+    borderWidth: 1.5,
+    borderColor: "#17171c",
+    borderRadius: 8,
+    paddingVertical: 7,
+    gap: 6,
+    marginTop: 6,
+  },
+  exitToFeedMenuBtnText: {
+    fontSize: 11.5,
+    fontWeight: "800",
     color: "#17171c",
   },
   menuNoticeBox: {

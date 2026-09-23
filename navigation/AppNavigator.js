@@ -29,12 +29,21 @@ const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 // แท็บเมนูด้านล่าง 5 แท็บหลัก
-function MainTabNavigator() {
+function MainTabNavigator({ navigation }) {
   const insets = useSafeAreaInsets();
   const { totalUnreadCount } = useFeed();
+  const { targetMainTab } = useCrossBubble();
+
+  React.useEffect(() => {
+    if (targetMainTab && targetMainTab !== "HomeTab") {
+      navigation.navigate(targetMainTab);
+    }
+  }, [targetMainTab, navigation]);
 
   return (
     <Tab.Navigator
+      key={targetMainTab || "main_tabs"}
+      initialRouteName={targetMainTab || "HomeTab"}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.primary,

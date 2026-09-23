@@ -122,7 +122,7 @@ export default function BlindLoungeScreen() {
             onPress={() => toggleCrossBubbleMode(false)}
           >
             <Ionicons name="log-out-outline" size={15} color="#64748b" />
-            <Text style={styles.exitBtnText}>โหมดปกติ</Text>
+            <Text style={styles.exitBtnText}>กลับสู่โหมดปกติ</Text>
           </TouchableOpacity>
         </View>
 
