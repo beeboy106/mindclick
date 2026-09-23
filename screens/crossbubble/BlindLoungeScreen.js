@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,1323 +6,1669 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Image,
   StatusBar,
-  Modal,
+  Alert,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useCrossBubble } from "../../context/CrossBubbleContext";
+import { useNavigation } from "@react-navigation/native";
+import { useCrossBubble, TOPIC_CATEGORIES } from "../../context/CrossBubbleContext";
 
 export default function BlindLoungeScreen() {
+  const navigation = useNavigation();
   const {
-    loungeRooms,
-    activeLoungeRoomId,
-    setActiveLoungeRoomId,
+    loungeStage,
+    todayTopic,
+    userPreAnswers,
+    userMission,
+    loungeMessages,
+    stageSecondsLeft,
+    userVotedSkip,
+    skipVotesCount,
+    loungeMembers,
+    quizSubmitted,
+    quizScore,
+    quizDetails,
+    userVotedClose,
+    closeVotesCount,
+    matchedMemberIds,
+    enterLoungeDevMode,
+    submitPreAnswers,
+    startStage1,
+    startStage2,
     sendLoungeMessage,
-    voteLoungePoll,
-    requestMutualReveal,
-    createNewRandomLoungeRoom,
+    voteSkipStage,
+    submitQuizAnswers,
+    voteCloseRoom,
+    matchWithMember,
+    resetLoungeSession,
     toggleCrossBubbleMode,
   } = useCrossBubble();
 
+  // Local state for Pre-Input
+  const [ans1, setAns1] = useState("");
+  const [ans2, setAns2] = useState("");
+
+  // Local state for chat message input
   const [inputMsg, setInputMsg] = useState("");
-  const [showRevealModal, setShowRevealModal] = useState(false);
-  const [isMatching, setIsMatching] = useState(false);
   const scrollViewRef = useRef(null);
 
-  // Current active room
-  const currentRoom =
-    loungeRooms.find((r) => r.id === activeLoungeRoomId) || null;
+  // Local state for Quiz answers: { [memberId]: { itemAnswer: "", roleplayGuess: "" } }
+  const [quizForm, setQuizForm] = useState({});
 
-  // Handle Send message in active room
+  // Auto scroll chat to bottom
+  useEffect(() => {
+    if (loungeStage === "stage1" || loungeStage === "stage2") {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [loungeMessages, loungeStage]);
+
+  // Format seconds to mm:ss
+  const formatTimer = (totalSeconds) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
+
   const handleSend = () => {
-    if (!inputMsg.trim() || !currentRoom) return;
-    sendLoungeMessage(inputMsg, currentRoom.id);
+    if (!inputMsg.trim()) return;
+    sendLoungeMessage(inputMsg);
     setInputMsg("");
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 150);
   };
 
-  // Handle Random Matching new group
-  const handleRandomMatch = () => {
-    setIsMatching(true);
-    setTimeout(() => {
-      createNewRandomLoungeRoom();
-      setIsMatching(false);
-    }, 1500);
+  const handlePreSubmit = () => {
+    if (!ans1.trim() || !ans2.trim()) {
+      Alert.alert("กรุณากรอกข้อมูลให้ครบถ้วน", "คำตอบของคุณจะถูกนำไปใช้เป็นโจทย์ภารกิจของเพื่อนในกลุ่ม");
+      return;
+    }
+    submitPreAnswers({ q1: ans1.trim(), q2: ans2.trim() });
   };
 
-  // ==========================================
-  // VIEW 1: LOBBY VIEW (เมื่อยังไม่ได้เลือกห้อง)
-  // ==========================================
-  if (!currentRoom) {
+  const handleQuizSubmit = () => {
+    submitQuizAnswers(quizForm);
+  };
+
+  // Available roleplay choices for quiz selection
+  const ROLEPLAY_CHOICES = [
+    "นักสืบโคนัน",
+    "วิศวกรซ่อมทุกอย่าง",
+    "กวีพเนจรผู้อารมณ์ดี",
+    "เชฟกระทะเหล็ก",
+    "ซีอีโอผู้เฉียบคม",
+    "ประธานรุ่นไฟแรง",
+  ];
+
+  // ====================================================
+  // VIEW 1: COUNTDOWN / LOBBY (เวลาก่อน 19:00 น.)
+  // ====================================================
+  if (loungeStage === "countdown") {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-        <StatusBar barStyle="light-content" backgroundColor="#0F172A" translucent={true} />
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={true} />
 
-        {/* Lobby Header */}
-        <View style={styles.lobbyHeader}>
-          <View style={styles.lobbyTitleRow}>
-            <View>
-              <Text style={styles.lobbyPreTitle}>UNDERGROUND LOUNGE</Text>
-              <Text style={styles.lobbyTitle}>ห้องสังสรรค์</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.exitModeBtn}
-              activeOpacity={0.8}
-              onPress={() => toggleCrossBubbleMode(false)}
-            >
-              <Ionicons name="log-out-outline" size={15} color="#94A3B8" />
-              <Text style={styles.exitModeText}>กลับโหมดปกติ</Text>
-            </TouchableOpacity>
+        {/* Header */}
+        <View style={styles.topHeader}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerSubtitle}>CAMPUS SOCIAL LOUNGE</Text>
+            <Text style={styles.headerTitle}>ห้องสังสรรค์</Text>
           </View>
-          <Text style={styles.lobbySubtitle}>
-            พื้นที่รวมกลุ่มเพื่อน 4 คณะตามไลฟ์สไตล์ สุ่มเข้ากลุ่มใหม่หรือคุยต่อในห้องเก่าได้ตลอดเวลา
-          </Text>
+          <TouchableOpacity
+            style={styles.exitBtn}
+            activeOpacity={0.8}
+            onPress={() => toggleCrossBubbleMode(false)}
+          >
+            <Ionicons name="log-out-outline" size={15} color="#64748b" />
+            <Text style={styles.exitBtnText}>โหมดปกติ</Text>
+          </TouchableOpacity>
         </View>
 
         <ScrollView
-          style={styles.lobbyScroll}
-          contentContainerStyle={styles.lobbyContent}
+          style={styles.container}
+          contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          {/* Action Card: สุ่มกลุ่มใหม่ */}
-          <TouchableOpacity
-            style={styles.randomMatchCard}
-            activeOpacity={0.85}
-            onPress={handleRandomMatch}
-            disabled={isMatching}
-          >
-            <View style={styles.randomMatchIconBox}>
-              <Ionicons name="sparkles" size={24} color="#818CF8" />
+          {/* Daily Schedule Banner */}
+          <View style={styles.scheduleCard}>
+            <View style={styles.scheduleClockCircle}>
+              <Ionicons name="time" size={28} color="#17171c" />
             </View>
-            <View style={styles.randomMatchTextBox}>
-              <Text style={styles.randomMatchTitle}>สุ่มกลุ่มสังสรรค์ใหม่</Text>
-              <Text style={styles.randomMatchDesc}>
-                จับคู่เพื่อน 4 คณะที่ไลฟ์สไตล์และความคิดตรงกันในสัปดาห์นี้
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color="#818CF8" />
-          </TouchableOpacity>
+            <Text style={styles.schedulePre}>DAILY 19:00 MATCHING</Text>
+            <Text style={styles.scheduleTitle}>ระบบสุ่มกลุ่ม 5 คนทุก 19:00 น.</Text>
+            <Text style={styles.scheduleDesc}>
+              ระบบจะจัดกลุ่มเพื่อน 5 คนจากต่างคณะ พร้อมหัวข้อและภารกิจลับ เพื่อให้ทุกคนได้เปิดใจพูดคุยกันอย่างเป็นธรรมชาติ
+            </Text>
 
-          {/* Rooms List Section */}
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionHeading}>ห้องที่คุณเข้าร่วม</Text>
-            <Text style={styles.sectionBadge}>{loungeRooms.length} ห้อง</Text>
-          </View>
-
-          {loungeRooms.map((room) => {
-            const facultySummary = room.faculties
-              .map((f) => f.replace("คณะ", "").replace("ศาสตร์", ""))
-              .join(" • ");
-            const isFullIntimacy = (room.bubbleEnergy || 0) >= 100;
-
-            return (
-              <TouchableOpacity
-                key={room.id}
-                style={styles.roomCard}
-                activeOpacity={0.75}
-                onPress={() => setActiveLoungeRoomId(room.id)}
-              >
-                <View style={styles.roomCardHeader}>
-                  <View style={styles.roomThemeTag}>
-                    <Ionicons name="chatbubbles-outline" size={12} color="#818CF8" />
-                    <Text style={styles.roomThemeTagText} numberOfLines={1}>
-                      {room.theme || "สังสรรค์ข้ามคณะ"}
-                    </Text>
-                  </View>
-                  <View style={styles.roomStatusPill}>
-                    {room.isActive ? (
-                      <View style={styles.activeDot} />
-                    ) : (
-                      <Ionicons name="time-outline" size={11} color="#64748B" />
-                    )}
-                    <Text
-                      style={[
-                        styles.roomStatusText,
-                        room.isActive && styles.roomStatusTextActive,
-                      ]}
-                    >
-                      {room.isActive ? "กำลังคุย" : "ห้องในอดีต"}
-                    </Text>
-                  </View>
-                </View>
-
-                <Text style={styles.roomTitleText}>{room.title}</Text>
-
-                {/* Inline Faculties */}
-                <Text style={styles.roomFacultiesText} numberOfLines={1}>
-                  {facultySummary} ({room.memberCount || 4} คน)
-                </Text>
-
-                {/* Last Message Snippet */}
-                {Boolean(room.lastMessage) && (
-                  <View style={styles.lastMsgBox}>
-                    <Text style={styles.lastMsgText} numberOfLines={1}>
-                      {room.lastMessage}
-                    </Text>
-                    <Text style={styles.lastMsgTime}>{room.lastMessageTime}</Text>
-                  </View>
-                )}
-
-                {/* Intimacy Bar Snippet */}
-                <View style={styles.roomCardFooter}>
-                  <View style={styles.intimacyMiniTrack}>
-                    <View
-                      style={[
-                        styles.intimacyMiniFill,
-                        {
-                          width: `${room.bubbleEnergy || 0}%`,
-                          backgroundColor: isFullIntimacy ? "#F59E0B" : "#818CF8",
-                        },
-                      ]}
-                    />
-                  </View>
-                  <Text style={styles.intimacyMiniText}>
-                    ความสนิท: {room.bubbleEnergy || 0}%
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {/* Matching Loading Modal */}
-        <Modal visible={isMatching} transparent={true} animationType="fade">
-          <View style={styles.matchingOverlay}>
-            <View style={styles.matchingCard}>
-              <ActivityIndicator size="large" color="#818CF8" />
-              <Text style={styles.matchingTitle}>กำลังค้นหาห้องสังสรรค์...</Text>
-              <Text style={styles.matchingSubtitle}>
-                สแกนหาเพื่อนต่างคณะที่ความสนใจและเคมีตรงกัน
-              </Text>
-              <View style={styles.matchingFacultyRow}>
-                <Text style={styles.matchingFacultyChip}>วิศวะ</Text>
-                <Text style={styles.matchingFacultyChip}>พยาบาล</Text>
-                <Text style={styles.matchingFacultyChip}>อักษร</Text>
-                <Text style={styles.matchingFacultyChip}>บัญชี</Text>
+            {/* Countdown Display */}
+            <View style={styles.countdownBox}>
+              <View style={styles.timeDigitCol}>
+                <Text style={styles.timeDigit}>19</Text>
+                <Text style={styles.timeDigitLabel}>ชั่วโมง</Text>
+              </View>
+              <Text style={styles.timeSeparator}>:</Text>
+              <View style={styles.timeDigitCol}>
+                <Text style={styles.timeDigit}>00</Text>
+                <Text style={styles.timeDigitLabel}>นาที</Text>
+              </View>
+              <Text style={styles.timeSeparator}>:</Text>
+              <View style={styles.timeDigitCol}>
+                <Text style={styles.timeDigit}>00</Text>
+                <Text style={styles.timeDigitLabel}>วินาที</Text>
               </View>
             </View>
           </View>
-        </Modal>
+
+          {/* Today's Topic Preview Card */}
+          <View style={styles.topicCard}>
+            <View style={styles.topicBadgeRow}>
+              <View style={styles.categoryBadge}>
+                <Ionicons name="bulb-outline" size={12} color="#17171c" />
+                <Text style={styles.categoryBadgeText}>{todayTopic.category}</Text>
+              </View>
+              <Text style={styles.topicDate}>หัวข้อประจำวัน</Text>
+            </View>
+            <Text style={styles.topicTitle}>{todayTopic.title}</Text>
+            <Text style={styles.topicDesc}>{todayTopic.description}</Text>
+
+            <View style={styles.topicAspectsRow}>
+              <View style={styles.aspectPill}>
+                <Text style={styles.aspectPillText}>1. ความชอบ</Text>
+              </View>
+              <View style={styles.aspectPill}>
+                <Text style={styles.aspectPillText}>2. ข้อถกเถียง</Text>
+              </View>
+              <View style={[styles.aspectPill, styles.aspectPillActive]}>
+                <Text style={styles.aspectPillTextActive}>3. สถานการณ์สมมติ</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Dev/Demo Simulation Action Button */}
+          <TouchableOpacity
+            style={styles.devSimBtn}
+            activeOpacity={0.85}
+            onPress={enterLoungeDevMode}
+          >
+            <View style={styles.devSimIconCircle}>
+              <Ionicons name="play" size={18} color="#17171c" />
+            </View>
+            <View style={styles.devSimTextCol}>
+              <Text style={styles.devSimTitle}>จำลองเข้าห้องทันที (Dev/Demo Mode)</Text>
+              <Text style={styles.devSimDesc}>ทดสอบ Use Flow ทั้ง 2 สเตจ ควิซ และการแมตช์ได้ตลอดเวลา</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#17171c" />
+          </TouchableOpacity>
+
+          <View style={{ height: 30 }} />
+        </ScrollView>
       </SafeAreaView>
     );
   }
 
-  // ==========================================
-  // VIEW 2: CHAT VIEW (เมื่อกดเข้าห้องใดห้องหนึ่ง)
-  // ==========================================
-  const isEnergyFull = (currentRoom.bubbleEnergy || 0) >= 100;
-  const facultyInlineText = `${currentRoom.faculties
-    .map((fac) => fac.replace("คณะ", "").replace("ศาสตร์", ""))
-    .join(" • ")} (${currentRoom.memberCount || 4} คน)`;
-  const currentMessages = currentRoom.messages || [];
+  // ====================================================
+  // VIEW 2: PRE-INPUT (กรอกข้อมูลก่อนเข้าห้อง)
+  // ====================================================
+  if (loungeStage === "pre_input") {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={true} />
 
-  return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <StatusBar barStyle="light-content" backgroundColor="#0F172A" translucent={true} />
-
-      {/* Flattened Modern Header with Back Button */}
-      <View style={styles.topHeader}>
-        <View style={styles.headerTopRow}>
+        <View style={styles.topHeader}>
           <TouchableOpacity
-            style={styles.backButton}
-            activeOpacity={0.7}
-            onPress={() => setActiveLoungeRoomId(null)}
+            style={styles.backBtn}
+            onPress={resetLoungeSession}
           >
-            <Ionicons name="arrow-back" size={20} color="#F8FAFC" />
+            <Ionicons name="arrow-back" size={20} color="#17171c" />
           </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerSubtitle}>STEP 1 OF 3</Text>
+            <Text style={styles.headerTitle}>เตรียมข้อมูลภารกิจ</Text>
+          </View>
+          <View style={{ width: 32 }} />
+        </View>
 
-          <View style={styles.headerTitleGroup}>
-            <Text style={styles.loungePreTitle}>ห้องสังสรรค์</Text>
-            <Text style={styles.groupTitle} numberOfLines={1}>
-              {currentRoom.title}
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.infoBanner}>
+            <Ionicons name="information-circle-outline" size={18} color="#17171c" />
+            <Text style={styles.infoBannerText}>
+              กรุณาตอบคำถาม 2 ข้อนี้สั้นๆ ข้อมูลของคุณจะถูกใช้เป็นเฉลยในภารกิจลับของเพื่อนร่วมกลุ่มหลังจบการสนทนา
             </Text>
           </View>
 
+          <View style={styles.inputGroupCard}>
+            <Text style={styles.inputLabel}>
+              คำถามข้อที่ 1 ({todayTopic.category})
+            </Text>
+            <Text style={styles.questionPromptText}>
+              {todayTopic.preQuestions[0].question}
+            </Text>
+            <TextInput
+              style={styles.textInput}
+              value={ans1}
+              onChangeText={setAns1}
+              placeholder={todayTopic.preQuestions[0].placeholder}
+              placeholderTextColor="#94a3b8"
+            />
+          </View>
+
+          <View style={styles.inputGroupCard}>
+            <Text style={styles.inputLabel}>
+              คำถามข้อที่ 2 ({todayTopic.category})
+            </Text>
+            <Text style={styles.questionPromptText}>
+              {todayTopic.preQuestions[1].question}
+            </Text>
+            <TextInput
+              style={styles.textInput}
+              value={ans2}
+              onChangeText={setAns2}
+              placeholder={todayTopic.preQuestions[1].placeholder}
+              placeholderTextColor="#94a3b8"
+            />
+          </View>
+
           <TouchableOpacity
-            style={styles.exitModeBtn}
-            activeOpacity={0.8}
-            onPress={() => toggleCrossBubbleMode(false)}
+            style={styles.primaryActionBtn}
+            activeOpacity={0.85}
+            onPress={handlePreSubmit}
           >
-            <Ionicons name="log-out-outline" size={15} color="#94A3B8" />
-            <Text style={styles.exitModeText}>ออก</Text>
+            <Text style={styles.primaryActionBtnText}>รับภารกิจและเริ่มแชท</Text>
+            <Ionicons name="arrow-forward" size={18} color="#17171c" />
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // ====================================================
+  // VIEW 3: MISSION BRIEF (แสดงภารกิจลับและบทบาทโรลเพลย์)
+  // ====================================================
+  if (loungeStage === "mission_brief") {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={true} />
+
+        <View style={styles.topHeader}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerSubtitle}>STEP 2 OF 3</Text>
+            <Text style={styles.headerTitle}>ภารกิจลับของคุณ</Text>
+          </View>
+        </View>
+
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Mission Card */}
+          <View style={styles.missionBriefCard}>
+            <View style={styles.briefBadge}>
+              <Ionicons name="shield-outline" size={14} color="#17171c" />
+              <Text style={styles.briefBadgeText}>SECRET ASSIGNMENT</Text>
+            </View>
+
+            <Text style={styles.missionBriefTitle}>{userMission.secretTask}</Text>
+            <Text style={styles.missionBriefSub}>
+              ในระหว่างการคุยสเตจที่ 1 และ 2 คุณต้องพยายามสอบถามข้อมูลนี้จากเพื่อนอย่างน้อย 2 คนโดยไม่ให้เพื่อนรู้ตัว
+            </Text>
+
+            <View style={styles.roleplayBox}>
+              <View style={styles.roleplayIconCircle}>
+                <Ionicons name="person-outline" size={20} color="#17171c" />
+              </View>
+              <View style={styles.roleplayTextCol}>
+                <Text style={styles.roleplayLabel}>บทบาทโรลเพลย์ประจำตัวคุณ</Text>
+                <Text style={styles.roleplayName}>{userMission.roleplayTitle}</Text>
+                <Text style={styles.roleplayDesc}>{userMission.roleplayInstruction}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Stages Info Card */}
+          <View style={styles.stagesInfoCard}>
+            <Text style={styles.stagesInfoTitle}>ขั้นตอนการสนทนาในห้อง</Text>
+            <View style={styles.stageStepRow}>
+              <View style={styles.stepNumCircle}>
+                <Text style={styles.stepNumText}>1</Text>
+              </View>
+              <View style={styles.stepTextCol}>
+                <Text style={styles.stepTitle}>สเตจแนะนำตัว (5 นาที)</Text>
+                <Text style={styles.stepDesc}>แนะนำตัว พูดคุย และสืบข้อมูลตามภารกิจลับ</Text>
+              </View>
+            </View>
+            <View style={styles.stageStepRow}>
+              <View style={styles.stepNumCircle}>
+                <Text style={styles.stepNumText}>2</Text>
+              </View>
+              <View style={styles.stepTextCol}>
+                <Text style={styles.stepTitle}>สเตจถกหัวข้อ (10 นาที)</Text>
+                <Text style={styles.stepDesc}>แลกเปลี่ยนมุมมองหัวข้อประจำวัน พร้อมสังเกตบทบาทเพื่อน</Text>
+              </View>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.primaryActionBtn}
+            activeOpacity={0.85}
+            onPress={startStage1}
+          >
+            <Text style={styles.primaryActionBtnText}>เข้าสู่ห้องแชทสเตจ 1</Text>
+            <Ionicons name="chatbubbles" size={18} color="#17171c" />
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // ====================================================
+  // VIEW 4 & 5: CHAT ROOM (STAGE 1 & STAGE 2)
+  // ====================================================
+  if (loungeStage === "stage1" || loungeStage === "stage2") {
+    const isStage1 = loungeStage === "stage1";
+
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={true} />
+
+        {/* Chat Stage Top Bar */}
+        <View style={styles.chatTopBar}>
+          <View style={styles.chatTopInfo}>
+            <View style={styles.stageIndicatorRow}>
+              <View style={styles.stagePill}>
+                <Text style={styles.stagePillText}>
+                  {isStage1 ? "สเตจ 1: แนะนำตัว" : "สเตจ 2: ถกหัวข้อ"}
+                </Text>
+              </View>
+              <View style={styles.timerBadge}>
+                <Ionicons name="timer-outline" size={14} color="#17171c" />
+                <Text style={styles.timerText}>{formatTimer(stageSecondsLeft)}</Text>
+              </View>
+            </View>
+            <Text style={styles.chatTopicTitle} numberOfLines={1}>
+              {isStage1 ? "แนะนำตัวและสืบข้อมูลภารกิจลับ" : todayTopic.title}
+            </Text>
+          </View>
+
+          {/* Vote Skip Button */}
+          <TouchableOpacity
+            style={[styles.voteSkipBtn, userVotedSkip && styles.voteSkipBtnActive]}
+            activeOpacity={0.85}
+            onPress={voteSkipStage}
+          >
+            <Ionicons
+              name={userVotedSkip ? "checkmark-circle" : "arrow-forward-circle-outline"}
+              size={16}
+              color="#17171c"
+            />
+            <Text style={styles.voteSkipText}>
+              {userVotedSkip ? `โหวตแล้ว (${skipVotesCount}/5)` : `โหวตข้าม (${skipVotesCount}/5)`}
+            </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Clean Inline Faculty & Member Text */}
-        <View style={styles.inlineMetaRow}>
-          <Ionicons name="sparkles" size={12} color="#818CF8" />
-          <Text style={styles.inlineMetaText} numberOfLines={1}>
-            {facultyInlineText}
-          </Text>
+        {/* Member Avatars Row */}
+        <View style={styles.membersAvatarBar}>
+          <Text style={styles.membersBarLabel}>สมาชิก 5 คน:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {loungeMembers.map((m) => (
+              <View key={m.id} style={styles.miniMemberChip}>
+                <Ionicons name={m.icon} size={14} color="#17171c" />
+                <Text style={styles.miniMemberAlias}>{m.alias}</Text>
+              </View>
+            ))}
+          </ScrollView>
         </View>
-      </View>
 
-      {/* Intimacy Progress Bar (Minimal 4px) */}
-      <View style={styles.intimacyContainer}>
-        <View style={styles.intimacyMetaRow}>
-          <Text style={styles.intimacyLabel}>
-            ความสนิทในห้อง: {currentRoom.bubbleEnergy || 0}%{" "}
-            <Text style={styles.intimacySubHint}>
-              (ชวนคุยอีกนิดเพื่อเปิดเผยตัวตนจริงร่วมกัน)
-            </Text>
-          </Text>
-          {isEnergyFull && (
-            <TouchableOpacity
-              style={styles.quickRevealPill}
-              activeOpacity={0.8}
-              onPress={() => setShowRevealModal(true)}
-            >
-              <Ionicons name="sparkles" size={11} color="#FFFFFF" />
-              <Text style={styles.quickRevealPillText}>เปิดเผยตัวตน</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-        <View style={styles.intimacyTrack}>
-          <View
-            style={[
-              styles.intimacyFill,
-              {
-                width: `${currentRoom.bubbleEnergy || 0}%`,
-                backgroundColor: isEnergyFull ? "#F59E0B" : "#818CF8",
-              },
-            ]}
-          />
-        </View>
-      </View>
-
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+        {/* Messages Scroll Area */}
         <ScrollView
           ref={scrollViewRef}
           style={styles.chatScroll}
           contentContainerStyle={styles.chatContent}
           showsVerticalScrollIndicator={false}
-          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
         >
-          {/* Icebreaker Question (Open System Message Bubble) */}
-          {Boolean(currentRoom.activePoll) && (
-            <View style={styles.icebreakerBubble}>
-              <View style={styles.icebreakerHeader}>
-                <View style={styles.icebreakerTag}>
-                  <Ionicons name="bulb-outline" size={12} color="#F59E0B" />
-                  <Text style={styles.icebreakerTagText}>หัวข้อเปิดบทสนทนาคืนนี้</Text>
-                </View>
-                <Text style={styles.icebreakerBonus}>+15% ความสนิท</Text>
-              </View>
-
-              <Text style={styles.icebreakerQuestion}>
-                {currentRoom.activePoll.question}
-              </Text>
-
-              <View style={styles.pollOptionsContainer}>
-                {currentRoom.activePoll.options.map((option, idx) => {
-                  const isVoted = currentRoom.activePoll.userVotedIndex === idx;
-                  const hasAnyVote = currentRoom.activePoll.userVotedIndex !== null;
-
-                  return (
-                    <TouchableOpacity
-                      key={idx}
-                      style={[
-                        styles.pollOptionRow,
-                        isVoted && styles.pollOptionRowVoted,
-                      ]}
-                      activeOpacity={0.8}
-                      disabled={hasAnyVote}
-                      onPress={() =>
-                        voteLoungePoll(currentRoom.activePoll.id, idx, currentRoom.id)
-                      }
-                    >
-                      <View style={styles.pollOptionLeft}>
-                        <View
-                          style={[
-                            styles.radioCircle,
-                            isVoted && styles.radioCircleVoted,
-                          ]}
-                        >
-                          {isVoted && <View style={styles.radioInnerDot} />}
-                        </View>
-                        <Text
-                          style={[
-                            styles.pollOptionLabel,
-                            isVoted && styles.pollOptionLabelVoted,
-                          ]}
-                        >
-                          {option.text}
-                        </Text>
-                      </View>
-                      {hasAnyVote && (
-                        <Text style={styles.pollVoteCount}>{option.votes} โหวต</Text>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-          )}
-
-          {/* Messages Feed */}
-          {currentMessages.map((msg) => {
+          {loungeMessages.map((msg) => {
             if (msg.isSystem) {
               return (
-                <View key={msg.id} style={styles.systemMessageContainer}>
-                  <Text style={styles.systemMessageText}>{msg.text}</Text>
+                <View key={msg.id} style={styles.sysMsgContainer}>
+                  <Text style={styles.sysMsgText}>{msg.text}</Text>
                 </View>
               );
             }
 
+            const isMe = msg.isMe;
+
             return (
               <View
                 key={msg.id}
-                style={[
-                  styles.messageRow,
-                  msg.isMe ? styles.messageRowMe : styles.messageRowOther,
-                ]}
+                style={[styles.msgRow, isMe ? styles.msgRowRight : styles.msgRowLeft]}
               >
-                {!msg.isMe && (
-                  <View style={styles.senderHeader}>
-                    <Ionicons
-                      name={msg.senderIcon || "finger-print-outline"}
-                      size={11}
-                      color="#818CF8"
-                    />
-                    <Text style={styles.senderAliasText}>{msg.senderAlias}</Text>
+                {!isMe && (
+                  <View style={styles.msgAvatarCircle}>
+                    <Ionicons name={msg.senderIcon || "person-outline"} size={16} color="#17171c" />
                   </View>
                 )}
-                <View
-                  style={[
-                    styles.messageBubble,
-                    msg.isMe ? styles.messageBubbleMe : styles.messageBubbleOther,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.messageText,
-                      msg.isMe ? styles.messageTextMe : styles.messageTextOther,
-                    ]}
-                  >
+                <View style={[styles.msgBubble, isMe ? styles.msgBubbleMe : styles.msgBubbleOther]}>
+                  {!isMe && <Text style={styles.msgSenderAlias}>{msg.senderAlias}</Text>}
+                  <Text style={[styles.msgBodyText, isMe && styles.msgBodyTextMe]}>
                     {msg.text}
                   </Text>
+                  <Text style={[styles.msgTimeText, isMe && styles.msgTimeTextMe]}>
+                    {msg.createdAt}
+                  </Text>
                 </View>
-                <Text style={styles.messageTimestamp}>{msg.createdAt}</Text>
               </View>
             );
           })}
         </ScrollView>
 
-        {/* Input Bar: Capsule / Rounded-full */}
-        <View style={styles.inputContainer}>
-          <View style={styles.inputCapsule}>
+        {/* Input Bar */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
+        >
+          <View style={styles.inputBar}>
             <TextInput
-              style={styles.textInput}
-              placeholder="พิมพ์ข้อความชวนคุยกับเพื่อนในห้อง..."
-              placeholderTextColor="#64748B"
+              style={styles.chatInput}
               value={inputMsg}
               onChangeText={setInputMsg}
+              placeholder="พิมพ์ข้อความในกลุ่มสังสรรค์..."
+              placeholderTextColor="#94a3b8"
               onSubmitEditing={handleSend}
               returnKeyType="send"
             />
             <TouchableOpacity
-              style={[
-                styles.sendButton,
-                !inputMsg.trim() && styles.sendButtonDisabled,
-              ]}
-              disabled={!inputMsg.trim()}
+              style={styles.sendBtn}
               activeOpacity={0.8}
               onPress={handleSend}
             >
-              <Ionicons
-                name="arrow-up"
-                size={16}
-                color={inputMsg.trim() ? "#FFFFFF" : "#64748B"}
-              />
+              <Ionicons name="send" size={16} color="#17171c" />
             </TouchableOpacity>
           </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
+
+  // ====================================================
+  // VIEW 6: QUIZ VIEW (ตอบคำถามภารกิจและทายโรลเพลย์)
+  // ====================================================
+  if (loungeStage === "quiz") {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={true} />
+
+        <View style={styles.topHeader}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerSubtitle}>STEP 3 OF 3</Text>
+            <Text style={styles.headerTitle}>แบบทดสอบภารกิจ</Text>
+          </View>
         </View>
-      </KeyboardAvoidingView>
 
-      {/* Mutual Reveal Modal */}
-      <Modal
-        visible={showRevealModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowRevealModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalIconWrap}>
-              <Ionicons name="sparkles" size={24} color="#818CF8" />
-            </View>
-
-            <Text style={styles.modalTitle}>
-              เปิดเผยตัวตนจริงร่วมกัน (Mutual Reveal)
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.infoBanner}>
+            <Ionicons name="help-circle-outline" size={18} color="#17171c" />
+            <Text style={styles.infoBannerText}>
+              ตอบคำถามจากข้อมูลที่ได้ยินมาในสเตจแนะนำตัว และทายว่าเพื่อนแต่ละคนสวมบทบาทโรลเพลย์อะไร
             </Text>
-            <Text style={styles.modalSubtitle}>
-              เมื่อสมาชิกทุกคนในห้องสังสรรค์ยินยอมร่วมกัน ระบบจะเปิดเผยโปรไฟล์จริงให้เห็นกันในห้องนี้
-            </Text>
+          </View>
 
-            {/* Consent Status */}
-            <View style={styles.consentCard}>
-              <View style={styles.consentRow}>
-                <Text style={styles.consentTitle}>ระดับความยินยอม</Text>
-                <Text style={styles.consentCount}>
-                  {currentRoom.mutualRevealState?.consentCount || 0} จาก{" "}
-                  {currentRoom.mutualRevealState?.totalRequired || 4} คน
-                </Text>
-              </View>
-              <View style={styles.consentTrack}>
-                <View
-                  style={[
-                    styles.consentFill,
-                    {
-                      width: `${
-                        ((currentRoom.mutualRevealState?.consentCount || 0) /
-                          (currentRoom.mutualRevealState?.totalRequired || 4)) *
-                        100
-                      }%`,
-                    },
-                  ]}
-                />
-              </View>
-            </View>
+          {loungeMembers.map((member) => {
+            const currentAns = quizForm[member.id] || {};
 
-            {/* Consent Action */}
-            {!currentRoom.mutualRevealState?.userHasConsented ? (
-              <TouchableOpacity
-                style={styles.consentActionBtn}
-                activeOpacity={0.85}
-                onPress={() => requestMutualReveal(currentRoom.id)}
-              >
-                <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
-                <Text style={styles.consentActionText}>
-                  ยินยอมเปิดเผยโปรไฟล์จริงในห้องนี้
-                </Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.consentedStatusBanner}>
-                <Ionicons name="checkmark-done" size={16} color="#818CF8" />
-                <Text style={styles.consentedStatusText}>
-                  คุณยินยอมเรียบร้อยแล้ว กำลังรอเพื่อนคนอื่นยืนยัน
-                </Text>
-              </View>
-            )}
-
-            {/* Members List */}
-            <Text style={styles.membersListHeader}>เพื่อนในห้องสังสรรค์:</Text>
-            <ScrollView style={styles.membersScroll} showsVerticalScrollIndicator={false}>
-              {currentRoom.members?.map((member) => (
-                <View key={member.id} style={styles.memberItem}>
-                  {currentRoom.mutualRevealState?.allConsented && member.realAvatar ? (
-                    <Image source={{ uri: member.realAvatar }} style={styles.memberAvatarImg} />
-                  ) : (
-                    <View style={styles.memberAvatarCircle}>
-                      <Text style={styles.memberAvatarInitial}>
-                        {currentRoom.mutualRevealState?.allConsented
-                          ? member.realName?.charAt(0)
-                          : member.alias?.charAt(0)}
-                      </Text>
-                    </View>
-                  )}
-                  <View style={styles.memberDetails}>
-                    <Text style={styles.memberDisplayName}>
-                      {currentRoom.mutualRevealState?.allConsented
-                        ? member.realName
-                        : member.alias}
-                    </Text>
-                    <Text style={styles.memberFacultyName}>{member.faculty}</Text>
+            return (
+              <View key={member.id} style={styles.quizCard}>
+                <View style={styles.quizMemberHeader}>
+                  <View style={styles.quizMemberIcon}>
+                    <Ionicons name={member.icon} size={18} color="#17171c" />
                   </View>
-                  <View
-                    style={[
-                      styles.consentBadge,
-                      member.consented && styles.consentBadgeDone,
-                    ]}
-                  >
-                    <Ionicons
-                      name={member.consented ? "checkmark" : "time-outline"}
-                      size={11}
-                      color={member.consented ? "#818CF8" : "#64748B"}
-                    />
-                    <Text
-                      style={[
-                        styles.consentBadgeText,
-                        member.consented && styles.consentBadgeTextDone,
-                      ]}
-                    >
-                      {member.consented ? "ยินยอมแล้ว" : "รอยืนยัน"}
-                    </Text>
+                  <View>
+                    <Text style={styles.quizMemberAlias}>{member.alias}</Text>
+                    <Text style={styles.quizMemberFaculty}>{member.faculty}</Text>
                   </View>
                 </View>
-              ))}
-            </ScrollView>
 
-            <TouchableOpacity
-              style={styles.modalCloseBtn}
-              activeOpacity={0.7}
-              onPress={() => setShowRevealModal(false)}
-            >
-              <Text style={styles.modalCloseText}>ปิด</Text>
-            </TouchableOpacity>
+                {/* Question 1: Item Answer */}
+                <Text style={styles.quizQuestionLabel}>
+                  1. เพื่อนคนนี้พกไอเท็มหรือตอบอะไรเกี่ยวกับหัวข้อ?
+                </Text>
+                <TextInput
+                  style={styles.quizInput}
+                  value={currentAns.itemAnswer || ""}
+                  onChangeText={(val) =>
+                    setQuizForm((prev) => ({
+                      ...prev,
+                      [member.id]: { ...prev[member.id], itemAnswer: val },
+                    }))
+                  }
+                  placeholder={`คำตอบของ ${member.alias}...`}
+                  placeholderTextColor="#94a3b8"
+                />
+
+                {/* Question 2: Roleplay Guess */}
+                <Text style={styles.quizQuestionLabel}>
+                  2. คุณคิดว่าเพื่อนคนนี้สวมบทบาทโรลเพลย์อะไร?
+                </Text>
+                <View style={styles.roleplayPickerGrid}>
+                  {ROLEPLAY_CHOICES.map((role) => {
+                    const isSelected = currentAns.roleplayGuess === role;
+
+                    return (
+                      <TouchableOpacity
+                        key={role}
+                        style={[
+                          styles.roleplayOptionBtn,
+                          isSelected && styles.roleplayOptionBtnSelected,
+                        ]}
+                        activeOpacity={0.8}
+                        onPress={() =>
+                          setQuizForm((prev) => ({
+                            ...prev,
+                            [member.id]: { ...prev[member.id], roleplayGuess: role },
+                          }))
+                        }
+                      >
+                        <Text
+                          style={[
+                            styles.roleplayOptionText,
+                            isSelected && styles.roleplayOptionTextSelected,
+                          ]}
+                        >
+                          {role}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            );
+          })}
+
+          <TouchableOpacity
+            style={styles.primaryActionBtn}
+            activeOpacity={0.85}
+            onPress={handleQuizSubmit}
+          >
+            <Text style={styles.primaryActionBtnText}>ส่งคำตอบและตรวจคะแนน</Text>
+            <Ionicons name="checkmark-done" size={18} color="#17171c" />
+          </TouchableOpacity>
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // ====================================================
+  // VIEW 7: VOTE CLOSE (โหวตปิดห้อง)
+  // ====================================================
+  if (loungeStage === "vote_close") {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={true} />
+
+        <View style={styles.topHeader}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerSubtitle}>SESSION COMPLETED</Text>
+            <Text style={styles.headerTitle}>คะแนนการตอบควิซ</Text>
           </View>
         </View>
-      </Modal>
-    </SafeAreaView>
-  );
+
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Score Card */}
+          <View style={styles.scoreCard}>
+            <Text style={styles.scoreCardPre}>คะแนนรวมของคุณ</Text>
+            <Text style={styles.scoreValue}>{quizScore} / 200 PTS</Text>
+            <Text style={styles.scoreDesc}>
+              {quizScore >= 100
+                ? "ยอดเยี่ยมมาก คุณเป็นนักสืบและผู้ฟังที่ดีเยี่ยม!"
+                : "ทำได้ดีมาก ทุกคนเริ่มเปิดใจและได้รู้จักกันมากขึ้นแล้ว"}
+            </Text>
+          </View>
+
+          {/* Details breakdown */}
+          <Text style={styles.sectionTitle}>ผลการตอบควิซเพื่อนในกลุ่ม</Text>
+          {quizDetails.map((detail) => (
+            <View key={detail.memberId} style={styles.quizDetailCard}>
+              <View style={styles.detailHeader}>
+                <Text style={styles.detailAlias}>{detail.memberAlias}</Text>
+                <Text style={styles.detailPoints}>+{detail.points} PTS</Text>
+              </View>
+              <Text style={styles.detailLine}>
+                คำตอบจริง: {detail.actualItem}
+              </Text>
+              <Text style={styles.detailLine}>
+                บทบาทจริง: {detail.actualRole}
+              </Text>
+            </View>
+          ))}
+
+          {/* Vote to close button */}
+          <View style={styles.closeVoteContainer}>
+            <Text style={styles.closeVotePrompt}>
+              กดโหวตปิดห้องเพื่อเปิดเผยตัวตนจริงของทุกคน และเลือกเพื่อนเพื่อคุยต่อในห้องมืด
+            </Text>
+            <TouchableOpacity
+              style={[styles.primaryActionBtn, userVotedClose && styles.primaryActionBtnActive]}
+              activeOpacity={0.85}
+              onPress={voteCloseRoom}
+            >
+              <Text style={styles.primaryActionBtnText}>
+                {userVotedClose
+                  ? `โหวตปิดห้องแล้ว (${closeVotesCount}/5 คน)`
+                  : `โหวตปิดแชท (${closeVotesCount}/5 คน)`}
+              </Text>
+              <Ionicons name="lock-closed-outline" size={18} color="#17171c" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // ====================================================
+  // VIEW 8: REVEALED (เปิดเผยตัวตนและกดแมตช์)
+  // ====================================================
+  if (loungeStage === "revealed") {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={true} />
+
+        <View style={styles.topHeader}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerSubtitle}>MUTUAL REVEAL & MATCH</Text>
+            <Text style={styles.headerTitle}>เปิดเผยตัวตนจริง</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.exitBtn}
+            onPress={resetLoungeSession}
+          >
+            <Ionicons name="refresh" size={15} color="#64748b" />
+            <Text style={styles.exitBtnText}>เริ่มรอบใหม่</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.revealedBanner}>
+            <Ionicons name="people" size={24} color="#17171c" />
+            <Text style={styles.revealedBannerTitle}>ยินดีด้วย! ทุกคนเปิดเผยตัวตนสำเร็จ</Text>
+            <Text style={styles.revealedBannerSub}>
+              หากคุณประทับใจใครในห้องนี้ สามารถกดแมตช์เพื่อเปิดห้องสนทนา 1-on-1 ในห้องมืด และแลกเปลี่ยนช่องทางติดต่อจริงได้ทันที
+            </Text>
+          </View>
+
+          {/* Member Profile Cards */}
+          {loungeMembers.map((member) => {
+            const isMatched = matchedMemberIds.includes(member.id);
+
+            return (
+              <View key={member.id} style={styles.memberRevealCard}>
+                <View style={styles.revealCardTop}>
+                  <View style={styles.revealAvatarCircle}>
+                    <Ionicons name={member.icon} size={28} color="#17171c" />
+                  </View>
+                  <View style={styles.revealInfoCol}>
+                    <Text style={styles.revealRealName}>{member.realName}</Text>
+                    <Text style={styles.revealFaculty}>{member.realFaculty}</Text>
+                    <Text style={styles.revealAlias}>ฉายาในห้อง: {member.alias}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.revealBioBox}>
+                  <Text style={styles.revealBioText}>{member.realBio}</Text>
+                </View>
+
+                <View style={styles.revealContactRow}>
+                  <View style={styles.contactItem}>
+                    <Ionicons name="logo-instagram" size={14} color="#64748b" />
+                    <Text style={styles.contactText}>{member.instagram}</Text>
+                  </View>
+                  <View style={styles.contactItem}>
+                    <Ionicons name="chatbubble-ellipses-outline" size={14} color="#64748b" />
+                    <Text style={styles.contactText}>Line: {member.lineId}</Text>
+                  </View>
+                </View>
+
+                {/* Match Action Button */}
+                <TouchableOpacity
+                  style={[styles.matchBtn, isMatched && styles.matchBtnMatched]}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    if (isMatched) {
+                      navigation.navigate("DarkRoomTab");
+                    } else {
+                      matchWithMember(member.id);
+                      Alert.alert(
+                        "แมตช์สำเร็จ",
+                        `คุณได้แมตช์กับ ${member.realName} แล้ว สามารถไปคุยต่อที่แท็บ 'ห้องมืด' ได้ทันที`,
+                        [
+                          { text: "อยู่หน้านี้ต่อ", style: "cancel" },
+                          { text: "ไปห้องมืด", onPress: () => navigation.navigate("DarkRoomTab") },
+                        ]
+                      );
+                    }
+                  }}
+                >
+                  <Ionicons
+                    name={isMatched ? "chatbubbles" : "heart"}
+                    size={16}
+                    color="#17171c"
+                  />
+                  <Text style={styles.matchBtnText}>
+                    {isMatched ? "แมตช์แล้ว (ไปคุยต่อในห้องมืด)" : "กดแมตช์คุยต่อในห้องมืด"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  return null;
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#0F172A",
+    backgroundColor: "#ffffff",
   },
-  // Lobby Styles
-  lobbyHeader: {
+  topHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 14,
-    backgroundColor: "#0F172A",
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "#1E293B",
+    borderBottomColor: "#f1f5f9",
+    backgroundColor: "#ffffff",
   },
-  lobbyTitleRow: {
+  headerLeft: {
+    flex: 1,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: "center",
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerSubtitle: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#64748b",
+    letterSpacing: 1,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#17171c",
+    marginTop: 2,
+  },
+  exitBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: "#f1f5f9",
+    gap: 4,
   },
-  lobbyPreTitle: {
-    color: "#818CF8",
-    fontSize: 10.5,
+  exitBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  container: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  content: {
+    padding: 20,
+  },
+  scheduleCard: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    padding: 20,
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  scheduleClockCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#c7f65a",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  schedulePre: {
+    fontSize: 10,
     fontWeight: "800",
-    letterSpacing: 0.5,
+    color: "#64748b",
+    letterSpacing: 1,
   },
-  lobbyTitle: {
-    color: "#F8FAFC",
+  scheduleTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#17171c",
+    marginTop: 4,
+  },
+  scheduleDesc: {
+    fontSize: 12.5,
+    color: "#64748b",
+    textAlign: "center",
+    marginTop: 8,
+    lineHeight: 18,
+  },
+  countdownBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#17171c",
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    marginTop: 16,
+  },
+  timeDigitCol: {
+    alignItems: "center",
+    width: 48,
+  },
+  timeDigit: {
     fontSize: 20,
     fontWeight: "900",
+    color: "#c7f65a",
   },
-  lobbySubtitle: {
-    color: "#94A3B8",
-    fontSize: 11.5,
-    lineHeight: 16,
+  timeDigitLabel: {
+    fontSize: 9,
+    color: "#94a3b8",
+    fontWeight: "600",
   },
-  lobbyScroll: {
-    flex: 1,
+  timeSeparator: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: "#94a3b8",
+    marginHorizontal: 4,
   },
-  lobbyContent: {
-    padding: 16,
-    paddingBottom: 30,
+  topicCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    padding: 18,
+    marginBottom: 16,
   },
-  randomMatchCard: {
+  topicBadgeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  categoryBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1E293B",
-    borderRadius: 16,
+    backgroundColor: "#c7f65a",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  categoryBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#17171c",
+  },
+  topicDate: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#64748b",
+  },
+  topicTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#17171c",
+    lineHeight: 22,
+  },
+  topicDesc: {
+    fontSize: 12.5,
+    color: "#64748b",
+    marginTop: 6,
+    lineHeight: 18,
+  },
+  topicAspectsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 14,
+  },
+  aspectPill: {
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  aspectPillActive: {
+    backgroundColor: "#17171c",
+  },
+  aspectPillText: {
+    fontSize: 10.5,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  aspectPillTextActive: {
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: "#c7f65a",
+  },
+  devSimBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#c7f65a",
+    borderRadius: 14,
     padding: 16,
     borderWidth: 1.5,
-    borderColor: "#818CF8",
-    marginBottom: 20,
-    gap: 12,
+    borderColor: "#17171c",
   },
-  randomMatchIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(129, 140, 248, 0.15)",
-    alignItems: "center",
+  devSimIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#ffffff",
     justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
   },
-  randomMatchTextBox: {
+  devSimTextCol: {
     flex: 1,
   },
-  randomMatchTitle: {
-    color: "#F8FAFC",
-    fontSize: 14.5,
-    fontWeight: "800",
-    marginBottom: 3,
-  },
-  randomMatchDesc: {
-    color: "#94A3B8",
-    fontSize: 11,
-    lineHeight: 15,
-  },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  sectionHeading: {
-    color: "#F8FAFC",
+  devSimTitle: {
     fontSize: 14,
     fontWeight: "800",
+    color: "#17171c",
   },
-  sectionBadge: {
-    color: "#64748B",
+  devSimDesc: {
     fontSize: 11.5,
-    fontWeight: "700",
+    color: "#17171c",
+    marginTop: 2,
+    opacity: 0.85,
   },
-  roomCard: {
-    backgroundColor: "#1E293B",
-    borderRadius: 14,
+  infoBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#334155",
-    marginBottom: 12,
+    borderColor: "#e2e8f0",
+    marginBottom: 16,
+    gap: 10,
   },
-  roomCardHeader: {
+  infoBannerText: {
+    flex: 1,
+    fontSize: 12.5,
+    color: "#17171c",
+    lineHeight: 18,
+  },
+  inputGroupCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    padding: 16,
+    marginBottom: 14,
+  },
+  inputLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#64748b",
+    letterSpacing: 0.5,
+  },
+  questionPromptText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#17171c",
+    marginVertical: 8,
+    lineHeight: 20,
+  },
+  textInput: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 13.5,
+    color: "#17171c",
+  },
+  primaryActionBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
+    justifyContent: "center",
+    backgroundColor: "#c7f65a",
+    borderRadius: 12,
+    paddingVertical: 14,
+    borderWidth: 1.5,
+    borderColor: "#17171c",
+    marginTop: 10,
+    gap: 8,
   },
-  roomThemeTag: {
+  primaryActionBtnActive: {
+    backgroundColor: "#f1f5f9",
+    borderColor: "#cbd5e1",
+  },
+  primaryActionBtnText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#17171c",
+  },
+  missionBriefCard: {
+    backgroundColor: "#17171c",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+  },
+  briefBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    backgroundColor: "#0F172A",
+    backgroundColor: "#c7f65a",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#334155",
-    maxWidth: "68%",
-  },
-  roomThemeTagText: {
-    color: "#818CF8",
-    fontSize: 10.5,
-    fontWeight: "700",
-  },
-  roomStatusPill: {
-    flexDirection: "row",
-    alignItems: "center",
+    alignSelf: "flex-start",
+    marginBottom: 12,
     gap: 4,
   },
-  activeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#818CF8",
-  },
-  roomStatusText: {
-    color: "#64748B",
-    fontSize: 10.5,
-    fontWeight: "600",
-  },
-  roomStatusTextActive: {
-    color: "#818CF8",
-    fontWeight: "700",
-  },
-  roomTitleText: {
-    color: "#F8FAFC",
-    fontSize: 14,
-    fontWeight: "800",
-    marginBottom: 4,
-  },
-  roomFacultiesText: {
-    color: "#94A3B8",
-    fontSize: 11.5,
-    fontWeight: "500",
-    marginBottom: 8,
-  },
-  lastMsgBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#0F172A",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginBottom: 10,
-    gap: 8,
-  },
-  lastMsgText: {
-    color: "#CBD5E1",
-    fontSize: 11,
-    flex: 1,
-  },
-  lastMsgTime: {
-    color: "#64748B",
+  briefBadgeText: {
     fontSize: 10,
+    fontWeight: "800",
+    color: "#17171c",
+    letterSpacing: 0.8,
   },
-  roomCardFooter: {
+  missionBriefTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#ffffff",
+    lineHeight: 24,
+  },
+  missionBriefSub: {
+    fontSize: 12.5,
+    color: "#94a3b8",
+    marginTop: 8,
+    lineHeight: 18,
+  },
+  roleplayBox: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+    alignItems: "flex-start",
+    backgroundColor: "#262626",
+    borderRadius: 12,
+    padding: 14,
+    marginTop: 16,
   },
-  intimacyMiniTrack: {
-    flex: 1,
-    height: 4,
-    backgroundColor: "#0F172A",
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  intimacyMiniFill: {
-    height: "100%",
-    borderRadius: 2,
-  },
-  intimacyMiniText: {
-    color: "#94A3B8",
-    fontSize: 10.5,
-    fontWeight: "600",
-  },
-  matchingOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.85)",
+  roleplayIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#c7f65a",
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
+    marginRight: 12,
   },
-  matchingCard: {
-    width: "100%",
-    backgroundColor: "#1E293B",
-    borderRadius: 18,
-    padding: 24,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#334155",
+  roleplayTextCol: {
+    flex: 1,
   },
-  matchingTitle: {
-    color: "#F8FAFC",
-    fontSize: 15.5,
+  roleplayLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#c7f65a",
+  },
+  roleplayName: {
+    fontSize: 14,
     fontWeight: "800",
-    marginTop: 14,
-    marginBottom: 4,
+    color: "#ffffff",
+    marginTop: 2,
   },
-  matchingSubtitle: {
-    color: "#94A3B8",
+  roleplayDesc: {
     fontSize: 11.5,
-    textAlign: "center",
+    color: "#94a3b8",
+    marginTop: 4,
     lineHeight: 16,
+  },
+  stagesInfoCard: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    padding: 16,
     marginBottom: 16,
   },
-  matchingFacultyRow: {
-    flexDirection: "row",
-    gap: 6,
+  stagesInfoTitle: {
+    fontSize: 13.5,
+    fontWeight: "800",
+    color: "#17171c",
+    marginBottom: 12,
   },
-  matchingFacultyChip: {
-    backgroundColor: "#0F172A",
-    color: "#818CF8",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    fontSize: 11,
-    fontWeight: "700",
-    borderWidth: 1,
-    borderColor: "#334155",
-  },
-
-  // Chat Screen Styles
-  topHeader: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-    backgroundColor: "#0F172A",
-    borderBottomWidth: 1,
-    borderBottomColor: "#1E293B",
-  },
-  headerTopRow: {
+  stageStepRow: {
     flexDirection: "row",
     alignItems: "center",
+    marginBottom: 10,
   },
-  backButton: {
-    paddingRight: 10,
-    paddingVertical: 4,
+  stepNumCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#17171c",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
   },
-  headerTitleGroup: {
+  stepNumText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#c7f65a",
+  },
+  stepTextCol: {
+    flex: 1,
+  },
+  stepTitle: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: "#17171c",
+  },
+  stepDesc: {
+    fontSize: 11,
+    color: "#64748b",
+  },
+  chatTopBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: "#ffffff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+  },
+  chatTopInfo: {
     flex: 1,
     marginRight: 10,
   },
-  loungePreTitle: {
-    color: "#818CF8",
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-    marginBottom: 2,
-  },
-  groupTitle: {
-    color: "#F8FAFC",
-    fontSize: 16,
-    fontWeight: "800",
-  },
-  exitModeBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#1E293B",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#334155",
-  },
-  exitModeText: {
-    color: "#94A3B8",
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  inlineMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginTop: 6,
-  },
-  inlineMetaText: {
-    color: "#94A3B8",
-    fontSize: 12,
-    fontWeight: "500",
-    flex: 1,
-  },
-  intimacyContainer: {
-    backgroundColor: "#0F172A",
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: "#1E293B",
-  },
-  intimacyMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  intimacyLabel: {
-    color: "#E2E8F0",
-    fontSize: 11.5,
-    fontWeight: "700",
-    flex: 1,
-  },
-  intimacySubHint: {
-    color: "#64748B",
-    fontSize: 10.5,
-    fontWeight: "400",
-  },
-  quickRevealPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#6366F1",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
-    marginLeft: 6,
-  },
-  quickRevealPillText: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  intimacyTrack: {
-    height: 4,
-    backgroundColor: "#1E293B",
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  intimacyFill: {
-    height: "100%",
-    borderRadius: 2,
-  },
-  chatScroll: {
-    flex: 1,
-  },
-  chatContent: {
-    padding: 16,
-    paddingBottom: 20,
-  },
-  icebreakerBubble: {
-    backgroundColor: "#1E293B",
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "#334155",
-    marginBottom: 16,
-  },
-  icebreakerHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  icebreakerTag: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  icebreakerTagText: {
-    color: "#F59E0B",
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  icebreakerBonus: {
-    color: "#818CF8",
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  icebreakerQuestion: {
-    color: "#F8FAFC",
-    fontSize: 13.5,
-    fontWeight: "700",
-    lineHeight: 19,
-    marginBottom: 10,
-  },
-  pollOptionsContainer: {
-    gap: 7,
-  },
-  pollOptionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#0F172A",
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#334155",
-  },
-  pollOptionRowVoted: {
-    borderColor: "#818CF8",
-    backgroundColor: "rgba(99, 102, 241, 0.12)",
-  },
-  pollOptionLeft: {
+  stageIndicatorRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    flex: 1,
   },
-  radioCircle: {
-    width: 15,
-    height: 15,
-    borderRadius: 7.5,
-    borderWidth: 1.5,
-    borderColor: "#64748B",
+  stagePill: {
+    backgroundColor: "#17171c",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  stagePillText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#c7f65a",
+  },
+  timerBadge: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+    gap: 3,
   },
-  radioCircleVoted: {
-    borderColor: "#818CF8",
+  timerText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#17171c",
   },
-  radioInnerDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: "#818CF8",
-  },
-  pollOptionLabel: {
-    color: "#CBD5E1",
+  chatTopicTitle: {
     fontSize: 12,
-    fontWeight: "500",
-    flex: 1,
-  },
-  pollOptionLabelVoted: {
-    color: "#F8FAFC",
     fontWeight: "700",
+    color: "#17171c",
+    marginTop: 4,
   },
-  pollVoteCount: {
-    color: "#94A3B8",
+  voteSkipBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#c7f65a",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 4,
+  },
+  voteSkipBtnActive: {
+    backgroundColor: "#e2e8f0",
+  },
+  voteSkipText: {
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: "800",
+    color: "#17171c",
   },
-  systemMessageContainer: {
-    alignSelf: "center",
-    backgroundColor: "#1E293B",
-    paddingHorizontal: 12,
+  membersAvatarBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 10,
-    marginVertical: 8,
-    maxWidth: "92%",
-    borderWidth: 1,
-    borderColor: "#334155",
+    backgroundColor: "#f8fafc",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
   },
-  systemMessageText: {
-    color: "#94A3B8",
+  membersBarLabel: {
     fontSize: 11,
+    fontWeight: "700",
+    color: "#64748b",
+    marginRight: 8,
+  },
+  miniMemberChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    marginRight: 6,
+    gap: 4,
+  },
+  miniMemberAlias: {
+    fontSize: 10.5,
+    fontWeight: "600",
+    color: "#17171c",
+  },
+  chatScroll: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  chatContent: {
+    padding: 16,
+  },
+  sysMsgContainer: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 10,
+    padding: 10,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    alignItems: "center",
+  },
+  sysMsgText: {
+    fontSize: 11.5,
+    color: "#64748b",
     textAlign: "center",
     lineHeight: 16,
   },
-  messageRow: {
-    marginVertical: 4,
+  msgRow: {
+    flexDirection: "row",
+    marginVertical: 6,
+  },
+  msgRowLeft: {
+    justifyContent: "flex-start",
+  },
+  msgRowRight: {
+    justifyContent: "flex-end",
+  },
+  msgAvatarCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#f1f5f9",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
+    marginTop: 4,
+  },
+  msgBubble: {
     maxWidth: "80%",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
-  messageRowMe: {
+  msgBubbleOther: {
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  msgBubbleMe: {
+    backgroundColor: "#17171c",
+  },
+  msgSenderAlias: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#64748b",
+    marginBottom: 2,
+  },
+  msgBodyText: {
+    fontSize: 13.5,
+    color: "#17171c",
+    lineHeight: 18,
+  },
+  msgBodyTextMe: {
+    color: "#ffffff",
+  },
+  msgTimeText: {
+    fontSize: 9.5,
+    color: "#94a3b8",
     alignSelf: "flex-end",
-    alignItems: "flex-end",
+    marginTop: 4,
   },
-  messageRowOther: {
-    alignSelf: "flex-start",
-    alignItems: "flex-start",
+  msgTimeTextMe: {
+    color: "#94a3b8",
   },
-  senderHeader: {
+  inputBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: "#ffffff",
+    borderTopWidth: 1,
+    borderTopColor: "#e2e8f0",
+    gap: 8,
+  },
+  chatInput: {
+    flex: 1,
+    backgroundColor: "#f8fafc",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13.5,
+    color: "#17171c",
+  },
+  sendBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "#c7f65a",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  quizCard: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    padding: 16,
+    marginBottom: 16,
+  },
+  quizMemberHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  quizMemberIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  quizMemberAlias: {
+    fontSize: 13.5,
+    fontWeight: "800",
+    color: "#17171c",
+  },
+  quizMemberFaculty: {
+    fontSize: 11,
+    color: "#64748b",
+  },
+  quizQuestionLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#17171c",
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  quizInput: {
+    backgroundColor: "#ffffff",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 12.5,
+    color: "#17171c",
+    marginBottom: 8,
+  },
+  roleplayPickerGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 4,
+  },
+  roleplayOptionBtn: {
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  roleplayOptionBtnSelected: {
+    backgroundColor: "#c7f65a",
+    borderColor: "#17171c",
+  },
+  roleplayOptionText: {
+    fontSize: 11,
+    color: "#64748b",
+    fontWeight: "600",
+  },
+  roleplayOptionTextSelected: {
+    color: "#17171c",
+    fontWeight: "800",
+  },
+  scoreCard: {
+    backgroundColor: "#17171c",
+    borderRadius: 16,
+    padding: 20,
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  scoreCardPre: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#94a3b8",
+  },
+  scoreValue: {
+    fontSize: 32,
+    fontWeight: "900",
+    color: "#c7f65a",
+    marginVertical: 6,
+  },
+  scoreDesc: {
+    fontSize: 12,
+    color: "#ffffff",
+    textAlign: "center",
+    lineHeight: 16,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#17171c",
+    marginBottom: 10,
+  },
+  quizDetailCard: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    marginBottom: 8,
+  },
+  detailHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  detailAlias: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: "#17171c",
+  },
+  detailPoints: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#15803d",
+  },
+  detailLine: {
+    fontSize: 11.5,
+    color: "#64748b",
+    marginTop: 2,
+  },
+  closeVoteContainer: {
+    marginTop: 16,
+    alignItems: "center",
+  },
+  closeVotePrompt: {
+    fontSize: 12,
+    color: "#64748b",
+    textAlign: "center",
+    marginBottom: 10,
+    lineHeight: 16,
+  },
+  revealedBanner: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  revealedBannerTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: "#17171c",
+    marginTop: 8,
+  },
+  revealedBannerSub: {
+    fontSize: 12,
+    color: "#64748b",
+    textAlign: "center",
+    marginTop: 6,
+    lineHeight: 18,
+  },
+  memberRevealCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    padding: 16,
+    marginBottom: 14,
+  },
+  revealCardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  revealAvatarCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#c7f65a",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  revealInfoCol: {
+    flex: 1,
+  },
+  revealRealName: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#17171c",
+  },
+  revealFaculty: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748b",
+    marginTop: 1,
+  },
+  revealAlias: {
+    fontSize: 11,
+    color: "#94a3b8",
+    marginTop: 1,
+  },
+  revealBioBox: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 8,
+    padding: 10,
+    marginVertical: 10,
+  },
+  revealBioText: {
+    fontSize: 12,
+    color: "#475569",
+    lineHeight: 16,
+  },
+  revealContactRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 12,
+  },
+  contactItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    marginBottom: 3,
-    marginLeft: 4,
   },
-  senderAliasText: {
-    color: "#818CF8",
-    fontSize: 10.5,
-    fontWeight: "700",
+  contactText: {
+    fontSize: 11.5,
+    color: "#64748b",
+    fontWeight: "600",
   },
-  messageBubble: {
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-    borderRadius: 16,
-  },
-  messageBubbleMe: {
-    backgroundColor: "#6366F1",
-    borderBottomRightRadius: 3,
-  },
-  messageBubbleOther: {
-    backgroundColor: "#1E293B",
-    borderBottomLeftRadius: 3,
-    borderWidth: 1,
-    borderColor: "#334155",
-  },
-  messageText: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  messageTextMe: {
-    color: "#FFFFFF",
-    fontWeight: "500",
-  },
-  messageTextOther: {
-    color: "#F8FAFC",
-  },
-  messageTimestamp: {
-    color: "#64748B",
-    fontSize: 9.5,
-    marginTop: 2,
-    marginHorizontal: 4,
-  },
-  inputContainer: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: "#0F172A",
-    borderTopWidth: 1,
-    borderTopColor: "#1E293B",
-  },
-  inputCapsule: {
+  matchBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1E293B",
-    borderRadius: 24,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: "#334155",
+    justifyContent: "center",
+    backgroundColor: "#c7f65a",
+    borderRadius: 10,
+    paddingVertical: 10,
+    gap: 6,
   },
-  textInput: {
-    flex: 1,
-    color: "#F8FAFC",
+  matchBtnMatched: {
+    backgroundColor: "#f1f5f9",
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+  },
+  matchBtnText: {
     fontSize: 13,
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-  },
-  sendButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#6366F1",
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 6,
-  },
-  sendButtonDisabled: {
-    backgroundColor: "#334155",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.85)",
-    justifyContent: "center",
-    padding: 20,
-  },
-  modalCard: {
-    backgroundColor: "#1E293B",
-    borderRadius: 18,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: "#334155",
-  },
-  modalIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "rgba(99, 102, 241, 0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "center",
-    marginBottom: 10,
-  },
-  modalTitle: {
-    color: "#F8FAFC",
-    fontSize: 15.5,
     fontWeight: "800",
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  modalSubtitle: {
-    color: "#94A3B8",
-    fontSize: 11.5,
-    textAlign: "center",
-    lineHeight: 16,
-    marginBottom: 14,
-  },
-  consentCard: {
-    backgroundColor: "#0F172A",
-    padding: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#334155",
-    marginBottom: 12,
-  },
-  consentRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  consentTitle: {
-    color: "#818CF8",
-    fontSize: 11.5,
-    fontWeight: "700",
-  },
-  consentCount: {
-    color: "#F8FAFC",
-    fontSize: 11.5,
-    fontWeight: "700",
-  },
-  consentTrack: {
-    height: 4,
-    backgroundColor: "#1E293B",
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  consentFill: {
-    height: "100%",
-    backgroundColor: "#818CF8",
-    borderRadius: 2,
-  },
-  consentActionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: "#6366F1",
-    paddingVertical: 11,
-    borderRadius: 10,
-    marginBottom: 14,
-  },
-  consentActionText: {
-    color: "#FFFFFF",
-    fontSize: 12.5,
-    fontWeight: "700",
-  },
-  consentedStatusBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(99, 102, 241, 0.12)",
-    padding: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#6366F1",
-    marginBottom: 14,
-  },
-  consentedStatusText: {
-    color: "#818CF8",
-    fontSize: 11.5,
-    fontWeight: "600",
-    flex: 1,
-  },
-  membersListHeader: {
-    color: "#94A3B8",
-    fontSize: 11.5,
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  membersScroll: {
-    maxHeight: 180,
-  },
-  memberItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#0F172A",
-    padding: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#334155",
-    marginBottom: 6,
-  },
-  memberAvatarImg: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  memberAvatarCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#1E293B",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#334155",
-  },
-  memberAvatarInitial: {
-    color: "#818CF8",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  memberDetails: {
-    flex: 1,
-    marginLeft: 8,
-  },
-  memberDisplayName: {
-    color: "#F8FAFC",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  memberFacultyName: {
-    color: "#64748B",
-    fontSize: 10.5,
-  },
-  consentBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: "#1E293B",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  consentBadgeDone: {
-    backgroundColor: "rgba(99, 102, 241, 0.15)",
-  },
-  consentBadgeText: {
-    color: "#64748B",
-    fontSize: 9.5,
-    fontWeight: "600",
-  },
-  consentBadgeTextDone: {
-    color: "#818CF8",
-  },
-  modalCloseBtn: {
-    alignItems: "center",
-    paddingVertical: 8,
-    marginTop: 8,
-  },
-  modalCloseText: {
-    color: "#94A3B8",
-    fontSize: 12,
-    fontWeight: "600",
+    color: "#17171c",
   },
 });

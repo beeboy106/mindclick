@@ -9,12 +9,13 @@ import {
   StatusBar,
   Alert,
   Animated,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useCrossBubble } from "../../context/CrossBubbleContext";
 
-const FACULTY_TAGS = [
+const FACULTY_PERSONAS = [
   "เด็กวิศวะ",
   "เด็กแพทย์",
   "เด็กอักษร",
@@ -22,17 +23,18 @@ const FACULTY_TAGS = [
   "เด็กสถาปัตย์",
   "เด็กพยาบาล",
   "เด็กนิติ",
+  "เด็กนิเทศ",
   "เด็กวิทยา",
+  "เด็กเศรษฐศาสตร์",
 ];
 
-// Interactive Bubble Pop Button with popping animation & bubble tones
+// Interactive Bubble Pop Button with popping animation
 function BubblePopButton({ item, onToggle }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const burstScale = useRef(new Animated.Value(0.8)).current;
   const burstOpacity = useRef(new Animated.Value(0)).current;
 
   const handlePress = () => {
-    // Run Pop Animation
     burstScale.setValue(0.8);
     burstOpacity.setValue(1);
 
@@ -67,7 +69,6 @@ function BubblePopButton({ item, onToggle }) {
 
   return (
     <View style={styles.bubbleBtnWrapper}>
-      {/* Animated Ripple / Burst Aura */}
       <Animated.View
         style={[
           styles.burstRipple,
@@ -78,73 +79,92 @@ function BubblePopButton({ item, onToggle }) {
         ]}
         pointerEvents="none"
       />
-
-      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-        <TouchableOpacity
-          style={[styles.popBtn, item.hasPopped && styles.popBtnActive]}
-          activeOpacity={0.8}
-          onPress={handlePress}
-        >
+      <TouchableOpacity
+        style={[styles.popBtn, item.hasPopped && styles.popBtnActive]}
+        activeOpacity={0.8}
+        onPress={handlePress}
+      >
+        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
           <Ionicons
-            name={item.hasPopped ? "sparkles" : "ellipse-outline"}
-            size={13}
-            color={item.hasPopped ? "#38BDF8" : "#94A3B8"}
+            name={item.hasPopped ? "radio-button-on" : "radio-button-off"}
+            size={16}
+            color={item.hasPopped ? "#17171c" : "#64748b"}
           />
-          <Text style={[styles.popText, item.hasPopped && styles.popTextActive]}>
-            {item.hasPopped ? "Bubble Pops" : "Bubble"}
-          </Text>
-          <View
-            style={[
-              styles.popCountBadge,
-              item.hasPopped && styles.popCountBadgeActive,
-            ]}
-          >
-            <Text
-              style={[
-                styles.popCountText,
-                item.hasPopped && styles.popCountTextActive,
-              ]}
-            >
-              {item.pops}
-            </Text>
-          </View>
-        </TouchableOpacity>
-      </Animated.View>
+        </Animated.View>
+        <Text style={[styles.popCountText, item.hasPopped && styles.popCountTextActive]}>
+          {item.pops}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 export default function WhisperWallScreen() {
-  const { whisperPosts, addWhisperPost, toggleWhisperPop, userAlias } = useCrossBubble();
-  const [whisperText, setWhisperText] = useState("");
-  const [selectedTag, setSelectedTag] = useState(
-    userAlias?.shortFaculty ? `เด็ก${userAlias.shortFaculty}` : "เด็กวิศวะ"
-  );
+  const {
+    whisperNotes,
+    popNoteBubble,
+    postSecretNote,
+    sendDirectFromNote,
+    toggleCrossBubbleMode,
+  } = useCrossBubble();
 
-  const handlePost = () => {
-    if (!whisperText.trim()) {
-      Alert.alert("แจ้งเตือน", "กรุณาพิมพ์ข้อความก่อนส่ง");
+  // Create Note Modal State
+  const [showPostModal, setShowPostModal] = useState(false);
+  const [selectedFaculty, setSelectedFaculty] = useState(FACULTY_PERSONAS[0]);
+  const [newNoteContent, setNewNoteContent] = useState("");
+
+  // Reply Direct Message Modal State
+  const [replyTargetNote, setReplyTargetNote] = useState(null);
+  const [replyText, setReplyText] = useState("");
+
+  const handleCreateNote = () => {
+    if (!newNoteContent.trim()) {
+      Alert.alert("กรุณากรอกข้อความ", "พิมพ์ข้อความสั้นๆ สไตล์ IG Notes ก่อนโพสต์");
       return;
     }
-    addWhisperPost(whisperText, selectedTag);
-    setWhisperText("");
-    Alert.alert("สำเร็จ", "ส่งข้อความขึ้นกระดานลับเรียบร้อยแล้ว");
+    postSecretNote(selectedFaculty, newNoteContent.trim());
+    setNewNoteContent("");
+    setShowPostModal(false);
+    Alert.alert("โพสต์สำเร็จ", `โน้ตของคุณในบทบาท "${selectedFaculty}" ถูกเผยแพร่บนกระดานลับแล้ว`);
+  };
+
+  const handleSendReply = () => {
+    if (!replyText.trim() || !replyTargetNote) return;
+    sendDirectFromNote(replyTargetNote, replyText.trim());
+    setReplyText("");
+    setReplyTargetNote(null);
+    Alert.alert(
+      "ส่งข้อความสำเร็จ",
+      `ส่งข้อความตอบกลับถึง ${replyTargetNote.authorFaculty} เรียบร้อยแล้ว สามารถไปคุยต่อที่แท็บ 'ห้องมืด' ได้ทันที`
+    );
   };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <StatusBar barStyle="light-content" backgroundColor="#0F172A" translucent={true} />
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={true} />
 
       {/* Header */}
       <View style={styles.topHeader}>
-        <View style={styles.titleRow}>
-          <View style={styles.headerIconCircle}>
-            <Ionicons name="chatbubble-ellipses-outline" size={18} color="#818CF8" />
-          </View>
-          <View>
-            <Text style={styles.headerTitle}>กระดานลับ</Text>
-            <Text style={styles.headerSubtitle}>พื้นที่ฝากข้อความนิรนามข้ามคณะ</Text>
-          </View>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerSubtitle}>CAMPUS WHISPER NOTES</Text>
+          <Text style={styles.headerTitle}>กระดานลับ</Text>
+        </View>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.postBtnHeader}
+            activeOpacity={0.85}
+            onPress={() => setShowPostModal(true)}
+          >
+            <Ionicons name="add" size={18} color="#17171c" />
+            <Text style={styles.postBtnHeaderText}>เขียนโน้ต</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.exitBtn}
+            activeOpacity={0.8}
+            onPress={() => toggleCrossBubbleMode(false)}
+          >
+            <Ionicons name="log-out-outline" size={15} color="#64748b" />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -153,109 +173,215 @@ export default function WhisperWallScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Whisper Composer Box */}
-        <View style={styles.composerCard}>
-          <Text style={styles.composerHeader}>ฝากข้อความถึงเพื่อนต่างคณะ...</Text>
+        {/* Instagram Notes Style Horizontal Bar */}
+        <Text style={styles.igNotesSectionTitle}>IG-STYLE CAMPUS NOTES</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.igNotesBar}
+        >
+          {/* Add My Note Bubble */}
+          <TouchableOpacity
+            style={styles.igNoteAddWrapper}
+            activeOpacity={0.8}
+            onPress={() => setShowPostModal(true)}
+          >
+            <View style={styles.igAddCircle}>
+              <Ionicons name="add" size={24} color="#17171c" />
+            </View>
+            <Text style={styles.igAddLabel}>แชร์โน้ต</Text>
+          </TouchableOpacity>
 
-          <TextInput
-            style={styles.composerInput}
-            placeholder="บ่นเรื่องเรียน ชวนคุย หรือระบายความในใจแบบนิรนาม..."
-            placeholderTextColor="#64748B"
-            multiline
-            maxLength={280}
-            value={whisperText}
-            onChangeText={setWhisperText}
-          />
+          {/* Notes Avatars */}
+          {whisperNotes.map((note) => (
+            <TouchableOpacity
+              key={`ig_${note.id}`}
+              style={styles.igNoteItem}
+              activeOpacity={0.85}
+              onPress={() => setReplyTargetNote(note)}
+            >
+              {/* Floating speech bubble */}
+              <View style={styles.speechBubble}>
+                <Text style={styles.speechBubbleText} numberOfLines={2}>
+                  {note.content}
+                </Text>
+                <View style={styles.speechBubbleTail} />
+              </View>
 
-          <View style={styles.tagSelectSection}>
-            <Text style={styles.tagLabel}>ส่งในนาม:</Text>
+              {/* Avatar circle */}
+              <View style={styles.igAvatarCircle}>
+                <Ionicons name={note.authorIcon || "person"} size={22} color="#17171c" />
+              </View>
+              <Text style={styles.igPersonaName} numberOfLines={1}>
+                {note.authorFaculty}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Divider */}
+        <View style={styles.sectionDivider} />
+
+        {/* Feed of Notes */}
+        <View style={styles.feedHeaderRow}>
+          <Text style={styles.feedTitle}>กระดานข้อความทั้งหมด</Text>
+          <Text style={styles.feedSubtitle}>สวมบทบาทเด็กคณะไหนก็ได้</Text>
+        </View>
+
+        {whisperNotes.map((note) => (
+          <View key={note.id} style={styles.noteCard}>
+            <View style={styles.noteTopRow}>
+              <View style={styles.noteAuthorBadge}>
+                <Ionicons name={note.authorIcon || "person"} size={14} color="#17171c" />
+                <Text style={styles.noteFacultyText}>{note.authorFaculty}</Text>
+              </View>
+              <Text style={styles.noteTimeText}>{note.createdAt}</Text>
+            </View>
+
+            <Text style={styles.noteBodyText}>{note.content}</Text>
+
+            <View style={styles.noteBottomRow}>
+              {/* Bubble Pop Button */}
+              <BubblePopButton
+                item={note}
+                onToggle={() => popNoteBubble(note.id)}
+              />
+
+              {/* Direct Message Action */}
+              <TouchableOpacity
+                style={styles.dmBtn}
+                activeOpacity={0.8}
+                onPress={() => setReplyTargetNote(note)}
+              >
+                <Ionicons name="chatbubble-outline" size={14} color="#17171c" />
+                <Text style={styles.dmBtnText}>ตอบกลับ (DM ไปห้องมืด)</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))}
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
+
+      {/* MODAL 1: CREATE NOTE MODAL */}
+      <Modal
+        visible={showPostModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowPostModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>เขียนโน้ตกระดานลับ</Text>
+              <TouchableOpacity onPress={() => setShowPostModal(false)}>
+                <Ionicons name="close" size={22} color="#17171c" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Choose Faculty Persona */}
+            <Text style={styles.fieldLabel}>เลือกบทบาทคณะที่คุณต้องการสวมบทบาท</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.tagsScroll}
+              contentContainerStyle={styles.personaChipsScroll}
             >
-              {FACULTY_TAGS.map((tag) => {
-                const isSelected = selectedTag === tag;
+              {FACULTY_PERSONAS.map((fac) => {
+                const isSelected = selectedFaculty === fac;
+
                 return (
                   <TouchableOpacity
-                    key={tag}
-                    style={[styles.tagPill, isSelected && styles.tagPillSelected]}
+                    key={fac}
+                    style={[styles.personaChip, isSelected && styles.personaChipActive]}
                     activeOpacity={0.8}
-                    onPress={() => setSelectedTag(tag)}
+                    onPress={() => setSelectedFaculty(fac)}
                   >
                     <Text
                       style={[
-                        styles.tagPillText,
-                        isSelected && styles.tagPillTextSelected,
+                        styles.personaChipText,
+                        isSelected && styles.personaChipTextActive,
                       ]}
                     >
-                      {tag}
+                      {fac}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
             </ScrollView>
-          </View>
 
-          <View style={styles.composerFooter}>
-            <Text style={styles.charCount}>{whisperText.length}/280</Text>
+            {/* Content Input */}
+            <Text style={styles.fieldLabel}>ข้อความสั้นๆ สไตล์ IG Notes (สูงสุด 80 ตัวอักษร)</Text>
+            <TextInput
+              style={styles.noteInput}
+              value={newNoteContent}
+              onChangeText={setNewNoteContent}
+              placeholder="แชร์สิ่งที่กำลังคิด อยากชวนคุย หรือเรื่องลับๆ ในมอ..."
+              placeholderTextColor="#94a3b8"
+              maxLength={80}
+              multiline
+            />
+            <Text style={styles.charCountText}>{newNoteContent.length}/80</Text>
+
+            {/* Post Button */}
             <TouchableOpacity
-              style={[styles.postBtn, !whisperText.trim() && styles.postBtnDisabled]}
-              disabled={!whisperText.trim()}
+              style={styles.submitPostBtn}
               activeOpacity={0.85}
-              onPress={handlePost}
+              onPress={handleCreateNote}
             >
-              <Ionicons
-                name="paper-plane"
-                size={13}
-                color={whisperText.trim() ? "#FFFFFF" : "#64748B"}
-              />
-              <Text
-                style={[
-                  styles.postBtnText,
-                  !whisperText.trim() && styles.postBtnTextDisabled,
-                ]}
-              >
-                โพสต์
-              </Text>
+              <Ionicons name="paper-plane" size={16} color="#17171c" />
+              <Text style={styles.submitPostBtnText}>โพสต์โน้ตลงกระดาน</Text>
             </TouchableOpacity>
           </View>
         </View>
+      </Modal>
 
-        {/* Whispers Feed */}
-        <View style={styles.feedHeaderRow}>
-          <Text style={styles.feedTitle}>ข้อความลับล่าสุด</Text>
-          <View style={styles.onlineBadge}>
-            <View style={styles.dotIndicator} />
-            <Text style={styles.onlineText}>กำลังเคลื่อนไหว</Text>
+      {/* MODAL 2: REPLY DIRECT MESSAGE MODAL */}
+      <Modal
+        visible={!!replyTargetNote}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setReplyTargetNote(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                ส่งข้อความหา {replyTargetNote?.authorFaculty}
+              </Text>
+              <TouchableOpacity onPress={() => setReplyTargetNote(null)}>
+                <Ionicons name="close" size={22} color="#17171c" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Note reference quote */}
+            <View style={styles.quoteBox}>
+              <Text style={styles.quoteFaculty}>
+                อ้างอิงโน้ตของ {replyTargetNote?.authorFaculty}:
+              </Text>
+              <Text style={styles.quoteContent}>"{replyTargetNote?.content}"</Text>
+            </View>
+
+            <Text style={styles.fieldLabel}>ข้อความของคุณ (จะเปิดเป็นห้องแชทในห้องมืด)</Text>
+            <TextInput
+              style={styles.noteInput}
+              value={replyText}
+              onChangeText={setReplyText}
+              placeholder="พิมพ์ข้อความเปิดบทสนทนา..."
+              placeholderTextColor="#94a3b8"
+              multiline
+            />
+
+            <TouchableOpacity
+              style={styles.submitPostBtn}
+              activeOpacity={0.85}
+              onPress={handleSendReply}
+            >
+              <Ionicons name="chatbubble-ellipses" size={16} color="#17171c" />
+              <Text style={styles.submitPostBtnText}>ส่งข้อความไปยังห้องมืด</Text>
+            </TouchableOpacity>
           </View>
         </View>
-
-        {whisperPosts.map((item) => (
-          <View key={item.id} style={styles.whisperCard}>
-            <View style={styles.whisperHeaderRow}>
-              <View style={styles.facultyBadge}>
-                <Ionicons
-                  name={item.authorIcon || "chatbubble-ellipses-outline"}
-                  size={12}
-                  color="#818CF8"
-                />
-                <Text style={styles.facultyBadgeText}>{item.authorFaculty}</Text>
-              </View>
-              <Text style={styles.timeText}>{item.createdAt}</Text>
-            </View>
-
-            <Text style={styles.whisperContent}>{item.content}</Text>
-
-            <View style={styles.whisperFooter}>
-              <BubblePopButton
-                item={item}
-                onToggle={() => toggleWhisperPop(item.id)}
-              />
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -263,220 +389,211 @@ export default function WhisperWallScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#0F172A",
+    backgroundColor: "#ffffff",
   },
   topHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 14,
-    backgroundColor: "#0F172A",
-    borderBottomWidth: 1,
-    borderBottomColor: "#1E293B",
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  headerIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(99, 102, 241, 0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#334155",
-  },
-  headerTitle: {
-    color: "#F8FAFC",
-    fontSize: 16,
-    fontWeight: "800",
-  },
-  headerSubtitle: {
-    color: "#94A3B8",
-    fontSize: 11,
-    fontWeight: "500",
-  },
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-    paddingBottom: 30,
-  },
-  composerCard: {
-    backgroundColor: "#1E293B",
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "#334155",
-    marginBottom: 20,
-  },
-  composerHeader: {
-    color: "#F8FAFC",
-    fontSize: 12.5,
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  composerInput: {
-    backgroundColor: "#0F172A",
-    color: "#F8FAFC",
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 13,
-    minHeight: 68,
-    textAlignVertical: "top",
-    borderWidth: 1,
-    borderColor: "#334155",
-    marginBottom: 10,
-  },
-  tagSelectSection: {
-    marginBottom: 10,
-  },
-  tagLabel: {
-    color: "#94A3B8",
-    fontSize: 11,
-    fontWeight: "600",
-    marginBottom: 6,
-  },
-  tagsScroll: {
-    gap: 6,
-  },
-  tagPill: {
-    backgroundColor: "#0F172A",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#334155",
-  },
-  tagPillSelected: {
-    backgroundColor: "rgba(99, 102, 241, 0.15)",
-    borderColor: "#818CF8",
-  },
-  tagPillText: {
-    color: "#94A3B8",
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  tagPillTextSelected: {
-    color: "#818CF8",
-    fontWeight: "700",
-  },
-  composerFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    borderTopWidth: 1,
-    borderTopColor: "#334155",
-    paddingTop: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+    backgroundColor: "#ffffff",
   },
-  charCount: {
-    color: "#64748B",
-    fontSize: 11,
+  headerLeft: {
+    flex: 1,
   },
-  postBtn: {
+  headerSubtitle: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#64748b",
+    letterSpacing: 1,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#17171c",
+    marginTop: 2,
+  },
+  headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "#6366F1",
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    gap: 8,
+  },
+  postBtnHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#c7f65a",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 8,
+    gap: 4,
   },
-  postBtnDisabled: {
-    backgroundColor: "#1E293B",
-    borderWidth: 1,
-    borderColor: "#334155",
-  },
-  postBtnText: {
-    color: "#FFFFFF",
+  postBtnHeaderText: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "800",
+    color: "#17171c",
   },
-  postBtnTextDisabled: {
-    color: "#64748B",
+  exitBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: "#f1f5f9",
+  },
+  container: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  content: {
+    paddingVertical: 16,
+  },
+  igNotesSectionTitle: {
+    fontSize: 10.5,
+    fontWeight: "800",
+    color: "#64748b",
+    letterSpacing: 0.8,
+    paddingHorizontal: 20,
+    marginBottom: 10,
+  },
+  igNotesBar: {
+    paddingHorizontal: 20,
+    alignItems: "flex-end",
+    gap: 16,
+    paddingBottom: 8,
+  },
+  igNoteAddWrapper: {
+    alignItems: "center",
+    width: 68,
+  },
+  igAddCircle: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "#f1f5f9",
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    borderStyle: "dashed",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  igAddLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#64748b",
+    marginTop: 6,
+  },
+  igNoteItem: {
+    alignItems: "center",
+    width: 80,
+  },
+  speechBubble: {
+    backgroundColor: "#17171c",
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    marginBottom: 8,
+    width: 78,
+    alignItems: "center",
+    position: "relative",
+  },
+  speechBubbleText: {
+    fontSize: 9.5,
+    color: "#c7f65a",
+    fontWeight: "700",
+    textAlign: "center",
+    lineHeight: 12,
+  },
+  speechBubbleTail: {
+    position: "absolute",
+    bottom: -4,
+    width: 8,
+    height: 8,
+    backgroundColor: "#17171c",
+    transform: [{ rotate: "45deg" }],
+  },
+  igAvatarCircle: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "#c7f65a",
+    borderWidth: 2,
+    borderColor: "#17171c",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  igPersonaName: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#17171c",
+    marginTop: 6,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: "#f1f5f9",
+    marginVertical: 16,
   },
   feedHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    paddingHorizontal: 20,
     marginBottom: 12,
   },
   feedTitle: {
-    color: "#F8FAFC",
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "800",
+    color: "#17171c",
   },
-  onlineBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: "rgba(99, 102, 241, 0.12)",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
+  feedSubtitle: {
+    fontSize: 11.5,
+    color: "#64748b",
+  },
+  noteCard: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#334155",
-  },
-  dotIndicator: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#818CF8",
-  },
-  onlineText: {
-    color: "#818CF8",
-    fontSize: 10.5,
-    fontWeight: "700",
-  },
-  whisperCard: {
-    backgroundColor: "#1E293B",
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#e2e8f0",
+    padding: 16,
+    marginHorizontal: 20,
     marginBottom: 12,
   },
-  whisperHeaderRow: {
+  noteTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  facultyBadge: {
+  noteAuthorBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    backgroundColor: "#0F172A",
+    backgroundColor: "#c7f65a",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#334155",
+    gap: 4,
   },
-  facultyBadgeText: {
-    color: "#818CF8",
+  noteFacultyText: {
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "800",
+    color: "#17171c",
   },
-  timeText: {
-    color: "#64748B",
-    fontSize: 10.5,
+  noteTimeText: {
+    fontSize: 11,
+    color: "#94a3b8",
   },
-  whisperContent: {
-    color: "#E2E8F0",
-    fontSize: 13,
-    lineHeight: 19,
-    marginBottom: 10,
+  noteBodyText: {
+    fontSize: 14,
+    color: "#17171c",
+    lineHeight: 20,
+    marginBottom: 14,
   },
-  whisperFooter: {
+  noteBottomRow: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
     borderTopWidth: 1,
-    borderTopColor: "#334155",
-    paddingTop: 8,
+    borderTopColor: "#e2e8f0",
+    paddingTop: 10,
   },
   bubbleBtnWrapper: {
     position: "relative",
@@ -485,53 +602,157 @@ const styles = StyleSheet.create({
   },
   burstRipple: {
     position: "absolute",
-    width: "100%",
-    height: "100%",
-    borderRadius: 18,
-    backgroundColor: "rgba(56, 189, 248, 0.35)",
-    borderWidth: 1,
-    borderColor: "#38BDF8",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#c7f65a",
   },
   popBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "#0F172A",
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: 18,
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#e2e8f0",
+    gap: 6,
   },
   popBtnActive: {
-    borderColor: "rgba(56, 189, 248, 0.6)",
-    backgroundColor: "rgba(56, 189, 248, 0.12)",
-  },
-  popText: {
-    color: "#94A3B8",
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  popTextActive: {
-    color: "#38BDF8",
-    fontWeight: "700",
-  },
-  popCountBadge: {
-    backgroundColor: "#1E293B",
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-    borderRadius: 8,
-    marginLeft: 2,
-  },
-  popCountBadgeActive: {
-    backgroundColor: "rgba(56, 189, 248, 0.2)",
+    backgroundColor: "#c7f65a",
+    borderColor: "#17171c",
   },
   popCountText: {
-    color: "#94A3B8",
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "700",
+    color: "#64748b",
   },
   popCountTextActive: {
-    color: "#38BDF8",
+    color: "#17171c",
+    fontWeight: "800",
+  },
+  dmBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    gap: 6,
+  },
+  dmBtnText: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: "#17171c",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  modalCard: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: "85%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#17171c",
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#64748b",
+    marginBottom: 8,
+    marginTop: 6,
+  },
+  personaChipsScroll: {
+    gap: 6,
+    paddingBottom: 8,
+  },
+  personaChip: {
+    backgroundColor: "#f1f5f9",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  personaChipActive: {
+    backgroundColor: "#c7f65a",
+    borderColor: "#17171c",
+  },
+  personaChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  personaChipTextActive: {
+    color: "#17171c",
+    fontWeight: "800",
+  },
+  noteInput: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    padding: 12,
+    fontSize: 13.5,
+    color: "#17171c",
+    minHeight: 80,
+    textAlignVertical: "top",
+  },
+  charCountText: {
+    fontSize: 11,
+    color: "#94a3b8",
+    alignSelf: "flex-end",
+    marginTop: 4,
+  },
+  submitPostBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#c7f65a",
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 16,
+    gap: 8,
+    borderWidth: 1.5,
+    borderColor: "#17171c",
+  },
+  submitPostBtnText: {
+    fontSize: 13.5,
+    fontWeight: "800",
+    color: "#17171c",
+  },
+  quoteBox: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 10,
+    padding: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: "#c7f65a",
+    marginBottom: 12,
+  },
+  quoteFaculty: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#64748b",
+  },
+  quoteContent: {
+    fontSize: 12.5,
+    color: "#17171c",
+    marginTop: 2,
+    fontStyle: "italic",
   },
 });

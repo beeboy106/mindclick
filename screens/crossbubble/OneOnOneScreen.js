@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,10 +8,9 @@ import {
   TextInput,
   Image,
   StatusBar,
-  Modal,
+  Alert,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,343 +18,257 @@ import { useCrossBubble } from "../../context/CrossBubbleContext";
 
 export default function OneOnOneScreen() {
   const {
-    oneOnOneRooms,
-    activeOneOnOneRoomId,
-    setActiveOneOnOneRoomId,
-    sendOneOnOneMessage,
-    requestOneOnOneReveal,
-    createNewOneOnOneRoom,
+    darkRooms,
+    activeDarkRoomId,
+    setActiveDarkRoomId,
+    sendDarkRoomMessage,
     toggleCrossBubbleMode,
   } = useCrossBubble();
 
   const [inputMsg, setInputMsg] = useState("");
-  const [isMatching, setIsMatching] = useState(false);
   const scrollViewRef = useRef(null);
 
-  const currentRoom =
-    oneOnOneRooms.find((r) => r.id === activeOneOnOneRoomId) || null;
+  const currentRoom = darkRooms.find((r) => r.id === activeDarkRoomId) || null;
+
+  useEffect(() => {
+    if (currentRoom) {
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [currentRoom?.messages, currentRoom]);
 
   const handleSend = () => {
     if (!inputMsg.trim() || !currentRoom) return;
-    sendOneOnOneMessage(currentRoom.id, inputMsg);
+    sendDarkRoomMessage(currentRoom.id, inputMsg);
     setInputMsg("");
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 150);
   };
 
-  const handleRandomMatch = () => {
-    setIsMatching(true);
-    setTimeout(() => {
-      createNewOneOnOneRoom();
-      setIsMatching(false);
-    }, 1500);
+  const handleCopyContact = (type, val) => {
+    Alert.alert("คัดลอกสำเร็จ", `${type}: ${val} (นำไปค้นหาและเพิ่มเพื่อนในแอปพลิเคชันได้ทันที)`);
   };
 
   // ==========================================
-  // VIEW 1: LOBBY VIEW (หน้ารวมแชท 1 on 1)
+  // VIEW 1: LOBBY VIEW (หน้ารวมแชทห้องมืด)
   // ==========================================
   if (!currentRoom) {
     return (
       <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-        <StatusBar barStyle="light-content" backgroundColor="#0F172A" translucent={true} />
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={true} />
 
         {/* Lobby Header */}
-        <View style={styles.lobbyHeader}>
-          <View style={styles.lobbyTitleRow}>
-            <View>
-              <Text style={styles.lobbyPreTitle}>ANONYMOUS 1 ON 1</Text>
-              <Text style={styles.lobbyTitle}>สุ่มคุย 1 on 1</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.exitModeBtn}
-              activeOpacity={0.8}
-              onPress={() => toggleCrossBubbleMode(false)}
-            >
-              <Ionicons name="log-out-outline" size={15} color="#94A3B8" />
-              <Text style={styles.exitModeText}>กลับโหมดปกติ</Text>
-            </TouchableOpacity>
+        <View style={styles.topHeader}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.headerSubtitle}>PRIVATE MATCH ROOM</Text>
+            <Text style={styles.headerTitle}>ห้องมืด</Text>
           </View>
-          <Text style={styles.lobbySubtitle}>
-            สุ่มจับคู่สนทนาตัวต่อตัวแบบนิรนามกับเพื่อนต่างคณะ เปิดเผยโปรไฟล์จริงได้เมื่อทั้งคู่พร้อม
-          </Text>
+          <TouchableOpacity
+            style={styles.exitBtn}
+            activeOpacity={0.8}
+            onPress={() => toggleCrossBubbleMode(false)}
+          >
+            <Ionicons name="log-out-outline" size={15} color="#64748b" />
+            <Text style={styles.exitBtnText}>โหมดปกติ</Text>
+          </TouchableOpacity>
         </View>
 
         <ScrollView
-          style={styles.lobbyScroll}
-          contentContainerStyle={styles.lobbyContent}
+          style={styles.container}
+          contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          {/* Action Card: สุ่มคู่สนทนาใหม่ */}
-          <TouchableOpacity
-            style={styles.randomMatchCard}
-            activeOpacity={0.85}
-            onPress={handleRandomMatch}
-            disabled={isMatching}
-          >
-            <View style={styles.randomMatchIconBox}>
-              <Ionicons name="shuffle" size={24} color="#818CF8" />
+          {/* Banner Explanation */}
+          <View style={styles.infoBanner}>
+            <View style={styles.infoIconCircle}>
+              <Ionicons name="moon" size={20} color="#17171c" />
             </View>
-            <View style={styles.randomMatchTextBox}>
-              <Text style={styles.randomMatchTitle}>สุ่มคู่สนทนาใหม่</Text>
-              <Text style={styles.randomMatchDesc}>
-                ค้นหาเพื่อนต่างคณะที่กำลังออนไลน์เพื่อเปิดบทสนทนาตัวต่อตัว
+            <View style={styles.infoTextCol}>
+              <Text style={styles.infoTitle}>พื้นที่สานต่อมิตรภาพ 1-on-1</Text>
+              <Text style={styles.infoDesc}>
+                พูดคุยส่วนตัวกับเพื่อนที่แมตช์ได้จากห้องสังสรรค์หรือตอบกลับจากกระดานลับ เปิดเผยโปรไฟล์จริงและคอนแทกต์ทันทีเพื่อต่อยอดสู่โลกจริง
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#818CF8" />
-          </TouchableOpacity>
-
-          {/* Conversations List Section */}
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionHeading}>บทสนทนาของคุณ</Text>
-            <Text style={styles.sectionBadge}>{oneOnOneRooms.length} คน</Text>
           </View>
 
-          {oneOnOneRooms.map((room) => {
-            const displayName = room.isRevealed
-              ? room.partnerRealName
-              : room.partnerAlias;
+          {/* Rooms List */}
+          <Text style={styles.sectionTitle}>
+            รายการบทสนทนา ({darkRooms.length})
+          </Text>
 
-            return (
+          {darkRooms.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Ionicons name="chatbubble-ellipses-outline" size={48} color="#cbd5e1" />
+              <Text style={styles.emptyTitle}>ยังไม่มีคู่สนทนาในห้องมืด</Text>
+              <Text style={styles.emptyDesc}>
+                เข้าร่วมห้องสังสรรค์เวลา 19:00 เพื่อสุ่มกลุ่ม ตอบควิซ และกดแมตช์เพื่อน หรือตอบกลับโน้ตในกระดานลับ
+              </Text>
+            </View>
+          ) : (
+            darkRooms.map((room) => (
               <TouchableOpacity
                 key={room.id}
-                style={styles.chatCard}
-                activeOpacity={0.75}
-                onPress={() => setActiveOneOnOneRoomId(room.id)}
+                style={styles.roomCard}
+                activeOpacity={0.85}
+                onPress={() => setActiveDarkRoomId(room.id)}
               >
-                {/* Partner Avatar / Icon Circle */}
-                {room.isRevealed && room.partnerRealAvatar ? (
-                  <Image
-                    source={{ uri: room.partnerRealAvatar }}
-                    style={styles.avatarImg}
-                  />
+                {room.partnerRealAvatar ? (
+                  <Image source={{ uri: room.partnerRealAvatar }} style={styles.roomAvatar} />
                 ) : (
-                  <View style={styles.avatarCircle}>
-                    <Ionicons
-                      name={room.partnerIcon || "finger-print-outline"}
-                      size={20}
-                      color="#818CF8"
-                    />
+                  <View style={styles.roomAvatarFallback}>
+                    <Ionicons name={room.partnerIcon || "person"} size={22} color="#17171c" />
                   </View>
                 )}
 
-                <View style={styles.chatCardDetails}>
-                  <View style={styles.chatCardTopRow}>
-                    <Text style={styles.chatPartnerName} numberOfLines={1}>
-                      {displayName}
-                    </Text>
-                    <Text style={styles.chatTimeText}>{room.lastMessageTime}</Text>
+                <View style={styles.roomInfoCol}>
+                  <View style={styles.roomNameRow}>
+                    <Text style={styles.roomPartnerName}>{room.partnerRealName}</Text>
+                    <Text style={styles.roomTimeText}>{room.lastMessageTime}</Text>
                   </View>
-
-                  <View style={styles.chatCardMetaRow}>
-                    <View style={styles.facultyTagPill}>
-                      <Text style={styles.facultyTagText}>{room.partnerFaculty}</Text>
-                    </View>
-                    {room.isRevealed ? (
-                      <View style={styles.revealedTag}>
-                        <Ionicons name="sparkles" size={10} color="#818CF8" />
-                        <Text style={styles.revealedTagText}>เปิดเผยตัวตนแล้ว</Text>
-                      </View>
-                    ) : (
-                      <View style={styles.anonymousTag}>
-                        <Ionicons name="lock-closed" size={10} color="#64748B" />
-                        <Text style={styles.anonymousTagText}>นิรนาม</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {Boolean(room.lastMessage) && (
-                    <Text style={styles.lastMsgSnippet} numberOfLines={1}>
-                      {room.lastMessage}
-                    </Text>
-                  )}
+                  <Text style={styles.roomFacultyText}>{room.partnerRealFaculty}</Text>
+                  <Text style={styles.roomLastMsg} numberOfLines={1}>
+                    {room.lastMessage}
+                  </Text>
                 </View>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
 
-        {/* Matching Loading Modal */}
-        <Modal visible={isMatching} transparent={true} animationType="fade">
-          <View style={styles.matchingOverlay}>
-            <View style={styles.matchingCard}>
-              <ActivityIndicator size="large" color="#818CF8" />
-              <Text style={styles.matchingTitle}>กำลังสแกนหาคู่สนทนา...</Text>
-              <Text style={styles.matchingSubtitle}>
-                ระบบกำลังเชื่อมต่อเพื่อนต่างคณะที่กำลังว่างอยู่ในขณะนี้
-              </Text>
-              <View style={styles.matchingFacultyRow}>
-                <Text style={styles.matchingFacultyChip}>แพทย์</Text>
-                <Text style={styles.matchingFacultyChip}>อักษร</Text>
-                <Text style={styles.matchingFacultyChip}>สถาปัตย์</Text>
-                <Text style={styles.matchingFacultyChip}>นิติ</Text>
-              </View>
-            </View>
-          </View>
-        </Modal>
+                <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+              </TouchableOpacity>
+            ))
+          )}
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
       </SafeAreaView>
     );
   }
 
   // ==========================================
-  // VIEW 2: CHAT VIEW (หน้าคุย 1 on 1)
+  // VIEW 2: ACTIVE 1-ON-1 CHAT
   // ==========================================
-  const displayName = currentRoom.isRevealed
-    ? currentRoom.partnerRealName
-    : currentRoom.partnerAlias;
-  const messages = currentRoom.messages || [];
-
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <StatusBar barStyle="light-content" backgroundColor="#0F172A" translucent={true} />
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={true} />
 
-      {/* Top Header */}
-      <View style={styles.chatHeader}>
+      {/* Chat Top Bar */}
+      <View style={styles.chatTopBar}>
         <TouchableOpacity
-          style={styles.backButton}
-          activeOpacity={0.7}
-          onPress={() => setActiveOneOnOneRoomId(null)}
+          style={styles.backBtn}
+          onPress={() => setActiveDarkRoomId(null)}
         >
-          <Ionicons name="arrow-back" size={20} color="#F8FAFC" />
+          <Ionicons name="arrow-back" size={20} color="#17171c" />
         </TouchableOpacity>
 
-        {/* Partner Info */}
-        {currentRoom.isRevealed && currentRoom.partnerRealAvatar ? (
-          <Image
-            source={{ uri: currentRoom.partnerRealAvatar }}
-            style={styles.chatHeaderAvatar}
-          />
+        {currentRoom.partnerRealAvatar ? (
+          <Image source={{ uri: currentRoom.partnerRealAvatar }} style={styles.chatHeaderAvatar} />
         ) : (
-          <View style={styles.chatHeaderAvatarCircle}>
-            <Ionicons
-              name={currentRoom.partnerIcon || "finger-print-outline"}
-              size={18}
-              color="#818CF8"
-            />
+          <View style={styles.chatHeaderAvatarFallback}>
+            <Ionicons name={currentRoom.partnerIcon || "person"} size={16} color="#17171c" />
           </View>
         )}
 
-        <View style={styles.chatHeaderDetails}>
-          <Text style={styles.chatHeaderName} numberOfLines={1}>
-            {displayName}
-          </Text>
-          <Text style={styles.chatHeaderFaculty}>
-            {currentRoom.partnerFaculty} • {currentRoom.isRevealed ? "โปรไฟล์จริง" : "นิรนาม"}
-          </Text>
+        <View style={styles.chatHeaderInfo}>
+          <Text style={styles.chatPartnerName}>{currentRoom.partnerRealName}</Text>
+          <Text style={styles.chatPartnerSub}>{currentRoom.partnerRealFaculty}</Text>
         </View>
-
-        {/* Instant Reveal Toggle Button */}
-        <TouchableOpacity
-          style={[
-            styles.revealActionBtn,
-            currentRoom.isRevealed && styles.revealActionBtnDone,
-          ]}
-          activeOpacity={0.8}
-          onPress={() => requestOneOnOneReveal(currentRoom.id)}
-        >
-          <Ionicons
-            name={currentRoom.isRevealed ? "sparkles" : "key-outline"}
-            size={12}
-            color={currentRoom.isRevealed ? "#818CF8" : "#F8FAFC"}
-          />
-          <Text
-            style={[
-              styles.revealActionText,
-              currentRoom.isRevealed && styles.revealActionTextDone,
-            ]}
-          >
-            {currentRoom.isRevealed ? "เปิดเผยแล้ว" : "ขอเปิดตัวตน"}
-          </Text>
-        </TouchableOpacity>
       </View>
 
-      {/* Profile Bio Banner if Revealed */}
-      {currentRoom.isRevealed && (
-        <View style={styles.bioBanner}>
-          <Ionicons name="sparkles" size={13} color="#818CF8" />
-          <Text style={styles.bioBannerText} numberOfLines={2}>
-            {currentRoom.partnerRealBio || "ยินดีที่ได้รู้จักกันแบบเปิดเผยตัวตนจริง!"}
+      {/* Disclosed Real Profile & Social Handles Card */}
+      <View style={styles.realProfileCard}>
+        <View style={styles.profileBadgeRow}>
+          <View style={styles.verifiedBadge}>
+            <Ionicons name="shield-checkmark" size={12} color="#17171c" />
+            <Text style={styles.verifiedBadgeText}>VERIFIED MATCH</Text>
+          </View>
+          <Text style={styles.profileBioText} numberOfLines={1}>
+            {currentRoom.partnerBio || "ยินดีที่ได้รู้จักนะ"}
           </Text>
         </View>
-      )}
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        <View style={styles.contactsRow}>
+          {currentRoom.instagram && (
+            <TouchableOpacity
+              style={styles.contactChip}
+              activeOpacity={0.8}
+              onPress={() => handleCopyContact("Instagram", currentRoom.instagram)}
+            >
+              <Ionicons name="logo-instagram" size={13} color="#17171c" />
+              <Text style={styles.contactChipText}>{currentRoom.instagram}</Text>
+              <Ionicons name="copy-outline" size={11} color="#64748b" />
+            </TouchableOpacity>
+          )}
+
+          {currentRoom.lineId && (
+            <TouchableOpacity
+              style={styles.contactChip}
+              activeOpacity={0.8}
+              onPress={() => handleCopyContact("Line ID", currentRoom.lineId)}
+            >
+              <Ionicons name="chatbubble-ellipses-outline" size={13} color="#17171c" />
+              <Text style={styles.contactChipText}>Line: {currentRoom.lineId}</Text>
+              <Ionicons name="copy-outline" size={11} color="#64748b" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* Messages Scroll Area */}
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.chatScroll}
+        contentContainerStyle={styles.chatContent}
+        showsVerticalScrollIndicator={false}
       >
-        <ScrollView
-          ref={scrollViewRef}
-          style={styles.chatScroll}
-          contentContainerStyle={styles.chatContent}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-        >
-          <View style={styles.systemNoticeBox}>
-            <Ionicons name="shield-checkmark-outline" size={14} color="#818CF8" />
-            <Text style={styles.systemNoticeText}>
-              การสนทนา 1 on 1 แบบนิรนาม ปลอดภัย สามารถกด "ขอเปิดตัวตน" เพื่อแลกเปลี่ยนโปรไฟล์จริงได้ตลอดเวลา
-            </Text>
-          </View>
+        {currentRoom.messages.map((msg) => {
+          if (msg.isSystem) {
+            return (
+              <View key={msg.id} style={styles.sysMsgContainer}>
+                <Ionicons name="git-branch-outline" size={14} color="#64748b" />
+                <Text style={styles.sysMsgText}>{msg.text}</Text>
+              </View>
+            );
+          }
 
-          {messages.map((msg) => (
+          const isMe = msg.isMe;
+
+          return (
             <View
               key={msg.id}
-              style={[
-                styles.messageRow,
-                msg.isMe ? styles.messageRowMe : styles.messageRowOther,
-              ]}
+              style={[styles.msgRow, isMe ? styles.msgRowRight : styles.msgRowLeft]}
             >
-              {!msg.isMe && (
-                <Text style={styles.senderAliasText}>{msg.senderAlias}</Text>
-              )}
-              <View
-                style={[
-                  styles.messageBubble,
-                  msg.isMe ? styles.messageBubbleMe : styles.messageBubbleOther,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.messageText,
-                    msg.isMe ? styles.messageTextMe : styles.messageTextOther,
-                  ]}
-                >
+              <View style={[styles.msgBubble, isMe ? styles.msgBubbleMe : styles.msgBubbleOther]}>
+                <Text style={[styles.msgBodyText, isMe && styles.msgBodyTextMe]}>
                   {msg.text}
                 </Text>
+                <Text style={[styles.msgTimeText, isMe && styles.msgTimeTextMe]}>
+                  {msg.createdAt}
+                </Text>
               </View>
-              <Text style={styles.messageTimestamp}>{msg.createdAt}</Text>
             </View>
-          ))}
-        </ScrollView>
+          );
+        })}
+      </ScrollView>
 
-        {/* Input Bar */}
-        <View style={styles.inputContainer}>
-          <View style={styles.inputCapsule}>
-            <TextInput
-              style={styles.textInput}
-              placeholder="พิมพ์ข้อความคุยตัวต่อตัว..."
-              placeholderTextColor="#64748B"
-              value={inputMsg}
-              onChangeText={setInputMsg}
-              onSubmitEditing={handleSend}
-              returnKeyType="send"
-            />
-            <TouchableOpacity
-              style={[
-                styles.sendButton,
-                !inputMsg.trim() && styles.sendButtonDisabled,
-              ]}
-              disabled={!inputMsg.trim()}
-              activeOpacity={0.8}
-              onPress={handleSend}
-            >
-              <Ionicons
-                name="arrow-up"
-                size={16}
-                color={inputMsg.trim() ? "#FFFFFF" : "#64748B"}
-              />
-            </TouchableOpacity>
-          </View>
+      {/* Input Bar */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 10 : 0}
+      >
+        <View style={styles.inputBar}>
+          <TextInput
+            style={styles.chatInput}
+            value={inputMsg}
+            onChangeText={setInputMsg}
+            placeholder={`ส่งข้อความหา ${currentRoom.partnerRealName}...`}
+            placeholderTextColor="#94a3b8"
+            onSubmitEditing={handleSend}
+            returnKeyType="send"
+          />
+          <TouchableOpacity
+            style={styles.sendBtn}
+            activeOpacity={0.8}
+            onPress={handleSend}
+          >
+            <Ionicons name="send" size={16} color="#17171c" />
+          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -365,278 +278,181 @@ export default function OneOnOneScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#0F172A",
+    backgroundColor: "#ffffff",
   },
-  // Lobby Styles
-  lobbyHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    paddingBottom: 14,
-    backgroundColor: "#0F172A",
-    borderBottomWidth: 1,
-    borderBottomColor: "#1E293B",
-  },
-  lobbyTitleRow: {
+  topHeader: {
     flexDirection: "row",
-    alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 6,
-  },
-  lobbyPreTitle: {
-    color: "#818CF8",
-    fontSize: 10.5,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  lobbyTitle: {
-    color: "#F8FAFC",
-    fontSize: 20,
-    fontWeight: "900",
-  },
-  lobbySubtitle: {
-    color: "#94A3B8",
-    fontSize: 11.5,
-    lineHeight: 16,
-  },
-  exitModeBtn: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    backgroundColor: "#1E293B",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#334155",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+    backgroundColor: "#ffffff",
   },
-  exitModeText: {
-    color: "#94A3B8",
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  lobbyScroll: {
+  headerLeft: {
     flex: 1,
   },
-  lobbyContent: {
-    padding: 16,
-    paddingBottom: 30,
+  headerSubtitle: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#64748b",
+    letterSpacing: 1,
   },
-  randomMatchCard: {
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#17171c",
+    marginTop: 2,
+  },
+  exitBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1E293B",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: "#f1f5f9",
+    gap: 4,
+  },
+  exitBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748b",
+  },
+  container: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+  },
+  content: {
+    padding: 20,
+  },
+  infoBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
     borderRadius: 16,
     padding: 16,
     borderWidth: 1.5,
-    borderColor: "#818CF8",
+    borderColor: "#e2e8f0",
     marginBottom: 20,
-    gap: 12,
   },
-  randomMatchIconBox: {
+  infoIconCircle: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "rgba(129, 140, 248, 0.15)",
-    alignItems: "center",
+    backgroundColor: "#c7f65a",
     justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
   },
-  randomMatchTextBox: {
+  infoTextCol: {
     flex: 1,
   },
-  randomMatchTitle: {
-    color: "#F8FAFC",
-    fontSize: 14.5,
-    fontWeight: "800",
-    marginBottom: 3,
-  },
-  randomMatchDesc: {
-    color: "#94A3B8",
-    fontSize: 11,
-    lineHeight: 15,
-  },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 12,
-  },
-  sectionHeading: {
-    color: "#F8FAFC",
+  infoTitle: {
     fontSize: 14,
     fontWeight: "800",
+    color: "#17171c",
   },
-  sectionBadge: {
-    color: "#64748B",
-    fontSize: 11.5,
+  infoDesc: {
+    fontSize: 12,
+    color: "#64748b",
+    marginTop: 4,
+    lineHeight: 17,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#17171c",
+    marginBottom: 12,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  emptyTitle: {
+    fontSize: 15,
     fontWeight: "700",
+    color: "#17171c",
+    marginTop: 12,
   },
-  chatCard: {
+  emptyDesc: {
+    fontSize: 12.5,
+    color: "#64748b",
+    textAlign: "center",
+    marginTop: 6,
+    lineHeight: 18,
+  },
+  roomCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1E293B",
+    backgroundColor: "#f8fafc",
     borderRadius: 14,
-    padding: 12,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#e2e8f0",
+    padding: 14,
     marginBottom: 10,
-    gap: 12,
   },
-  avatarCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#0F172A",
-    alignItems: "center",
+  roomAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    marginRight: 12,
+  },
+  roomAvatarFallback: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: "#c7f65a",
     justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: "#818CF8",
+    alignItems: "center",
+    marginRight: 12,
   },
-  avatarImg: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-  },
-  chatCardDetails: {
+  roomInfoCol: {
     flex: 1,
+    marginRight: 8,
   },
-  chatCardTopRow: {
+  roomNameRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 3,
   },
-  chatPartnerName: {
-    color: "#F8FAFC",
-    fontSize: 13.5,
+  roomPartnerName: {
+    fontSize: 14,
     fontWeight: "800",
-    flex: 1,
-    marginRight: 6,
+    color: "#17171c",
   },
-  chatTimeText: {
-    color: "#64748B",
+  roomTimeText: {
     fontSize: 10.5,
+    color: "#94a3b8",
   },
-  chatCardMetaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 4,
-  },
-  facultyTagPill: {
-    backgroundColor: "#0F172A",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "#334155",
-  },
-  facultyTagText: {
-    color: "#818CF8",
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  revealedTag: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: "rgba(129, 140, 248, 0.15)",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  revealedTagText: {
-    color: "#818CF8",
-    fontSize: 9.5,
-    fontWeight: "700",
-  },
-  anonymousTag: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: "#0F172A",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  anonymousTagText: {
-    color: "#64748B",
-    fontSize: 9.5,
+  roomFacultyText: {
+    fontSize: 11.5,
     fontWeight: "600",
+    color: "#64748b",
+    marginTop: 2,
   },
-  lastMsgSnippet: {
-    color: "#CBD5E1",
-    fontSize: 11.5,
+  roomLastMsg: {
+    fontSize: 12,
+    color: "#64748b",
+    marginTop: 4,
   },
-  matchingOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(15, 23, 42, 0.85)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  matchingCard: {
-    width: "100%",
-    backgroundColor: "#1E293B",
-    borderRadius: 18,
-    padding: 24,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#334155",
-  },
-  matchingTitle: {
-    color: "#F8FAFC",
-    fontSize: 15.5,
-    fontWeight: "800",
-    marginTop: 14,
-    marginBottom: 4,
-  },
-  matchingSubtitle: {
-    color: "#94A3B8",
-    fontSize: 11.5,
-    textAlign: "center",
-    lineHeight: 16,
-    marginBottom: 16,
-  },
-  matchingFacultyRow: {
-    flexDirection: "row",
-    gap: 6,
-  },
-  matchingFacultyChip: {
-    backgroundColor: "#0F172A",
-    color: "#818CF8",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    fontSize: 11,
-    fontWeight: "700",
-    borderWidth: 1,
-    borderColor: "#334155",
-  },
-
-  // Chat Screen Styles
-  chatHeader: {
+  chatTopBar: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 10,
-    backgroundColor: "#0F172A",
+    paddingVertical: 10,
+    backgroundColor: "#ffffff",
     borderBottomWidth: 1,
-    borderBottomColor: "#1E293B",
+    borderBottomColor: "#e2e8f0",
   },
-  backButton: {
-    paddingRight: 10,
-    paddingVertical: 4,
-  },
-  chatHeaderAvatarCircle: {
+  backBtn: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: "#1E293B",
-    alignItems: "center",
+    borderRadius: 8,
+    backgroundColor: "#f1f5f9",
     justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: "#818CF8",
+    alignItems: "center",
     marginRight: 10,
   },
   chatHeaderAvatar: {
@@ -645,167 +461,173 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     marginRight: 10,
   },
-  chatHeaderDetails: {
-    flex: 1,
-    marginRight: 8,
+  chatHeaderAvatarFallback: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#c7f65a",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
   },
-  chatHeaderName: {
-    color: "#F8FAFC",
-    fontSize: 14,
+  chatHeaderInfo: {
+    flex: 1,
+  },
+  chatPartnerName: {
+    fontSize: 14.5,
     fontWeight: "800",
+    color: "#17171c",
   },
-  chatHeaderFaculty: {
-    color: "#94A3B8",
-    fontSize: 10.5,
+  chatPartnerSub: {
+    fontSize: 11.5,
+    color: "#64748b",
   },
-  revealActionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#6366F1",
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 14,
-  },
-  revealActionBtnDone: {
-    backgroundColor: "rgba(129, 140, 248, 0.15)",
-    borderWidth: 1,
-    borderColor: "#818CF8",
-  },
-  revealActionText: {
-    color: "#FFFFFF",
-    fontSize: 10.5,
-    fontWeight: "700",
-  },
-  revealActionTextDone: {
-    color: "#818CF8",
-  },
-  bioBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(129, 140, 248, 0.12)",
+  realProfileCard: {
+    backgroundColor: "#f8fafc",
     paddingHorizontal: 16,
-    paddingVertical: 7,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: "#1E293B",
+    borderBottomColor: "#e2e8f0",
   },
-  bioBannerText: {
-    color: "#818CF8",
-    fontSize: 11,
-    fontWeight: "500",
+  profileBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  verifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#c7f65a",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    gap: 4,
+  },
+  verifiedBadgeText: {
+    fontSize: 9.5,
+    fontWeight: "800",
+    color: "#17171c",
+    letterSpacing: 0.5,
+  },
+  profileBioText: {
     flex: 1,
+    fontSize: 11,
+    color: "#64748b",
+  },
+  contactsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  contactChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    gap: 6,
+  },
+  contactChipText: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: "#17171c",
   },
   chatScroll: {
     flex: 1,
+    backgroundColor: "#ffffff",
   },
   chatContent: {
     padding: 16,
-    paddingBottom: 20,
   },
-  systemNoticeBox: {
+  sysMsgContainer: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "#f8fafc",
+    borderRadius: 8,
+    padding: 10,
+    marginVertical: 8,
     gap: 6,
-    backgroundColor: "#1E293B",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-    marginBottom: 14,
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#e2e8f0",
   },
-  systemNoticeText: {
-    color: "#94A3B8",
-    fontSize: 10.5,
-    lineHeight: 15,
+  sysMsgText: {
     flex: 1,
+    fontSize: 11.5,
+    color: "#64748b",
+    lineHeight: 16,
   },
-  messageRow: {
+  msgRow: {
+    flexDirection: "row",
     marginVertical: 4,
+  },
+  msgRowLeft: {
+    justifyContent: "flex-start",
+  },
+  msgRowRight: {
+    justifyContent: "flex-end",
+  },
+  msgBubble: {
     maxWidth: "80%",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
-  messageRowMe: {
-    alignSelf: "flex-end",
-    alignItems: "flex-end",
-  },
-  messageRowOther: {
-    alignSelf: "flex-start",
-    alignItems: "flex-start",
-  },
-  senderAliasText: {
-    color: "#818CF8",
-    fontSize: 10,
-    fontWeight: "700",
-    marginBottom: 2,
-    marginLeft: 4,
-  },
-  messageBubble: {
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-    borderRadius: 16,
-  },
-  messageBubbleMe: {
-    backgroundColor: "#6366F1",
-    borderBottomRightRadius: 3,
-  },
-  messageBubbleOther: {
-    backgroundColor: "#1E293B",
-    borderBottomLeftRadius: 3,
+  msgBubbleOther: {
+    backgroundColor: "#f8fafc",
     borderWidth: 1,
-    borderColor: "#334155",
+    borderColor: "#e2e8f0",
   },
-  messageText: {
-    fontSize: 13,
+  msgBubbleMe: {
+    backgroundColor: "#17171c",
+  },
+  msgBodyText: {
+    fontSize: 13.5,
+    color: "#17171c",
     lineHeight: 18,
   },
-  messageTextMe: {
-    color: "#FFFFFF",
-    fontWeight: "500",
+  msgBodyTextMe: {
+    color: "#ffffff",
   },
-  messageTextOther: {
-    color: "#F8FAFC",
-  },
-  messageTimestamp: {
-    color: "#64748B",
+  msgTimeText: {
     fontSize: 9.5,
-    marginTop: 2,
-    marginHorizontal: 4,
+    color: "#94a3b8",
+    alignSelf: "flex-end",
+    marginTop: 4,
   },
-  inputContainer: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    backgroundColor: "#0F172A",
-    borderTopWidth: 1,
-    borderTopColor: "#1E293B",
+  msgTimeTextMe: {
+    color: "#94a3b8",
   },
-  inputCapsule: {
+  inputBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#1E293B",
-    borderRadius: 24,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: "#334155",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: "#ffffff",
+    borderTopWidth: 1,
+    borderTopColor: "#e2e8f0",
+    gap: 8,
   },
-  textInput: {
+  chatInput: {
     flex: 1,
-    color: "#F8FAFC",
-    fontSize: 13,
-    paddingVertical: 6,
-    paddingHorizontal: 4,
+    backgroundColor: "#f8fafc",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13.5,
+    color: "#17171c",
   },
-  sendButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#6366F1",
-    alignItems: "center",
+  sendBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "#c7f65a",
     justifyContent: "center",
-    marginLeft: 6,
-  },
-  sendButtonDisabled: {
-    backgroundColor: "#334155",
+    alignItems: "center",
   },
 });

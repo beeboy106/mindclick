@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  TextInput,
   StatusBar,
   Alert,
 } from "react-native";
@@ -13,40 +14,64 @@ import { Ionicons } from "@expo/vector-icons";
 import { useCrossBubble } from "../../context/CrossBubbleContext";
 import { useAuth } from "../../context/AuthContext";
 import { useData } from "../../context/DataContext";
+import { useNavigation } from "@react-navigation/native";
 
 export default function MyAliasScreen() {
+  const navigation = useNavigation();
   const {
     userAlias,
-    regenerateAlias,
+    updateUserAliasName,
     changeMascot,
-    mascotOptions,
+    regenerateAlias,
+    unlockedAvatars,
+    streakDays,
+    isFlameActive,
+    bubblePoints,
     toggleCrossBubbleMode,
   } = useCrossBubble();
+
   const { user } = useAuth();
   const { profile } = useData();
 
+  const [aliasNameInput, setAliasNameInput] = useState(userAlias?.nickname || "");
+  const [isEditing, setIsEditing] = useState(false);
+
   const realDisplayName = profile?.name || user?.name || "คุณ";
+
+  const handleSaveName = () => {
+    if (!aliasNameInput.trim()) {
+      Alert.alert("กรุณากรอกชื่อ", "นามแฝงต้องมีอย่างน้อย 1 ตัวอักษร");
+      return;
+    }
+    updateUserAliasName(aliasNameInput.trim());
+    setIsEditing(false);
+    Alert.alert("บันทึกสำเร็จ", `เปลี่ยนนามแฝงเป็น "${aliasNameInput.trim()}" เรียบร้อยแล้ว`);
+  };
 
   const handleReroll = async () => {
     const newAlias = await regenerateAlias();
+    setAliasNameInput(newAlias.nickname);
     Alert.alert("สุ่มฉายาใหม่สำเร็จ", `ฉายาของคุณตอนนี้คือ: "${newAlias.nickname}"`);
   };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <StatusBar barStyle="light-content" backgroundColor="#0F172A" translucent={true} />
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={true} />
 
       {/* Header */}
       <View style={styles.topHeader}>
-        <View style={styles.titleRow}>
-          <View style={styles.headerIconCircle}>
-            <Ionicons name="shield-checkmark-outline" size={18} color="#818CF8" />
-          </View>
-          <View>
-            <Text style={styles.headerTitle}>โปรไฟล์ลับ</Text>
-            <Text style={styles.headerSubtitle}>จัดการตัวตนนามแฝงและสัญลักษณ์ประจำตัว</Text>
-          </View>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerSubtitle}>CROSS-BUBBLE PROFILE</Text>
+          <Text style={styles.headerTitle}>โปรไฟล์ & นามแฝง</Text>
         </View>
+        <TouchableOpacity
+          style={styles.exitBtn}
+          activeOpacity={0.8}
+          onPress={() => toggleCrossBubbleMode(false)}
+        >
+          <Ionicons name="log-out-outline" size={15} color="#64748b" />
+          <Text style={styles.exitBtnText}>โหมดปกติ</Text>
+        </TouchableOpacity>
       </View>
 
       <ScrollView
@@ -54,113 +79,161 @@ export default function MyAliasScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Persona Card */}
+        {/* Main Persona Card */}
         <View style={styles.personaCard}>
           <View style={styles.mascotBigCircle}>
             <Ionicons
               name={userAlias?.icon || "finger-print-outline"}
-              size={36}
-              color="#818CF8"
+              size={48}
+              color="#17171c"
             />
           </View>
 
-          <Text style={styles.aliasNickname}>{userAlias?.nickname || "นิรนาม"}</Text>
+          {/* Alias Name Field */}
+          {isEditing ? (
+            <View style={styles.editNameRow}>
+              <TextInput
+                style={styles.editNameInput}
+                value={aliasNameInput}
+                onChangeText={setAliasNameInput}
+                placeholder="ตั้งชื่อนามแฝง..."
+                placeholderTextColor="#94a3b8"
+                autoFocus
+              />
+              <TouchableOpacity
+                style={styles.saveNameBtn}
+                activeOpacity={0.85}
+                onPress={handleSaveName}
+              >
+                <Ionicons name="checkmark" size={16} color="#17171c" />
+                <Text style={styles.saveNameBtnText}>บันทึก</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.nameDisplayRow}>
+              <Text style={styles.aliasNickname}>
+                {userAlias?.nickname || "กำลังโหลด..."}
+              </Text>
+              <TouchableOpacity
+                style={styles.editIconBtn}
+                onPress={() => setIsEditing(true)}
+              >
+                <Ionicons name="pencil" size={14} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+          )}
 
-          <View style={styles.facultyBadge}>
-            <Ionicons name="school-outline" size={12} color="#818CF8" />
-            <Text style={styles.facultyBadgeText}>
-              {userAlias?.faculty || "มหาวิทยาลัย"}
-            </Text>
+          {/* Badges Row */}
+          <View style={styles.badgeRow}>
+            <View style={styles.limeBadge}>
+              <Ionicons name="shield-checkmark" size={12} color="#17171c" />
+              <Text style={styles.limeBadgeText}>ผู้ทลาย Social Bubble</Text>
+            </View>
+            <View style={styles.facultyBadge}>
+              <Text style={styles.facultyBadgeText}>
+                {userAlias?.faculty || profile?.faculty || "คณะทั่วไป"}
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.maskedRealBox}>
-            <Ionicons name="lock-closed-outline" size={13} color="#94A3B8" />
-            <Text style={styles.maskedRealText}>
-              ตัวตนจริงที่ซ่อนอยู่: <Text style={styles.maskedRealName}>{realDisplayName}</Text>
-            </Text>
-          </View>
-
-          {/* Reroll Alias Button */}
+          {/* Reroll Button */}
           <TouchableOpacity
             style={styles.rerollBtn}
             activeOpacity={0.8}
             onPress={handleReroll}
           >
-            <Ionicons name="dice-outline" size={15} color="#FFFFFF" />
-            <Text style={styles.rerollBtnText}>สุ่มฉายาใหม่ (Re-roll)</Text>
+            <Ionicons name="dice-outline" size={16} color="#17171c" />
+            <Text style={styles.rerollBtnText}>สุ่มฉายาและสไตล์ใหม่</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Mascot Picker */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>เลือกสัญลักษณ์ประจำตัว</Text>
-          <Text style={styles.sectionSubtitle}>
-            ไอคอนจะแสดงแทนตัวตนในห้องสังสรรค์และกระดานลับ
-          </Text>
-
-          <View style={styles.mascotGrid}>
-            {mascotOptions.map((icon) => {
-              const isSelected = userAlias?.icon === icon;
-              return (
-                <TouchableOpacity
-                  key={icon}
-                  style={[
-                    styles.mascotChoiceBtn,
-                    isSelected && styles.mascotChoiceSelected,
-                  ]}
-                  activeOpacity={0.7}
-                  onPress={() => changeMascot(icon)}
-                >
-                  <Ionicons
-                    name={icon}
-                    size={20}
-                    color={isSelected ? "#818CF8" : "#64748B"}
-                  />
-                </TouchableOpacity>
-              );
-            })}
+        {/* Stats & Flame Status Row */}
+        <View style={styles.statsCard}>
+          <View style={styles.statCol}>
+            <View style={styles.statIconRow}>
+              <Ionicons
+                name="flame"
+                size={18}
+                color={isFlameActive ? "#17171c" : "#94a3b8"}
+              />
+              <Text style={styles.statValue}>{streakDays} วัน</Text>
+            </View>
+            <Text style={styles.statLabel}>สถานะไฟต่อเนื่อง</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statCol}>
+            <View style={styles.statIconRow}>
+              <Ionicons name="sparkles" size={18} color="#17171c" />
+              <Text style={styles.statValue}>{bubblePoints} PTS</Text>
+            </View>
+            <Text style={styles.statLabel}>Bubble Points</Text>
           </View>
         </View>
 
-        {/* Badges Collected */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>เกียรติยศในโหมดลับ (Badges)</Text>
-          <View style={styles.badgeRow}>
-            <View style={styles.badgeItem}>
-              <View style={styles.badgeIconCircle}>
-                <Ionicons name="sparkles-outline" size={18} color="#818CF8" />
-              </View>
-              <Text style={styles.badgeName}>ผู้ทลายกรอบ</Text>
-              <Text style={styles.badgeDesc}>สนทนาข้าม 3 คณะ</Text>
-            </View>
+        {/* Avatar Selection Section */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>เลือกรูปอวาตารประจำตัว</Text>
+          <Text style={styles.sectionCount}>({unlockedAvatars.length} แบบ)</Text>
+        </View>
+        <Text style={styles.sectionSubtitle}>
+          แตะไอคอนเพื่อเปลี่ยนอวาตารที่คุณต้องการใช้แสดงในห้องสังสรรค์และกระดานลับ
+        </Text>
 
-            <View style={styles.badgeItem}>
-              <View style={styles.badgeIconCircle}>
-                <Ionicons name="moon-outline" size={18} color="#38BDF8" />
-              </View>
-              <Text style={styles.badgeName}>Night Owl</Text>
-              <Text style={styles.badgeDesc}>คุยช่วงดึก</Text>
-            </View>
+        <View style={styles.avatarsGrid}>
+          {unlockedAvatars.map((iconName) => {
+            const isSelected = userAlias?.icon === iconName;
 
-            <View style={styles.badgeItem}>
-              <View style={styles.badgeIconCircle}>
-                <Ionicons name="key-outline" size={18} color="#F59E0B" />
-              </View>
-              <Text style={styles.badgeName}>Mutual Master</Text>
-              <Text style={styles.badgeDesc}>ปลดล็อกโปรไฟล์</Text>
-            </View>
-          </View>
+            return (
+              <TouchableOpacity
+                key={iconName}
+                style={[
+                  styles.avatarChoiceBox,
+                  isSelected && styles.avatarChoiceBoxSelected,
+                ]}
+                activeOpacity={0.8}
+                onPress={() => changeMascot(iconName)}
+              >
+                <Ionicons
+                  name={iconName}
+                  size={28}
+                  color={isSelected ? "#17171c" : "#64748b"}
+                />
+                {isSelected && (
+                  <View style={styles.selectedCheckBadge}>
+                    <Ionicons name="checkmark" size={10} color="#17171c" />
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
-        {/* Return to Normal Mode Button */}
+        {/* Mission Shop Banner link */}
         <TouchableOpacity
-          style={styles.exitToNormalBtn}
+          style={styles.moreAvatarsBanner}
           activeOpacity={0.85}
-          onPress={() => toggleCrossBubbleMode(false)}
+          onPress={() => navigation.navigate("MissionsTab")}
         >
-          <Ionicons name="log-out-outline" size={16} color="#94A3B8" />
-          <Text style={styles.exitToNormalBtnText}>ออกจากโหมดลับ กลับสู่โหมดปกติ</Text>
+          <View style={styles.moreAvatarsIcon}>
+            <Ionicons name="gift-outline" size={20} color="#17171c" />
+          </View>
+          <View style={styles.moreAvatarsTextCol}>
+            <Text style={styles.moreAvatarsTitle}>ต้องการอวาตารระดับตำนานเพิ่ม?</Text>
+            <Text style={styles.moreAvatarsDesc}>ทำภารกิจรายวันและสะสมแต้มเพื่อปลดล็อคในหน้าร้านค้า</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#17171c" />
         </TouchableOpacity>
+
+        {/* Real Account Info Footer */}
+        <View style={styles.realAccountCard}>
+          <Text style={styles.realAccountLabel}>บัญชีมหาวิทยาลัยที่เชื่อมต่อ:</Text>
+          <Text style={styles.realAccountName}>{realDisplayName}</Text>
+          <Text style={styles.realAccountNotice}>
+            ข้อมูลจริงของคุณจะถูกเปิดเผยเฉพาะกับเพื่อนที่คุณกดยืนยันแมตช์ในห้องมืดเท่านั้น
+          </Text>
+        </View>
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -169,215 +242,323 @@ export default function MyAliasScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#0F172A",
+    backgroundColor: "#ffffff",
   },
   topHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 14,
-    backgroundColor: "#0F172A",
-    borderBottomWidth: 1,
-    borderBottomColor: "#1E293B",
-  },
-  titleRow: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+    backgroundColor: "#ffffff",
   },
-  headerIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(99, 102, 241, 0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#334155",
-  },
-  headerTitle: {
-    color: "#F8FAFC",
-    fontSize: 16,
-    fontWeight: "800",
+  headerLeft: {
+    flex: 1,
   },
   headerSubtitle: {
-    color: "#94A3B8",
-    fontSize: 11,
-    fontWeight: "500",
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#64748b",
+    letterSpacing: 1,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#17171c",
+    marginTop: 2,
+  },
+  exitBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: "#f1f5f9",
+    gap: 4,
+  },
+  exitBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748b",
   },
   container: {
     flex: 1,
+    backgroundColor: "#ffffff",
   },
   content: {
-    padding: 16,
-    paddingBottom: 36,
+    padding: 20,
   },
   personaCard: {
-    backgroundColor: "#1E293B",
+    backgroundColor: "#f8fafc",
     borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
     padding: 20,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#334155",
     marginBottom: 16,
   },
   mascotBigCircle: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: "#0F172A",
-    alignItems: "center",
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#c7f65a",
+    borderWidth: 2,
+    borderColor: "#17171c",
     justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: "#818CF8",
+    alignItems: "center",
     marginBottom: 12,
+  },
+  nameDisplayRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
   },
   aliasNickname: {
-    color: "#F8FAFC",
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: "800",
-    marginBottom: 6,
+    color: "#17171c",
   },
-  facultyBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: "#0F172A",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+  editIconBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#334155",
-    marginBottom: 12,
+    borderColor: "#e2e8f0",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  facultyBadgeText: {
-    color: "#818CF8",
-    fontSize: 11.5,
-    fontWeight: "600",
-  },
-  maskedRealBox: {
+  editNameRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "#0F172A",
+    gap: 8,
+    marginBottom: 8,
+    width: "100%",
+  },
+  editNameInput: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: "#17171c",
     paddingHorizontal: 12,
     paddingVertical: 6,
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#17171c",
+  },
+  saveNameBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#c7f65a",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#334155",
+    borderWidth: 1.5,
+    borderColor: "#17171c",
+    gap: 4,
+  },
+  saveNameBtnText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#17171c",
+  },
+  badgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     marginBottom: 16,
   },
-  maskedRealText: {
-    color: "#94A3B8",
-    fontSize: 11,
+  limeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#c7f65a",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    gap: 4,
   },
-  maskedRealName: {
-    color: "#F8FAFC",
-    fontWeight: "700",
+  limeBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#17171c",
+  },
+  facultyBadge: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  facultyBadgeText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#64748b",
   },
   rerollBtn: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
     gap: 6,
-    backgroundColor: "#6366F1",
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 10,
   },
   rerollBtnText: {
-    color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "700",
+    color: "#17171c",
   },
-  sectionCard: {
-    backgroundColor: "#1E293B",
+  statsCard: {
+    flexDirection: "row",
+    backgroundColor: "#f8fafc",
     borderRadius: 14,
-    padding: 16,
     borderWidth: 1,
-    borderColor: "#334155",
-    marginBottom: 16,
+    borderColor: "#e2e8f0",
+    paddingVertical: 14,
+    marginBottom: 20,
   },
-  sectionTitle: {
-    color: "#F8FAFC",
-    fontSize: 14,
-    fontWeight: "800",
-    marginBottom: 3,
-  },
-  sectionSubtitle: {
-    color: "#64748B",
-    fontSize: 11,
-    marginBottom: 12,
-  },
-  mascotGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  mascotChoiceBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#0F172A",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#334155",
-  },
-  mascotChoiceSelected: {
-    borderColor: "#818CF8",
-    backgroundColor: "rgba(99, 102, 241, 0.15)",
-  },
-  badgeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  badgeItem: {
+  statCol: {
     flex: 1,
     alignItems: "center",
-    backgroundColor: "#0F172A",
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#334155",
   },
-  badgeIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#1E293B",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#334155",
-    marginBottom: 6,
-  },
-  badgeName: {
-    color: "#F8FAFC",
-    fontSize: 11,
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 2,
-  },
-  badgeDesc: {
-    color: "#64748B",
-    fontSize: 9.5,
-    textAlign: "center",
-  },
-  exitToNormalBtn: {
+  statIconRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
     gap: 6,
-    backgroundColor: "#1E293B",
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#334155",
-    marginTop: 4,
   },
-  exitToNormalBtnText: {
-    color: "#94A3B8",
+  statValue: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: "#17171c",
+  },
+  statLabel: {
+    fontSize: 11,
+    color: "#64748b",
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: "80%",
+    backgroundColor: "#e2e8f0",
+    alignSelf: "center",
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#17171c",
+  },
+  sectionCount: {
+    fontSize: 13,
+    color: "#64748b",
+  },
+  sectionSubtitle: {
     fontSize: 12,
-    fontWeight: "600",
+    color: "#64748b",
+    marginTop: 4,
+    marginBottom: 14,
+    lineHeight: 16,
+  },
+  avatarsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginBottom: 20,
+  },
+  avatarChoiceBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 14,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "relative",
+  },
+  avatarChoiceBoxSelected: {
+    backgroundColor: "#ffffff",
+    borderColor: "#17171c",
+    borderWidth: 2,
+  },
+  selectedCheckBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#c7f65a",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#17171c",
+  },
+  moreAvatarsBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    padding: 14,
+    marginBottom: 20,
+  },
+  moreAvatarsIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#c7f65a",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  moreAvatarsTextCol: {
+    flex: 1,
+  },
+  moreAvatarsTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#17171c",
+  },
+  moreAvatarsDesc: {
+    fontSize: 11.5,
+    color: "#64748b",
+    marginTop: 2,
+  },
+  realAccountCard: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  realAccountLabel: {
+    fontSize: 10.5,
+    fontWeight: "700",
+    color: "#94a3b8",
+  },
+  realAccountName: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#17171c",
+    marginTop: 2,
+  },
+  realAccountNotice: {
+    fontSize: 11.5,
+    color: "#64748b",
+    marginTop: 6,
+    lineHeight: 16,
   },
 });
