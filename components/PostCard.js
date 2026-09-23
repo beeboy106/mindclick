@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors, shadows } from "../lib/theme";
+import { useAuth } from "../context/AuthContext";
+import ReportBlockModal from "./ReportBlockModal";
 
 // ข้อมูลสีสำหรับแต่ละกระทู้ (ไม่มีไอคอน/อิโมจิ)
 const TOPIC_CONFIG = {
@@ -31,10 +33,17 @@ export default function PostCard({
   onPressImage,
   onSelectTopic,
 }) {
+  const { blockUser, submitReport } = useAuth();
   const [commentText, setCommentText] = useState("");
   const [replyingTo, setReplyingTo] = useState(null); // { rootId, targetId, userName }
   const [showComments, setShowComments] = useState(true);
   const [avatarError, setAvatarError] = useState(false);
+  const [reportModalConfig, setReportModalConfig] = useState({
+    visible: false,
+    targetType: "post",
+    targetId: null,
+    targetName: "",
+  });
   const inputRef = useRef(null);
 
   const isLiked = (post.likes || []).includes(currentUserId);
@@ -194,13 +203,28 @@ export default function PostCard({
           </View>
         </TouchableOpacity>
 
-        {isAuthor && (
+        {isAuthor ? (
           <TouchableOpacity
             style={styles.deleteBtn}
             activeOpacity={0.7}
             onPress={handleDelete}
           >
             <Ionicons name="close" size={18} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            activeOpacity={0.7}
+            onPress={() =>
+              setReportModalConfig({
+                visible: true,
+                targetType: "post",
+                targetId: post.id,
+                targetName: authorDisplayName,
+              })
+            }
+          >
+            <Ionicons name="ellipsis-horizontal" size={18} color={colors.mutedForeground} />
           </TouchableOpacity>
         )}
       </View>
@@ -300,7 +324,7 @@ export default function PostCard({
                           </View>
                           <Text style={styles.commentContent}>{root.content}</Text>
                         </View>
-                        {/* Meta Action Row: Time • Reply */}
+                        {/* Meta Action Row: Time • Reply • Report */}
                         <View style={styles.commentMetaRow}>
                           <Text style={styles.commentTime}>{root.createdAt}</Text>
                           <Text style={styles.commentDot}>•</Text>
@@ -319,6 +343,24 @@ export default function PostCard({
                           >
                             <Text style={styles.replyActionText}>ตอบกลับ</Text>
                           </TouchableOpacity>
+                          {root.userId !== currentUserId && (
+                            <>
+                              <Text style={styles.commentDot}>•</Text>
+                              <TouchableOpacity
+                                activeOpacity={0.7}
+                                onPress={() =>
+                                  setReportModalConfig({
+                                    visible: true,
+                                    targetType: "comment",
+                                    targetId: root.id,
+                                    targetName: rootDisplayName,
+                                  })
+                                }
+                              >
+                                <Text style={styles.reportActionText}>รายงาน</Text>
+                              </TouchableOpacity>
+                            </>
+                          )}
                         </View>
                       </View>
                     </View>
@@ -388,6 +430,24 @@ export default function PostCard({
                                   >
                                     <Text style={styles.replyActionText}>ตอบกลับ</Text>
                                   </TouchableOpacity>
+                                  {reply.userId !== currentUserId && (
+                                    <>
+                                      <Text style={styles.commentDot}>•</Text>
+                                      <TouchableOpacity
+                                        activeOpacity={0.7}
+                                        onPress={() =>
+                                          setReportModalConfig({
+                                            visible: true,
+                                            targetType: "comment",
+                                            targetId: reply.id,
+                                            targetName: replyDisplayName,
+                                          })
+                                        }
+                                      >
+                                        <Text style={styles.reportActionText}>รายงาน</Text>
+                                      </TouchableOpacity>
+                                    </>
+                                  )}
                                 </View>
                               </View>
                             </View>
@@ -446,6 +506,33 @@ export default function PostCard({
           </View>
         </View>
       )}
+
+      {/* Report and Block Modal */}
+      <ReportBlockModal
+        visible={reportModalConfig.visible}
+        onClose={() =>
+          setReportModalConfig((prev) => ({ ...prev, visible: false }))
+        }
+        targetType={reportModalConfig.targetType}
+        targetId={reportModalConfig.targetId}
+        targetName={reportModalConfig.targetName}
+        onBlockUser={async (targetId, targetName) => {
+          if (blockUser) {
+            const authorToBlock =
+              reportModalConfig.targetType === "post" ? post.authorId : targetId;
+            await blockUser(authorToBlock, targetName);
+          }
+        }}
+        onReportSubmitted={async (reportData) => {
+          if (submitReport) {
+            await submitReport({
+              ...reportData,
+              postId: post.id,
+              postContent: post.content,
+            });
+          }
+        }}
+      />
     </View>
   );
 }
@@ -809,5 +896,10 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: "800",
     fontSize: 13,
+  },
+  reportActionText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.mutedForeground,
   },
 });

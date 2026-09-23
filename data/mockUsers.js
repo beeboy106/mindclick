@@ -7,7 +7,7 @@ export const mockUsers = [
     faculty: "คณะวิทยาศาสตร์",
     image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80",
     gender: "female",
-    bio: "ชอบฟังเพลงยุค 90s ดื่มกาแฟดริป และเที่ยวธรรมชาติวันหยุด วันว่างๆ ชอบอ่านหนังสือพัฒนาตัวเอง ☕🌿",
+    bio: "ชอบฟังเพลงยุค 90s ดื่มกาแฟดริป และเที่ยวธรรมชาติวันหยุด วันว่างๆ ชอบอ่านหนังสือพัฒนาตัวเอง",
     socialLinks: {
       instagram: "fahsay.vibes",
       line: "fahsay_99",
@@ -88,7 +88,7 @@ export const mockUsers = [
     faculty: "คณะสถาปัตยกรรมศาสตร์",
     image: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&auto=format&fit=crop&q=80",
     gender: "female",
-    bio: "Graphic Designer & Cat lover 🐱 ชื่นชอบศิลปะ งานคราฟต์ และนิทรรศการ เข้ากับคนง่ายแต่มีมุม Introvert",
+    bio: "Graphic Designer & Cat lover ชื่นชอบศิลปะ งานคราฟต์ และนิทรรศการ เข้ากับคนง่ายแต่มีมุม Introvert",
     socialLinks: {
       instagram: "praew.craft",
       line: "praewcat",
@@ -128,7 +128,7 @@ export const mockUsers = [
     faculty: "คณะศิลปศาสตร์ / มนุษยศาสตร์",
     image: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80",
     gender: "male",
-    bio: "นักดนตรีอิสระ ชอบเล่นกีตาร์ ท่องเที่ยวแบ็คแพ็ค และค้นพบเพลงใหม่ๆ ใช้ชีวิตเรียบง่าย มองโลกในแง่ดี 🎸",
+    bio: "นักดนตรีอิสระ ชอบเล่นกีตาร์ ท่องเที่ยวแบ็คแพ็ค และค้นพบเพลงใหม่ๆ ใช้ชีวิตเรียบง่าย มองโลกในแง่ดี",
     socialLinks: {
       instagram: "mix.guitar",
       tiktok: "mixmusic_th",
@@ -166,7 +166,7 @@ export const mockUsers = [
     faculty: "คณะบริหารธุรกิจ / บัญชี",
     image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&auto=format&fit=crop&q=80",
     gender: "female",
-    bio: "นักการตลาดดิจิทัล ชอบกินของอร่อย ทำขนมเบเกอรี่ และดูซีรีส์เกาหลี คุยสนุก เป็นมิตรกับทุกคน 🧁🍰",
+    bio: "นักการตลาดดิจิทัล ชอบกินของอร่อย ทำขนมเบเกอรี่ และดูซีรีส์เกาหลี คุยสนุก เป็นมิตรกับทุกคน",
     socialLinks: {
       instagram: "rinlada.bakes",
       facebook: "Rinlada Wongsuwan",

@@ -22,6 +22,8 @@ try {
 }
 
 const AUTH_STORAGE_KEY = "@friendq_auth_session";
+const BLOCKED_USERS_STORAGE_PREFIX = "@mindclick_blocked_users_";
+const REPORTS_STORAGE_KEY = "@mindclick_reports_history";
 
 // -------------------------------------------------------------
 // Google Client ID
@@ -36,14 +38,22 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
+  const [blockedUserIds, setBlockedUserIds] = useState([]);
 
-  // โหลด Session จาก AsyncStorage ตอนเริ่มต้นแอป
+  // โหลด Session และรายการที่ถูกบล็อกจาก AsyncStorage ตอนเริ่มต้นแอป
   useEffect(() => {
     async function loadStoredSession() {
       try {
         const storedUser = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
         if (storedUser) {
-          setUser(JSON.parse(storedUser));
+          const parsed = JSON.parse(storedUser);
+          setUser(parsed);
+          if (parsed?.id) {
+            const blockedRaw = await AsyncStorage.getItem(`${BLOCKED_USERS_STORAGE_PREFIX}${parsed.id}`);
+            if (blockedRaw) {
+              setBlockedUserIds(JSON.parse(blockedRaw));
+            }
+          }
         }
       } catch (e) {
         console.error("Failed to load stored auth session:", e);
@@ -73,6 +83,12 @@ export function AuthProvider({ children }) {
       await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
       setUser(userData);
       setAuthError(null);
+      if (userData?.id) {
+        const blockedRaw = await AsyncStorage.getItem(`${BLOCKED_USERS_STORAGE_PREFIX}${userData.id}`);
+        if (blockedRaw) {
+          setBlockedUserIds(JSON.parse(blockedRaw));
+        }
+      }
     } catch (e) {
       console.error("Error saving auth session:", e);
     }
@@ -95,8 +111,74 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // สลับโหมดใช้งานจริง / โหมดสาธิตพรีเซนต์อาจารย์
+  const toggleDemoMode = async () => {
+    const currentMode = Boolean(user?.isDemoMode);
+    const nextMode = !currentMode;
+    const updated = await updateUserSession({ isDemoMode: nextMode });
+    return updated?.isDemoMode;
+  };
 
-  // เข้าสู่ระบบแบบจำลอง (Demo Google Account)
+  // บล็อกผู้ใช้ (Block User)
+  const blockUser = async (targetUserId, targetName = "ผู้ใช้งาน") => {
+    if (!targetUserId) return;
+    const nextBlocked = Array.from(new Set([...blockedUserIds, targetUserId]));
+    setBlockedUserIds(nextBlocked);
+    if (user?.id) {
+      await AsyncStorage.setItem(
+        `${BLOCKED_USERS_STORAGE_PREFIX}${user.id}`,
+        JSON.stringify(nextBlocked)
+      );
+    }
+    return nextBlocked;
+  };
+
+  // ปลดบล็อกผู้ใช้ (Unblock User)
+  const unblockUser = async (targetUserId) => {
+    if (!targetUserId) return;
+    const nextBlocked = blockedUserIds.filter((id) => id !== targetUserId);
+    setBlockedUserIds(nextBlocked);
+    if (user?.id) {
+      await AsyncStorage.setItem(
+        `${BLOCKED_USERS_STORAGE_PREFIX}${user.id}`,
+        JSON.stringify(nextBlocked)
+      );
+    }
+    return nextBlocked;
+  };
+
+  // ส่งรายงานพฤติกรรมหรือเนื้อหา (Report Content/User)
+  const submitReport = async (reportData) => {
+    try {
+      const raw = await AsyncStorage.getItem(REPORTS_STORAGE_KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      const newReport = {
+        id: `rep_${Date.now()}`,
+        reporterId: user?.id || "guest",
+        ...reportData,
+      };
+      const updated = [newReport, ...list];
+      await AsyncStorage.setItem(REPORTS_STORAGE_KEY, JSON.stringify(updated));
+      return true;
+    } catch (e) {
+      console.error("Error saving report:", e);
+      return false;
+    }
+  };
+
+  // ยืนยันอีเมลนักศึกษา
+  const verifyStudentEmail = async (studentEmail) => {
+    if (!studentEmail || !studentEmail.includes("@")) return false;
+    const isEduDomain = studentEmail.endsWith(".ac.th") || studentEmail.includes(".edu");
+    const updatedUser = await updateUserSession({
+      studentEmail: studentEmail.trim().toLowerCase(),
+      isStudentVerified: true,
+      isEduDomain,
+    });
+    return updatedUser;
+  };
+
+  // เข้าสู่ระบบแบบจำลอง (Demo Google Account สำหรับพรีเซนต์อาจารย์)
   const signInWithDemo = async (customUser) => {
     let demoId = "118198207968490232896";
     try {
@@ -115,6 +197,8 @@ export function AuthProvider({ children }) {
       email: "beemnum2548@gmail.com",
       image: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
       provider: "google",
+      isDemoMode: true, // กำหนดเป็นโหมดสาธิตสำหรับนำเสนออาจารย์
+      isStudentVerified: true,
     };
     await saveUserSession(demoGoogleUser);
   };
@@ -280,6 +364,13 @@ export function AuthProvider({ children }) {
         user,
         isLoading,
         authError,
+        isDemoMode: Boolean(user?.isDemoMode),
+        toggleDemoMode,
+        blockedUserIds,
+        blockUser,
+        unblockUser,
+        submitReport,
+        verifyStudentEmail,
         signInWithGoogle,
         signInWithDemo,
         signOut,

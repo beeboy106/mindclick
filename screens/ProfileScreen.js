@@ -72,7 +72,7 @@ function GalleryThumbItem({ img, onSelect, onRemove }) {
 }
 
 export default function ProfileScreen({ navigation }) {
-  const { user, signOut } = useAuth();
+  const { user, signOut, isDemoMode, toggleDemoMode, verifyStudentEmail } = useAuth();
   const {
     profile,
     updateProfile,
@@ -108,6 +108,31 @@ export default function ProfileScreen({ navigation }) {
   const [avatarUri, setAvatarUri] = useState(profile.image || user?.image || null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+  const [studentEmailInput, setStudentEmailInput] = useState(user?.studentEmail || "");
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
+
+  const handleVerifyStudentEmail = async () => {
+    if (!studentEmailInput.trim() || !studentEmailInput.includes("@")) {
+      Alert.alert("กรุณากรอกอีเมล", "โปรดระบุอีเมลนักศึกษาที่ถูกต้อง");
+      return;
+    }
+    setIsVerifyingEmail(true);
+    try {
+      const updated = await verifyStudentEmail(studentEmailInput.trim());
+      if (updated) {
+        Alert.alert(
+          "ยืนยันตัวตนสำเร็จ",
+          `ยืนยันอีเมลนักศึกษา ${studentEmailInput.trim()} เรียบร้อยแล้ว สัญลักษณ์นักศึกษาจะแสดงบนโปรไฟล์ของคุณ`
+        );
+      } else {
+        Alert.alert("เกิดข้อผิดพลาด", "ไม่สามารถยืนยันอีเมลได้ในขณะนี้");
+      }
+    } catch (e) {
+      Alert.alert("เกิดข้อผิดพลาด", "ไม่สามารถยืนยันอีเมลได้ในขณะนี้");
+    } finally {
+      setIsVerifyingEmail(false);
+    }
+  };
   const [socialLinks, setSocialLinks] = useState({
     instagram: profile.socialLinks?.instagram || "",
     facebook: profile.socialLinks?.facebook || "",
@@ -471,6 +496,60 @@ export default function ProfileScreen({ navigation }) {
           <Ionicons name="chevron-forward" size={20} color={colors.ink} />
         </TouchableOpacity>
 
+        {/* Form: Student Verification (.ac.th email) */}
+        <View style={styles.formCard}>
+          <View style={styles.sectionHeaderRow}>
+            <Ionicons name="school-outline" size={16} color={colors.primary} />
+            <Text style={styles.sectionTitle}>ยืนยันสถานะนิสิต / นักศึกษา</Text>
+          </View>
+
+          {user?.isStudentVerified ? (
+            <View style={styles.verifiedStudentBanner}>
+              <Ionicons name="checkmark-circle" size={24} color="#16a34a" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.verifiedStudentTitle}>
+                  ยืนยันสถานะนักศึกษาเรียบร้อยแล้ว
+                </Text>
+                <Text style={styles.verifiedStudentEmail}>
+                  {user.studentEmail || user.email}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.verifyStudentForm}>
+              <Text style={styles.verifyStudentHint}>
+                ใช้อีเมลสถาบันการศึกษา (.ac.th หรือ .edu) เพื่อรับตราสัญลักษณ์นักศึกษาจริง
+              </Text>
+              <View style={styles.verifyStudentInputRow}>
+                <TextInput
+                  style={styles.verifyStudentInput}
+                  placeholder="เช่น student@chula.ac.th"
+                  placeholderTextColor={colors.mutedForeground}
+                  value={studentEmailInput}
+                  onChangeText={setStudentEmailInput}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                />
+                <TouchableOpacity
+                  style={[
+                    styles.verifyStudentBtn,
+                    !studentEmailInput.trim() && styles.verifyStudentBtnDisabled,
+                  ]}
+                  disabled={!studentEmailInput.trim() || isVerifyingEmail}
+                  onPress={handleVerifyStudentEmail}
+                  activeOpacity={0.85}
+                >
+                  {isVerifyingEmail ? (
+                    <ActivityIndicator size="small" color={colors.white} />
+                  ) : (
+                    <Text style={styles.verifyStudentBtnText}>ยืนยัน</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </View>
+
         {/* Form: Gender (Matching Image 3) */}
         <View style={styles.formCard}>
           <View style={styles.sectionHeaderRow}>
@@ -746,6 +825,46 @@ export default function ProfileScreen({ navigation }) {
           {/* Dev Mode Sandbox Actions */}
           <View style={styles.sandboxDevBox}>
             <Text style={styles.sandboxTitle}>SANDBOX ควบคุมการทดสอบ (DEV MODE)</Text>
+
+            {/* System Dual-Mode Switcher (Real vs Advisor Demo Mode) */}
+            <View style={styles.modeSwitchBox}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modeSwitchTitle}>
+                  โหมดระบบ: {isDemoMode ? "โหมดสาธิต (Advisor Demo)" : "โหมดใช้งานจริง (Real Mode)"}
+                </Text>
+                <Text style={styles.modeSwitchSubtitle}>
+                  {isDemoMode
+                    ? "เปิดใช้ Mock ผู้ใช้และบอทจำลองสำหรับสาธิตให้อาจารย์ดู"
+                    : "ข้อมูลสะอาด 100% สำหรับผู้ใช้จริง ไม่มี Mock หรือบอท"}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[
+                  styles.modeSwitchBtn,
+                  isDemoMode ? styles.modeSwitchBtnDemo : styles.modeSwitchBtnReal,
+                ]}
+                activeOpacity={0.85}
+                onPress={async () => {
+                  const nextMode = await toggleDemoMode();
+                  Alert.alert(
+                    "สลับโหมดสำเร็จ",
+                    nextMode
+                      ? "เข้าสู่ 'โหมดสาธิตพรีเซนต์อาจารย์' ข้อมูลจำลองและบอทพร้อมใช้งาน"
+                      : "เข้าสู่ 'โหมดใช้งานจริง' ล้างข้อมูลจำลองและเตรียมพร้อมสำหรับการทดสอบจริง"
+                  );
+                }}
+              >
+                <Ionicons
+                  name={isDemoMode ? "play-outline" : "flash-outline"}
+                  size={14}
+                  color={colors.white}
+                />
+                <Text style={styles.modeSwitchBtnText}>
+                  {isDemoMode ? "สลับเป็นโหมดจริง" : "สลับเป็นโหมดสาธิต"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <Text style={styles.sandboxSubText}>
               จำลองสถานะเวลา 7 วัน และโควต้าโพสต์สำหรับการทดสอบ:
             </Text>
@@ -1573,5 +1692,109 @@ const styles = StyleSheet.create({
   },
   statusTextActive: {
     color: colors.ink,
+  },
+  verifiedStudentBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    backgroundColor: "#f0fdf4",
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#86efac",
+    marginTop: 8,
+  },
+  verifiedStudentTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#166534",
+  },
+  verifiedStudentEmail: {
+    fontSize: 12,
+    color: "#15803d",
+    marginTop: 2,
+  },
+  verifyStudentForm: {
+    marginTop: 8,
+  },
+  verifyStudentHint: {
+    fontSize: 12,
+    color: colors.mutedForeground,
+    marginBottom: 10,
+    lineHeight: 18,
+  },
+  verifyStudentInputRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+  },
+  verifyStudentInput: {
+    flex: 1,
+    height: 44,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    fontSize: 13,
+    color: colors.ink,
+  },
+  verifyStudentBtn: {
+    height: 44,
+    paddingHorizontal: 16,
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  verifyStudentBtnDisabled: {
+    backgroundColor: "#94a3b8",
+  },
+  verifyStudentBtnText: {
+    color: colors.white,
+    fontWeight: "800",
+    fontSize: 13,
+  },
+  modeSwitchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#ffffff",
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    marginTop: 10,
+    marginBottom: 14,
+    gap: 10,
+  },
+  modeSwitchTitle: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: colors.ink,
+  },
+  modeSwitchSubtitle: {
+    fontSize: 11,
+    color: colors.mutedForeground,
+    marginTop: 2,
+  },
+  modeSwitchBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  modeSwitchBtnDemo: {
+    backgroundColor: colors.primary,
+  },
+  modeSwitchBtnReal: {
+    backgroundColor: "#059669",
+  },
+  modeSwitchBtnText: {
+    color: colors.white,
+    fontWeight: "800",
+    fontSize: 12,
   },
 });

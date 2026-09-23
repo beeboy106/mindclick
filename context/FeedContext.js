@@ -213,38 +213,37 @@ const DEFAULT_FRIENDS = [
 const FeedContext = createContext();
 
 export function FeedProvider({ children }) {
-  const { user } = useAuth();
+  const { user, isDemoMode = false, blockedUserIds = [] } = useAuth();
   const { profile, usersPool } = useData();
   const { isBubbleUser } = usePremium();
   const userId = user?.id || "guest";
 
+  const postsKey = isDemoMode ? "@mindclick_demo_feed_posts" : "@mindclick_prod_feed_posts";
+  const friendsKey = isDemoMode ? `@mindclick_demo_friends_${userId}` : `@mindclick_prod_friends_${userId}`;
+  const chatsKey = isDemoMode ? `@mindclick_demo_chats_${userId}` : `@mindclick_prod_chats_${userId}`;
+
   const [posts, setPosts] = useState([]);
   const [dailyPostCount, setDailyPostCount] = useState(0);
   const [userStatus, setUserStatusState] = useState("online"); // 'online' | 'busy' | 'offline'
-  const [friends, setFriends] = useState(DEFAULT_FRIENDS);
+  const [friends, setFriends] = useState([]);
   const [chats, setChats] = useState({}); // { [friendId]: [ { id, senderId, text, createdAt } ] }
   const [isLoading, setIsLoading] = useState(true);
 
-  // โหลดโพสต์ สถานะ และประวัติแชทจาก AsyncStorage
+  // โหลดโพสต์ สถานะ และประวัติแชทจาก AsyncStorage ตามโหมด (Real / Demo)
   useEffect(() => {
     async function loadData() {
+      setIsLoading(true);
       try {
         // 1. โหลดโพสต์
-        const storedPosts = await AsyncStorage.getItem(POSTS_STORAGE_KEY);
+        const storedPosts = await AsyncStorage.getItem(postsKey);
         if (storedPosts) {
           const parsed = JSON.parse(storedPosts);
-          // ตรวจสอบว่ามีโพสต์กระทู้หรือไม่ หากยังไม่มีให้รวม INITIAL_POSTS ใหม่เข้าไปด้วย
-          const hasTopicPosts = parsed.some((p) => p.topicId);
-          if (!hasTopicPosts) {
-            const combined = [...parsed, ...INITIAL_POSTS.filter((ip) => ip.topicId)];
-            setPosts(combined);
-            await AsyncStorage.setItem(POSTS_STORAGE_KEY, JSON.stringify(combined));
-          } else {
-            setPosts(parsed);
-          }
+          setPosts(parsed);
         } else {
-          setPosts(INITIAL_POSTS);
-          await AsyncStorage.setItem(POSTS_STORAGE_KEY, JSON.stringify(INITIAL_POSTS));
+          // โหมดสาธิตพรีเซนต์อาจารย์ = มี Mock Posts เริ่มต้น, โหมดใช้งานจริง = ว่างเปล่าสำหรับผู้ใช้จริง
+          const initialPostsData = isDemoMode ? INITIAL_POSTS : [];
+          setPosts(initialPostsData);
+          await AsyncStorage.setItem(postsKey, JSON.stringify(initialPostsData));
         }
 
         // 2. โหลดสถานะของผู้ใช้
@@ -253,47 +252,49 @@ export function FeedProvider({ children }) {
           setUserStatusState(storedStatus);
         }
 
-        // 3. โหลดรายชื่อเพื่อนและแชท
-        const storedFriends = await AsyncStorage.getItem(`${FRIENDS_STORAGE_PREFIX}${userId}`);
+        // 3. โหลดรายชื่อเพื่อน
+        const storedFriends = await AsyncStorage.getItem(friendsKey);
         if (storedFriends) {
           setFriends(JSON.parse(storedFriends));
         } else {
-          setFriends(DEFAULT_FRIENDS);
-          await AsyncStorage.setItem(`${FRIENDS_STORAGE_PREFIX}${userId}`, JSON.stringify(DEFAULT_FRIENDS));
+          const initialFriendsData = isDemoMode ? DEFAULT_FRIENDS : [];
+          setFriends(initialFriendsData);
+          await AsyncStorage.setItem(friendsKey, JSON.stringify(initialFriendsData));
         }
 
         // 4. โหลดประวัติแชท
-        const storedChats = await AsyncStorage.getItem(`${CHATS_STORAGE_PREFIX}${userId}`);
+        const storedChats = await AsyncStorage.getItem(chatsKey);
         if (storedChats) {
           setChats(JSON.parse(storedChats));
         } else {
-          // เตรียมข้อความเริ่มต้นสำหรับเพื่อนบางคน
-          const initialChatMap = {
-            user_mock_aphisak: [
-              {
-                id: "msg_1",
-                senderId: "user_mock_aphisak",
-                text: "สวัสดีครับ เห็นว่าเราตอบคำถามตรงกันหลายด้านเลย",
-                createdAt: "15:30",
-              },
-              {
-                id: "msg_2",
-                senderId: "user_mock_aphisak",
-                text: "สะดวกคุยไหมครับเรื่องผลแมตช์",
-                createdAt: "15:38",
-              },
-            ],
-            user_mock_1: [
-              {
-                id: "msg_3",
-                senderId: "user_mock_1",
-                text: "สวัสดีค่ะ เราแมตช์กัน 4 ด้านเลย!",
-                createdAt: "10:20",
-              },
-            ],
-          };
+          const initialChatMap = isDemoMode
+            ? {
+                user_mock_aphisak: [
+                  {
+                    id: "msg_1",
+                    senderId: "user_mock_aphisak",
+                    text: "สวัสดีครับ เห็นว่าเราตอบคำถามตรงกันหลายด้านเลย",
+                    createdAt: "15:30",
+                  },
+                  {
+                    id: "msg_2",
+                    senderId: "user_mock_aphisak",
+                    text: "สะดวกคุยไหมครับเรื่องผลแมตช์",
+                    createdAt: "15:38",
+                  },
+                ],
+                user_mock_1: [
+                  {
+                    id: "msg_3",
+                    senderId: "user_mock_1",
+                    text: "สวัสดีค่ะ เราแมตช์กัน 4 ด้านเลย!",
+                    createdAt: "10:20",
+                  },
+                ],
+              }
+            : {};
           setChats(initialChatMap);
-          await AsyncStorage.setItem(`${CHATS_STORAGE_PREFIX}${userId}`, JSON.stringify(initialChatMap));
+          await AsyncStorage.setItem(chatsKey, JSON.stringify(initialChatMap));
         }
 
         // 5. โหลดสถิติจำนวนโพสต์ประจำวัน
@@ -312,13 +313,13 @@ export function FeedProvider({ children }) {
     }
 
     loadData();
-  }, [userId]);
+  }, [userId, isDemoMode, postsKey, friendsKey, chatsKey]);
 
   // ฟังก์ชันจัดเก็บโพสต์ลง AsyncStorage
   const savePosts = async (newPosts) => {
     setPosts(newPosts);
     try {
-      await AsyncStorage.setItem(POSTS_STORAGE_KEY, JSON.stringify(newPosts));
+      await AsyncStorage.setItem(postsKey, JSON.stringify(newPosts));
     } catch (err) {
       console.error("Error saving posts:", err);
     }
@@ -548,7 +549,7 @@ export function FeedProvider({ children }) {
             ? { ...f, lastMessage: text.trim(), lastTime: timeStr, unread: 0 }
             : f
         );
-        AsyncStorage.setItem(`${FRIENDS_STORAGE_PREFIX}${userId}`, JSON.stringify(updated)).catch(
+        AsyncStorage.setItem(friendsKey, JSON.stringify(updated)).catch(
           (err) => console.error("Error saving friends in sendMessage:", err)
         );
         return updated;
@@ -556,30 +557,30 @@ export function FeedProvider({ children }) {
 
       try {
         await AsyncStorage.setItem(
-          `${CHATS_STORAGE_PREFIX}${userId}`,
+          chatsKey,
           JSON.stringify(updatedChats)
         );
       } catch (err) {
         console.error("Error saving chats:", err);
       }
     },
-    [chats, userId]
+    [chats, userId, friendsKey, chatsKey]
   );
 
   // 7. มาร์กแชทว่าอ่านแล้ว
   const markAsRead = useCallback((friendId) => {
     setFriends((prev) => {
       const updated = prev.map((f) => (f.id === friendId ? { ...f, unread: 0 } : f));
-      AsyncStorage.setItem(`${FRIENDS_STORAGE_PREFIX}${userId}`, JSON.stringify(updated)).catch(
+      AsyncStorage.setItem(friendsKey, JSON.stringify(updated)).catch(
         (err) => console.error("Error saving friends in markAsRead:", err)
       );
       return updated;
     });
-  }, [userId]);
+  }, [friendsKey]);
 
-  // 8. เริ่มแชทกับคู่แมตช์ / บุคคลใหม่ (Spark Opener & Add to Friends)
+  // 8. เริ่มแชทกับคู่แมตช์ / บุคคลใหม่ (Spark Opener & Add to Friends & Dark Room Migration)
   const startChatWithUser = useCallback(
-    async (targetUser, initialMessage = null) => {
+    async (targetUser, initialMessage = null, initialChatHistory = null) => {
       if (!targetUser) return null;
       const targetId = targetUser.id || targetUser.visitorId;
       if (!targetId) return null;
@@ -594,12 +595,19 @@ export function FeedProvider({ children }) {
       let nextFriends = [...friends];
       const existingIndex = nextFriends.findIndex((f) => f.id === targetId);
 
+      const latestMessageText =
+        initialChatHistory && initialChatHistory.length > 0
+          ? initialChatHistory[initialChatHistory.length - 1].text
+          : initialMessage || "เริ่มบทสนทนาใหม่";
+
       if (existingIndex >= 0) {
         targetFriend = {
           ...nextFriends[existingIndex],
           name: displayName,
           avatar: displayAvatar,
-          ...(initialMessage ? { lastMessage: initialMessage, lastTime: timeStr, unread: 0 } : {}),
+          lastMessage: latestMessageText,
+          lastTime: timeStr,
+          unread: 0,
         };
         // เลื่อนคนนี้ขึ้นมาบนสุดของรายการแชท
         nextFriends.splice(existingIndex, 1);
@@ -610,7 +618,7 @@ export function FeedProvider({ children }) {
           name: displayName,
           avatar: displayAvatar,
           status: "online",
-          lastMessage: initialMessage || "เริ่มบทสนทนาใหม่",
+          lastMessage: latestMessageText,
           lastTime: timeStr,
           unread: 0,
         };
@@ -620,26 +628,31 @@ export function FeedProvider({ children }) {
       setFriends(nextFriends);
 
       let nextChats = { ...chats };
-      if (initialMessage && initialMessage.trim()) {
+      let currentMsgs = [...(nextChats[targetId] || [])];
+
+      if (initialChatHistory && Array.isArray(initialChatHistory) && initialChatHistory.length > 0) {
+        currentMsgs = [...currentMsgs, ...initialChatHistory];
+      } else if (initialMessage && initialMessage.trim()) {
         const newMsg = {
           id: `msg_${Date.now()}`,
           senderId: userId,
           text: initialMessage.trim(),
           createdAt: timeStr,
         };
-        const currentMsgs = nextChats[targetId] || [];
-        nextChats[targetId] = [...currentMsgs, newMsg];
-        setChats(nextChats);
+        currentMsgs.push(newMsg);
       }
+
+      nextChats[targetId] = currentMsgs;
+      setChats(nextChats);
 
       try {
         await AsyncStorage.setItem(
-          `${FRIENDS_STORAGE_PREFIX}${userId}`,
+          friendsKey,
           JSON.stringify(nextFriends)
         );
-        if (initialMessage && initialMessage.trim()) {
+        if (currentMsgs.length > 0) {
           await AsyncStorage.setItem(
-            `${CHATS_STORAGE_PREFIX}${userId}`,
+            chatsKey,
             JSON.stringify(nextChats)
           );
         }
@@ -649,7 +662,7 @@ export function FeedProvider({ children }) {
 
       return targetFriend;
     },
-    [friends, chats, userId]
+    [friends, chats, userId, friendsKey, chatsKey]
   );
 
   // คำนวณจำนวนแจ้งเตือนแชทที่ยังไม่ได้อ่าน
@@ -658,10 +671,25 @@ export function FeedProvider({ children }) {
   // คำนวณจำนวนโพสต์ที่เหลือสำหรับวันนี้
   const remainingPostsToday = isBubbleUser ? Infinity : Math.max(0, DAILY_POST_LIMIT - dailyPostCount);
 
+  // กรองโพสต์และคอมเมนต์ของผู้ใช้ที่ถูกบล็อก (Safety & App Store Compliance)
+  const visiblePosts = (posts || [])
+    .filter((post) => !blockedUserIds.includes(post.authorId))
+    .map((post) => ({
+      ...post,
+      comments: (post.comments || []).filter(
+        (c) => !blockedUserIds.includes(c.userId)
+      ),
+    }));
+
+  // กรองเพื่อนที่ถูกบล็อก
+  const visibleFriends = (friends || []).filter(
+    (f) => !blockedUserIds.includes(f.id)
+  );
+
   return (
     <FeedContext.Provider
       value={{
-        posts,
+        posts: visiblePosts,
         isLoading,
         userStatus,
         setUserStatus,
@@ -669,7 +697,7 @@ export function FeedProvider({ children }) {
         deletePost,
         toggleLike,
         addComment,
-        friends,
+        friends: visibleFriends,
         chats,
         sendMessage,
         markAsRead,
@@ -679,6 +707,7 @@ export function FeedProvider({ children }) {
         dailyPostLimit: DAILY_POST_LIMIT,
         remainingPostsToday,
         resetDailyPostQuota,
+        isDemoMode,
       }}
     >
       {children}

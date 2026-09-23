@@ -937,8 +937,17 @@ export function CrossBubbleProvider({ children }) {
 
           AsyncStorage.setItem(CROSS_BUBBLE_DARK_ROOMS_KEY, JSON.stringify(updatedWithAccepted));
 
-          // ซิงค์เพื่อนคนนี้เข้าสู่แชทหน้าหลัก (FeedContext)
+          // ซิงค์เพื่อนคนนี้เข้าสู่แชทหน้าหลัก (FeedContext) พร้อมย้ายประวัติแชทจากห้องมืด
           if (startChatWithUser) {
+            const darkHistory = (target.messages || [])
+              .filter((m) => !m.isSystem && m.text)
+              .map((m) => ({
+                id: m.id || `migrated_${Date.now()}_${Math.random()}`,
+                senderId: m.isMe ? (user?.id || "guest") : (target.feedUserId || target.partnerId),
+                text: m.text,
+                createdAt: m.createdAt,
+              }));
+
             startChatWithUser(
               {
                 id: target.feedUserId || target.partnerId,
@@ -947,7 +956,8 @@ export function CrossBubbleProvider({ children }) {
                 faculty: target.partnerRealFaculty,
                 status: "online",
               },
-              `สวัสดีครับ เป็นเพื่อนกันจากห้องมืดในโหมด Cross-Bubble แล้วนะ!`
+              `สวัสดีครับ เป็นเพื่อนกันจากห้องมืดในโหมด Cross-Bubble แล้วนะ!`,
+              darkHistory
             );
           }
 

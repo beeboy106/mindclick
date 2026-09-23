@@ -316,7 +316,10 @@ export default function MatchDetailScreen({ route, navigation }) {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionEyebrow}>MIND-INSIGHT</Text>
-              <Text style={styles.sectionTitle}>💡 จุดร่วมที่คุณทั้งสองตอบตรงกัน</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <Ionicons name="bulb-outline" size={18} color={colors.ink} />
+                <Text style={styles.sectionTitle}>จุดร่วมที่คุณทั้งสองตอบตรงกัน</Text>
+              </View>
             </View>
 
             <View style={styles.insightCard}>
@@ -460,7 +463,7 @@ export default function MatchDetailScreen({ route, navigation }) {
           >
             <Ionicons name="chatbubbles" size={20} color={colors.white} style={{ marginRight: 8 }} />
             <View>
-              <Text style={styles.sparkChatMainBtnText}>💬 เริ่มแชทด้วยจุดร่วม (Spark Chat)</Text>
+              <Text style={styles.sparkChatMainBtnText}>เริ่มแชทด้วยจุดร่วม (Spark Chat)</Text>
               <Text style={styles.sparkChatMainBtnSub}>เปิดห้องแชทพร้อมหัวข้อคุยแนะนำ</Text>
             </View>
           </TouchableOpacity>

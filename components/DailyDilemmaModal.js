@@ -72,13 +72,23 @@ export default function DailyDilemmaModal({ visible, onClose }) {
               streakStatus === "extinguished" && styles.streakBadgeExtinguished,
             ]}
           >
-            <Text style={styles.streakFlameIcon}>
-              {streakStatus === "active"
-                ? "🔥"
-                : streakStatus === "warning"
-                ? "⚠️"
-                : "💨"}
-            </Text>
+            <Ionicons
+              name={
+                streakStatus === "active"
+                  ? "flame"
+                  : streakStatus === "warning"
+                  ? "warning-outline"
+                  : "snow-outline"
+              }
+              size={16}
+              color={
+                streakStatus === "active"
+                  ? "#ea580c"
+                  : streakStatus === "warning"
+                  ? "#d97706"
+                  : "#64748b"
+              }
+            />
             <Text
               style={[
                 styles.streakText,
@@ -223,7 +233,7 @@ export default function DailyDilemmaModal({ visible, onClose }) {
 
               {/* Streak Flame Celebration Box */}
               <View style={styles.streakCelebrationBox}>
-                <Text style={styles.flameBigIcon}>🔥</Text>
+                <Ionicons name="flame" size={32} color="#ea580c" />
                 <View style={styles.streakCelebrationTextCol}>
                   <Text style={styles.streakCelebrationTitle}>
                     รักษาสตรีคไฟสำเร็จ! ({streakCount} วันติดต่อกัน)

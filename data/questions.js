@@ -1,9 +1,9 @@
 // FriendQ Question Data & Helpers (Pure JavaScript)
 
 export const answerOptions = [
-  { value: 0, label: "ไม่เห็นด้วย", icon: "👎" },
-  { value: 1, label: "เฉยๆ", icon: "😐" },
-  { value: 2, label: "เห็นด้วย", icon: "👍" },
+  { value: 0, label: "ไม่เห็นด้วย", icon: "thumbs-down-outline" },
+  { value: 1, label: "เฉยๆ", icon: "remove-outline" },
+  { value: 2, label: "เห็นด้วย", icon: "thumbs-up-outline" },
 ];
 
 export const categories = [
@@ -11,7 +11,7 @@ export const categories = [
     id: "lifestyle",
     name: "ด้านไลฟ์สไตล์",
     nameEN: "Lifestyle",
-    icon: "🌟",
+    icon: "sparkles-outline",
     description: "คำถามเกี่ยวกับรูปแบบการใช้ชีวิต การพักผ่อน และกิจกรรมที่ชอบ",
     color: "#c7f65a",
     textColor: "#17171c",
@@ -32,7 +32,7 @@ export const categories = [
     id: "personality",
     name: "ด้านบุคลิกภาพ",
     nameEN: "Personality",
-    icon: "🎭",
+    icon: "happy-outline",
     description: "คำถามเกี่ยวกับลักษณะนิสัย ค่านิยม และตัวตนของคุณ",
     color: "#3457ff",
     textColor: "#ffffff",
@@ -53,7 +53,7 @@ export const categories = [
     id: "interaction",
     name: "ด้านการปฏิสัมพันธ์",
     nameEN: "Interaction",
-    icon: "💕",
+    icon: "heart-outline",
     description: "คำถามเกี่ยวกับความสัมพันธ์และการมีปฏิสัมพันธ์กับคนใกล้ชิด",
     color: "#ff5c5c",
     textColor: "#ffffff",
@@ -74,7 +74,7 @@ export const categories = [
     id: "social",
     name: "ด้านการเข้าสังคม",
     nameEN: "Social",
-    icon: "👥",
+    icon: "people-outline",
     description: "คำถามเกี่ยวกับการเข้าสังคมและความสัมพันธ์กับผู้คน",
     color: "#17171c",
     textColor: "#ffffff",

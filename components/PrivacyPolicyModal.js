@@ -86,7 +86,7 @@ export default function PrivacyPolicyModal({
               {/* Introduction Badge */}
               <View style={styles.introBadge}>
                 <Text style={styles.introBadgeText}>
-                  ยินดีต้อนรับสู่ Mindclick 👋 เพื่อความโปร่งใสและสร้างความมั่นใจในการใช้งาน กรุณาทำความเข้าใจนโยบายการคุ้มครองข้อมูลด้านล่างนี้
+                  ยินดีต้อนรับสู่ Mindclick เพื่อความโปร่งใสและสร้างความมั่นใจในการใช้งาน กรุณาทำความเข้าใจนโยบายการคุ้มครองข้อมูลด้านล่างนี้
                 </Text>
               </View>
 

@@ -16,6 +16,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, shadows } from "../lib/theme";
 import { useFeed } from "../context/FeedContext";
+import { useAuth } from "../context/AuthContext";
+import ReportBlockModal from "./ReportBlockModal";
 import { getIcebreakerList } from "../lib/mindInsight";
 
 export default function ChatModal({
@@ -26,10 +28,12 @@ export default function ChatModal({
   suggestedIcebreakers = [],
 }) {
   const { friends, chats, sendMessage, markAsRead, startChatWithUser } = useFeed();
+  const { blockedUserIds = [], blockUser, submitReport } = useAuth();
 
   // State: activeFriend (null = ดูหน้ารวมรายชื่อเพื่อน, object = อยู่ในห้องแชทเดี่ยว)
   const [activeFriend, setActiveFriend] = useState(null);
   const [inputText, setInputText] = useState("");
+  const [reportModalVisible, setReportModalVisible] = useState(false);
   const flatListRef = useRef(null);
 
   // เมื่อเปิด Modal ถ้ามี initialFriendId ให้เปิดห้องแชทของคนนั้นทันที
@@ -69,6 +73,9 @@ export default function ChatModal({
     }, 100);
   };
 
+  const visibleFriends = (friends || []).filter(
+    (f) => !blockedUserIds.includes(f.id)
+  );
   const activeMessages = activeFriend ? chats[activeFriend.id] || [] : [];
   const prompts =
     suggestedIcebreakers && suggestedIcebreakers.length > 0
@@ -139,13 +146,23 @@ export default function ChatModal({
                     </View>
                   </View>
 
-                  <TouchableOpacity
-                    style={styles.closeBtn}
-                    onPress={onClose}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="close" size={22} color={colors.ink} />
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <TouchableOpacity
+                      style={styles.headerActionBtn}
+                      onPress={() => setReportModalVisible(true)}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="ellipsis-vertical" size={20} color={colors.ink} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.closeBtn}
+                      onPress={onClose}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="close" size={22} color={colors.ink} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 {/* Messages List */}
@@ -225,7 +242,10 @@ export default function ChatModal({
                           activeOpacity={0.8}
                           onPress={() => setInputText(pText)}
                         >
-                          <Text style={styles.icebreakerChipText}>💬 {pText}</Text>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                            <Ionicons name="chatbubble-ellipses-outline" size={12} color={colors.primary} />
+                            <Text style={styles.icebreakerChipText}>{pText}</Text>
+                          </View>
                         </TouchableOpacity>
                       ))}
                     </ScrollView>
@@ -276,7 +296,7 @@ export default function ChatModal({
 
                 {/* Friends List */}
                 <FlatList
-                  data={friends}
+                  data={visibleFriends}
                   keyExtractor={(item) => item.id}
                   contentContainerStyle={styles.friendsListContent}
                   renderItem={({ item }) => (
@@ -335,6 +355,28 @@ export default function ChatModal({
           </KeyboardAvoidingView>
         </SafeAreaView>
       </View>
+
+      <ReportBlockModal
+        visible={reportModalVisible}
+        onClose={() => setReportModalVisible(false)}
+        targetType="user"
+        targetId={activeFriend?.id}
+        targetName={activeFriend?.name || "ผู้ใช้งาน"}
+        onBlockUser={async (targetId, targetName) => {
+          if (blockUser && targetId) {
+            await blockUser(targetId, targetName);
+            setActiveFriend(null);
+          }
+        }}
+        onReportSubmitted={async (reportData) => {
+          if (submitReport) {
+            await submitReport({
+              ...reportData,
+              context: "1-on-1 chat",
+            });
+          }
+        }}
+      />
     </Modal>
   );
 }
@@ -383,6 +425,14 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#f3f4f6",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerActionBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
