@@ -11,7 +11,9 @@ export default function Header({ rightComponent, onProfilePress }) {
   const [imgError, setImgError] = useState(false);
 
   const displayImage = profile?.image || user?.image || null;
-  const displayName = profile?.name || user?.name || "ผู้ใช้งาน";
+  const userEmail = user?.email || profile?.email || "";
+  const displayName = userEmail || profile?.name || user?.name || "ผู้ใช้งาน";
+  const avatarInitial = displayName ? displayName.charAt(0).toUpperCase() : "U";
 
   useEffect(() => {
     setImgError(false);
@@ -48,11 +50,11 @@ export default function Header({ rightComponent, onProfilePress }) {
             ) : (
               <View style={styles.avatarFallback}>
                 <Text style={styles.avatarInitial}>
-                  {displayName ? displayName.charAt(0).toUpperCase() : "U"}
+                  {avatarInitial}
                 </Text>
               </View>
             )}
-            <Text style={styles.userNameText} numberOfLines={1}>
+            <Text style={styles.userNameText} numberOfLines={1} ellipsizeMode="tail">
               {displayName}
             </Text>
           </TouchableOpacity>
@@ -109,6 +111,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "#e2e8f0",
+    maxWidth: 210,
   },
   avatarImage: {
     width: 28,
@@ -125,13 +128,14 @@ const styles = StyleSheet.create({
   },
   avatarInitial: {
     color: colors.white,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "800",
   },
   userNameText: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: "700",
     color: colors.ink,
-    maxWidth: 130,
+    maxWidth: 155,
+    flexShrink: 1,
   },
 });
