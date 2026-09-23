@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Animated,
+  PanResponder,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -49,29 +51,98 @@ export default function FeedScreen({ navigation }) {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
 
   const { toggleCrossBubbleMode } = useCrossBubble();
-  const [pullDistance, setPullDistance] = useState(0);
-  const [isPullingTrigger, setIsPullingTrigger] = useState(false);
+  const scrollOffsetRef = useRef(0);
+  const pullAnim = useRef(new Animated.Value(0)).current;
+  const [pullDistanceState, setPullDistanceState] = useState(0);
+  const [isReadyToRelease, setIsReadyToRelease] = useState(false);
+
+  const PULL_THRESHOLD = 60;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        const isPullDown = gestureState.dy > 6;
+        const isVertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.3;
+        return scrollOffsetRef.current <= 5 && isPullDown && isVertical;
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        if (gestureState.dy > 0) {
+          const distance = Math.min(115, gestureState.dy * 0.65);
+          pullAnim.setValue(distance);
+          setPullDistanceState(distance);
+          setIsReadyToRelease(distance >= PULL_THRESHOLD);
+        }
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        const distance = gestureState.dy * 0.65;
+        if (distance >= PULL_THRESHOLD) {
+          // ดีดหน้าขึ้น (Snap/rebound back up) แล้วเปลี่ยนเข้าสู่โหมด Cross-Bubble
+          Animated.timing(pullAnim, {
+            toValue: 0,
+            duration: 220,
+            useNativeDriver: false,
+          }).start(() => {
+            setPullDistanceState(0);
+            setIsReadyToRelease(false);
+            toggleCrossBubbleMode(true);
+          });
+        } else {
+          // ดีดกลับขึ้นไป
+          Animated.spring(pullAnim, {
+            toValue: 0,
+            bounciness: 6,
+            useNativeDriver: false,
+          }).start(() => {
+            setPullDistanceState(0);
+            setIsReadyToRelease(false);
+          });
+        }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(pullAnim, {
+          toValue: 0,
+          useNativeDriver: false,
+        }).start(() => {
+          setPullDistanceState(0);
+          setIsReadyToRelease(false);
+        });
+      },
+    })
+  ).current;
 
   const handleScroll = (event) => {
-    const offsetY = event.nativeEvent.contentOffset.y;
-    if (offsetY < -15) {
-      setPullDistance(Math.abs(offsetY));
-      setIsPullingTrigger(offsetY < -80);
-    } else {
-      if (pullDistance > 0) {
-        setPullDistance(0);
-        setIsPullingTrigger(false);
-      }
+    const y = event.nativeEvent.contentOffset.y;
+    scrollOffsetRef.current = y;
+    if (y < -8) {
+      const dist = Math.min(115, Math.abs(y));
+      pullAnim.setValue(dist);
+      setPullDistanceState(dist);
+      setIsReadyToRelease(dist >= PULL_THRESHOLD);
     }
   };
 
   const handleScrollEndDrag = (event) => {
-    const offsetY = event.nativeEvent.contentOffset.y;
-    if (offsetY < -80) {
-      toggleCrossBubbleMode(true);
+    const y = event.nativeEvent.contentOffset.y;
+    if (y < -PULL_THRESHOLD || pullDistanceState >= PULL_THRESHOLD) {
+      Animated.timing(pullAnim, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: false,
+      }).start(() => {
+        setPullDistanceState(0);
+        setIsReadyToRelease(false);
+        toggleCrossBubbleMode(true);
+      });
+    } else if (y < 0 || pullDistanceState > 0) {
+      Animated.spring(pullAnim, {
+        toValue: 0,
+        useNativeDriver: false,
+      }).start(() => {
+        setPullDistanceState(0);
+        setIsReadyToRelease(false);
+      });
     }
-    setPullDistance(0);
-    setIsPullingTrigger(false);
   };
 
   const currentTopic =
@@ -193,6 +264,16 @@ export default function FeedScreen({ navigation }) {
 
         {/* Right Header Controls */}
         <View style={styles.headerRightControls}>
+          {/* Cross Bubble Switch Button: กรอบสี่เหลี่ยมเขียวมะนาว ชื่อสีขาว */}
+          <TouchableOpacity
+            style={styles.crossBubbleHeaderBtn}
+            activeOpacity={0.8}
+            onPress={() => toggleCrossBubbleMode(true)}
+          >
+            <Ionicons name="moon" size={13} color="#a3e635" />
+            <Text style={styles.crossBubbleHeaderBtnText}>Cross Bubble</Text>
+          </TouchableOpacity>
+
           {/* Chat Notification Button */}
           <TouchableOpacity
             style={styles.chatIconBtn}
@@ -209,40 +290,74 @@ export default function FeedScreen({ navigation }) {
         </View>
       </View>
 
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        onScroll={handleScroll}
-        onScrollEndDrag={handleScrollEndDrag}
-        scrollEventThrottle={16}
-      >
-        {/* Pull-down Vanish Mode Indicator (Pure Gesture) */}
-        {pullDistance > 15 && (
-          <View
-            style={[
-              styles.pullIndicatorBox,
-              isPullingTrigger && styles.pullIndicatorBoxTriggered,
-            ]}
-          >
-            <Ionicons
-              name={isPullingTrigger ? "sparkles" : "arrow-down-circle-outline"}
-              size={16}
-              color={isPullingTrigger ? "#a3e635" : "#8b5cf6"}
-            />
-            <Text
+      {/* PanResponder Touch Receiver Area */}
+      <View {...panResponder.panHandlers} style={{ flex: 1 }}>
+        {/* Pull-down Vanish Drawer (Lime to Black Gradient) */}
+        <Animated.View
+          style={[
+            styles.pullDrawerContainer,
+            {
+              height: pullAnim,
+            },
+          ]}
+        >
+          {/* Vertical Lime Green to Deep Black Gradient */}
+          <View style={StyleSheet.absoluteFill} pointerEvents="none">
+            {[
+              "#a3e635",
+              "#84cc16",
+              "#65a30d",
+              "#4d7c0f",
+              "#365314",
+              "#1e3110",
+              "#142211",
+              "#0e1919",
+              "#090f19",
+              "#090d16",
+            ].map((c, i) => (
+              <View key={i} style={{ flex: 1, backgroundColor: c }} />
+            ))}
+          </View>
+
+          {/* Drawer Content with Instructions */}
+          <View style={styles.pullDrawerContent}>
+            <View
               style={[
-                styles.pullIndicatorText,
-                isPullingTrigger && styles.pullIndicatorTextTriggered,
+                styles.pullDrawerBadge,
+                isReadyToRelease && styles.pullDrawerBadgeReady,
               ]}
             >
-              {isPullingTrigger
-                ? "ปล่อยนิ้วเพื่อเข้าสู่โหมด Cross-Bubble"
-                : "ดึงลงอีกนิดเพื่อเข้าสู่โหมด Cross-Bubble"}
-            </Text>
+              <Ionicons
+                name={isReadyToRelease ? "sparkles" : "arrow-down"}
+                size={16}
+                color={isReadyToRelease ? "#a3e635" : "#090d16"}
+              />
+            </View>
+
+            <View style={styles.pullDrawerTextCol}>
+              <Text style={styles.pullDrawerTitle}>
+                {isReadyToRelease
+                  ? "ปล่อยนิ้วเพื่อเข้าสู่โหมด Cross-Bubble"
+                  : "ดึงลงเพื่อเข้าสู่โหมด Cross-Bubble"}
+              </Text>
+              <Text style={styles.pullDrawerDesc}>
+                {isReadyToRelease
+                  ? "ปล่อยเพื่อสลับธีมมืดและเปิดพื้นที่ Underground Lounge ทันที"
+                  : "ดึงหน้าจอลงอีกนิดเพื่อเปิดใช้งานโหมดลับข้ามคณะ"}
+              </Text>
+            </View>
           </View>
-        )}
-        {/* SECTION 1: Friends Online / Chat Quick Access Bar */}
+        </Animated.View>
+
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          onScrollEndDrag={handleScrollEndDrag}
+          scrollEventThrottle={16}
+        >
+          {/* SECTION 1: Friends Online / Chat Quick Access Bar */}
         <View style={styles.friendsSection}>
           <View style={styles.friendsSectionHeader}>
             <Text style={styles.sectionTitle}>เพื่อนที่เคยคุยด้วย (Friends)</Text>
@@ -514,6 +629,7 @@ export default function FeedScreen({ navigation }) {
           ))
         )}
       </ScrollView>
+      </View>
 
       {/* Fullscreen Photo Viewer */}
       <GalleryViewer
@@ -574,48 +690,67 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  crossBubbleSwitchBtn: {
+  crossBubbleHeaderBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    backgroundColor: "#f5f3ff",
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-    borderRadius: 16,
+    gap: 6,
+    backgroundColor: "#090d16",
     borderWidth: 1.5,
-    borderColor: "#ddd6fe",
+    borderColor: "#a3e635",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginRight: 4,
   },
-  crossBubbleSwitchText: {
-    color: "#7c3aed",
-    fontSize: 11,
+  crossBubbleHeaderBtnText: {
+    color: "#ffffff",
+    fontSize: 12,
     fontWeight: "800",
+    letterSpacing: 0.2,
   },
-  pullIndicatorBox: {
+  pullDrawerContainer: {
+    width: "100%",
+    backgroundColor: "#090d16",
+    justifyContent: "center",
+    borderBottomWidth: 1.5,
+    borderBottomColor: "#1e293b",
+    overflow: "hidden",
+  },
+  pullDrawerContent: {
     flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    gap: 12,
+  },
+  pullDrawerBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: "#a3e635",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    backgroundColor: "#f5f3ff",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginTop: 8,
-    marginBottom: 6,
-    borderWidth: 1.5,
-    borderColor: "#c084fc",
   },
-  pullIndicatorBoxTriggered: {
+  pullDrawerBadgeReady: {
     backgroundColor: "#090d16",
+    borderWidth: 1.5,
     borderColor: "#a3e635",
   },
-  pullIndicatorText: {
-    color: "#7c3aed",
-    fontSize: 11.5,
-    fontWeight: "800",
+  pullDrawerTextCol: {
+    flex: 1,
   },
-  pullIndicatorTextTriggered: {
-    color: "#a3e635",
+  pullDrawerTitle: {
+    color: "#ffffff",
+    fontSize: 13,
+    fontWeight: "900",
+    marginBottom: 2,
+    letterSpacing: 0.2,
+  },
+  pullDrawerDesc: {
+    color: "#cbd5e1",
+    fontSize: 11,
+    fontWeight: "600",
+    lineHeight: 15,
   },
   chatIconBtn: {
     position: "relative",
