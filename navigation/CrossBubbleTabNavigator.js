@@ -17,19 +17,19 @@ export default function CrossBubbleTabNavigator() {
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: "#a3e635",
-        tabBarInactiveTintColor: "#64748b",
+        tabBarActiveTintColor: "#818CF8",
+        tabBarInactiveTintColor: "#64748B",
         tabBarStyle: {
-          backgroundColor: "#090d16",
-          borderTopWidth: 1.5,
-          borderTopColor: "#1e293b",
-          height: 62 + insets.bottom,
+          backgroundColor: "#0F172A",
+          borderTopWidth: 1,
+          borderTopColor: "#1E293B",
+          height: 60 + insets.bottom,
           paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
           paddingTop: 6,
         },
         tabBarLabelStyle: {
           fontSize: 10.5,
-          fontWeight: "800",
+          fontWeight: "700",
           marginTop: 2,
         },
         tabBarIcon: ({ focused, color, size }) => {
@@ -45,14 +45,14 @@ export default function CrossBubbleTabNavigator() {
             iconName = focused ? "shield-checkmark" : "shield-checkmark-outline";
           }
 
-          return <Ionicons name={iconName} size={21} color={color} />;
+          return <Ionicons name={iconName} size={20} color={color} />;
         },
       })}
     >
       <Tab.Screen
         name="BlindLoungeTab"
         component={BlindLoungeScreen}
-        options={{ tabBarLabel: "แชทกลุ่ม" }}
+        options={{ tabBarLabel: "ห้องสังสรรค์" }}
       />
       <Tab.Screen
         name="WhisperWallTab"

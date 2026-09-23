@@ -9,13 +9,19 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useCrossBubble } from "../../context/CrossBubbleContext";
 import { useAuth } from "../../context/AuthContext";
 import { useData } from "../../context/DataContext";
 
 export default function MyAliasScreen() {
-  const { userAlias, regenerateAlias, changeMascot, mascotOptions, toggleCrossBubbleMode } = useCrossBubble();
+  const {
+    userAlias,
+    regenerateAlias,
+    changeMascot,
+    mascotOptions,
+    toggleCrossBubbleMode,
+  } = useCrossBubble();
   const { user } = useAuth();
   const { profile } = useData();
 
@@ -28,16 +34,16 @@ export default function MyAliasScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <StatusBar barStyle="light-content" backgroundColor="#090d16" translucent={true} />
+      <StatusBar barStyle="light-content" backgroundColor="#0F172A" translucent={true} />
 
       {/* Header */}
       <View style={styles.topHeader}>
         <View style={styles.titleRow}>
           <View style={styles.headerIconCircle}>
-            <MaterialCommunityIcons name="shield-account-outline" size={20} color="#a3e635" />
+            <Ionicons name="shield-checkmark-outline" size={18} color="#818CF8" />
           </View>
           <View>
-            <Text style={styles.headerTitle}>โปรไฟล์ลับ (MY ALIAS)</Text>
+            <Text style={styles.headerTitle}>โปรไฟล์ลับ</Text>
             <Text style={styles.headerSubtitle}>จัดการตัวตนนามแฝงและสัญลักษณ์ประจำตัว</Text>
           </View>
         </View>
@@ -48,25 +54,27 @@ export default function MyAliasScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Big Persona Card */}
+        {/* Persona Card */}
         <View style={styles.personaCard}>
           <View style={styles.mascotBigCircle}>
             <Ionicons
               name={userAlias?.icon || "finger-print-outline"}
-              size={38}
-              color="#a3e635"
+              size={36}
+              color="#818CF8"
             />
           </View>
 
           <Text style={styles.aliasNickname}>{userAlias?.nickname || "นิรนาม"}</Text>
 
           <View style={styles.facultyBadge}>
-            <Ionicons name="school-outline" size={12} color="#38bdf8" />
-            <Text style={styles.facultyBadgeText}>{userAlias?.faculty || "มหาวิทยาลัย"}</Text>
+            <Ionicons name="school-outline" size={12} color="#818CF8" />
+            <Text style={styles.facultyBadgeText}>
+              {userAlias?.faculty || "มหาวิทยาลัย"}
+            </Text>
           </View>
 
           <View style={styles.maskedRealBox}>
-            <Ionicons name="lock-closed" size={13} color="#94a3b8" />
+            <Ionicons name="lock-closed-outline" size={13} color="#94A3B8" />
             <Text style={styles.maskedRealText}>
               ตัวตนจริงที่ซ่อนอยู่: <Text style={styles.maskedRealName}>{realDisplayName}</Text>
             </Text>
@@ -78,7 +86,7 @@ export default function MyAliasScreen() {
             activeOpacity={0.8}
             onPress={handleReroll}
           >
-            <Ionicons name="dice-outline" size={16} color="#090d16" />
+            <Ionicons name="dice-outline" size={15} color="#FFFFFF" />
             <Text style={styles.rerollBtnText}>สุ่มฉายาใหม่ (Re-roll)</Text>
           </TouchableOpacity>
         </View>
@@ -86,7 +94,9 @@ export default function MyAliasScreen() {
         {/* Mascot Picker */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>เลือกสัญลักษณ์ประจำตัว</Text>
-          <Text style={styles.sectionSubtitle}>ไอคอนจะแสดงแทนตัวตนในแชทกลุ่มลับและกระดานลับ</Text>
+          <Text style={styles.sectionSubtitle}>
+            ไอคอนจะแสดงแทนตัวตนในห้องสังสรรค์และกระดานลับ
+          </Text>
 
           <View style={styles.mascotGrid}>
             {mascotOptions.map((icon) => {
@@ -94,14 +104,17 @@ export default function MyAliasScreen() {
               return (
                 <TouchableOpacity
                   key={icon}
-                  style={[styles.mascotChoiceBtn, isSelected && styles.mascotChoiceSelected]}
+                  style={[
+                    styles.mascotChoiceBtn,
+                    isSelected && styles.mascotChoiceSelected,
+                  ]}
                   activeOpacity={0.7}
                   onPress={() => changeMascot(icon)}
                 >
                   <Ionicons
                     name={icon}
                     size={20}
-                    color={isSelected ? "#a3e635" : "#94a3b8"}
+                    color={isSelected ? "#818CF8" : "#64748B"}
                   />
                 </TouchableOpacity>
               );
@@ -115,7 +128,7 @@ export default function MyAliasScreen() {
           <View style={styles.badgeRow}>
             <View style={styles.badgeItem}>
               <View style={styles.badgeIconCircle}>
-                <Ionicons name="sparkles" size={18} color="#a3e635" />
+                <Ionicons name="sparkles-outline" size={18} color="#818CF8" />
               </View>
               <Text style={styles.badgeName}>ผู้ทลายกรอบ</Text>
               <Text style={styles.badgeDesc}>สนทนาข้าม 3 คณะ</Text>
@@ -123,15 +136,15 @@ export default function MyAliasScreen() {
 
             <View style={styles.badgeItem}>
               <View style={styles.badgeIconCircle}>
-                <Ionicons name="moon" size={18} color="#38bdf8" />
+                <Ionicons name="moon-outline" size={18} color="#38BDF8" />
               </View>
               <Text style={styles.badgeName}>Night Owl</Text>
-              <Text style={styles.badgeDesc}>คุยช่วงเที่ยงคืน</Text>
+              <Text style={styles.badgeDesc}>คุยช่วงดึก</Text>
             </View>
 
             <View style={styles.badgeItem}>
               <View style={styles.badgeIconCircle}>
-                <Ionicons name="key" size={18} color="#c084fc" />
+                <Ionicons name="key-outline" size={18} color="#F59E0B" />
               </View>
               <Text style={styles.badgeName}>Mutual Master</Text>
               <Text style={styles.badgeDesc}>ปลดล็อกโปรไฟล์</Text>
@@ -145,8 +158,8 @@ export default function MyAliasScreen() {
           activeOpacity={0.85}
           onPress={() => toggleCrossBubbleMode(false)}
         >
-          <Ionicons name="log-out-outline" size={18} color="#f8fafc" />
-          <Text style={styles.exitToNormalBtnText}>ออกจากโหมด Cross-Bubble กลับสู่โหมดปกติ</Text>
+          <Ionicons name="log-out-outline" size={16} color="#94A3B8" />
+          <Text style={styles.exitToNormalBtnText}>ออกจากโหมดลับ กลับสู่โหมดปกติ</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -156,15 +169,15 @@ export default function MyAliasScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#090d16",
+    backgroundColor: "#0F172A",
   },
   topHeader: {
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 14,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#0F172A",
     borderBottomWidth: 1,
-    borderBottomColor: "#1e293b",
+    borderBottomColor: "#1E293B",
   },
   titleRow: {
     flexDirection: "row",
@@ -175,22 +188,21 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(163, 230, 53, 0.15)",
+    backgroundColor: "rgba(99, 102, 241, 0.12)",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#a3e635",
+    borderColor: "#334155",
   },
   headerTitle: {
-    color: "#f8fafc",
+    color: "#F8FAFC",
     fontSize: 16,
-    fontWeight: "900",
-    letterSpacing: 0.5,
+    fontWeight: "800",
   },
   headerSubtitle: {
-    color: "#94a3b8",
+    color: "#94A3B8",
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: "500",
   },
   container: {
     flex: 1,
@@ -200,39 +212,36 @@ const styles = StyleSheet.create({
     paddingBottom: 36,
   },
   personaCard: {
-    backgroundColor: "#0f172a",
+    backgroundColor: "#1E293B",
     borderRadius: 16,
     padding: 20,
     alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: "#8b5cf6",
+    borderWidth: 1,
+    borderColor: "#334155",
     marginBottom: 16,
   },
   mascotBigCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#1e293b",
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: "#0F172A",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#a3e635",
+    borderWidth: 1.5,
+    borderColor: "#818CF8",
     marginBottom: 12,
   },
-  mascotBigEmoji: {
-    fontSize: 38,
-  },
   aliasNickname: {
-    color: "#f8fafc",
-    fontSize: 18,
-    fontWeight: "900",
+    color: "#F8FAFC",
+    fontSize: 17,
+    fontWeight: "800",
     marginBottom: 6,
   },
   facultyBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "#1e293b",
+    backgroundColor: "#0F172A",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -241,58 +250,60 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   facultyBadgeText: {
-    color: "#38bdf8",
+    color: "#818CF8",
     fontSize: 11.5,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   maskedRealBox: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#161f36",
+    backgroundColor: "#0F172A",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#334155",
     marginBottom: 16,
   },
   maskedRealText: {
-    color: "#94a3b8",
+    color: "#94A3B8",
     fontSize: 11,
   },
   maskedRealName: {
-    color: "#f8fafc",
+    color: "#F8FAFC",
     fontWeight: "700",
   },
   rerollBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#a3e635",
+    backgroundColor: "#6366F1",
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 9,
     borderRadius: 10,
   },
   rerollBtnText: {
-    color: "#090d16",
-    fontSize: 12.5,
-    fontWeight: "900",
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
   },
   sectionCard: {
-    backgroundColor: "#0f172a",
+    backgroundColor: "#1E293B",
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: "#1e293b",
+    borderColor: "#334155",
     marginBottom: 16,
   },
   sectionTitle: {
-    color: "#f8fafc",
+    color: "#F8FAFC",
     fontSize: 14,
     fontWeight: "800",
     marginBottom: 3,
   },
   sectionSubtitle: {
-    color: "#64748b",
+    color: "#64748B",
     fontSize: 11,
     marginBottom: 12,
   },
@@ -305,18 +316,15 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#1e293b",
+    backgroundColor: "#0F172A",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "#334155",
   },
   mascotChoiceSelected: {
-    borderColor: "#a3e635",
-    backgroundColor: "rgba(163, 230, 53, 0.15)",
-  },
-  mascotChoiceEmoji: {
-    fontSize: 20,
+    borderColor: "#818CF8",
+    backgroundColor: "rgba(99, 102, 241, 0.15)",
   },
   badgeRow: {
     flexDirection: "row",
@@ -326,7 +334,7 @@ const styles = StyleSheet.create({
   badgeItem: {
     flex: 1,
     alignItems: "center",
-    backgroundColor: "#1e293b",
+    backgroundColor: "#0F172A",
     padding: 10,
     borderRadius: 10,
     borderWidth: 1,
@@ -336,23 +344,22 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#1E293B",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#334155",
     marginBottom: 6,
   },
-  badgeEmoji: {
-    fontSize: 18,
-  },
   badgeName: {
-    color: "#f8fafc",
+    color: "#F8FAFC",
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "700",
     textAlign: "center",
     marginBottom: 2,
   },
   badgeDesc: {
-    color: "#64748b",
+    color: "#64748B",
     fontSize: 9.5,
     textAlign: "center",
   },
@@ -360,17 +367,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    backgroundColor: "#334155",
-    paddingVertical: 14,
+    gap: 6,
+    backgroundColor: "#1E293B",
+    paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#475569",
-    marginTop: 8,
+    borderColor: "#334155",
+    marginTop: 4,
   },
   exitToNormalBtnText: {
-    color: "#f8fafc",
-    fontSize: 13,
-    fontWeight: "800",
+    color: "#94A3B8",
+    fontSize: 12,
+    fontWeight: "600",
   },
 });

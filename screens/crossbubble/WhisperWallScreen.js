@@ -10,15 +10,26 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useCrossBubble } from "../../context/CrossBubbleContext";
 
-const FACULTY_TAGS = ["เด็กวิศวะ", "เด็กแพทย์", "เด็กอักษร", "เด็กบัญชี", "เด็กสถาปัตย์", "เด็กพยาบาล", "เด็กนิติ", "เด็กวิทยา"];
+const FACULTY_TAGS = [
+  "เด็กวิศวะ",
+  "เด็กแพทย์",
+  "เด็กอักษร",
+  "เด็กบัญชี",
+  "เด็กสถาปัตย์",
+  "เด็กพยาบาล",
+  "เด็กนิติ",
+  "เด็กวิทยา",
+];
 
 export default function WhisperWallScreen() {
   const { whisperPosts, addWhisperPost, toggleWhisperPop, userAlias } = useCrossBubble();
   const [whisperText, setWhisperText] = useState("");
-  const [selectedTag, setSelectedTag] = useState(userAlias?.shortFaculty ? `เด็ก${userAlias.shortFaculty}` : "เด็กวิศวะ");
+  const [selectedTag, setSelectedTag] = useState(
+    userAlias?.shortFaculty ? `เด็ก${userAlias.shortFaculty}` : "เด็กวิศวะ"
+  );
 
   const handlePost = () => {
     if (!whisperText.trim()) {
@@ -32,16 +43,16 @@ export default function WhisperWallScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <StatusBar barStyle="light-content" backgroundColor="#090d16" translucent={true} />
+      <StatusBar barStyle="light-content" backgroundColor="#0F172A" translucent={true} />
 
       {/* Header */}
       <View style={styles.topHeader}>
         <View style={styles.titleRow}>
           <View style={styles.headerIconCircle}>
-            <MaterialCommunityIcons name="message-flash" size={18} color="#c084fc" />
+            <Ionicons name="chatbubble-ellipses-outline" size={18} color="#818CF8" />
           </View>
           <View>
-            <Text style={styles.headerTitle}>กระดานลับ (WHISPER WALL)</Text>
+            <Text style={styles.headerTitle}>กระดานลับ</Text>
             <Text style={styles.headerSubtitle}>พื้นที่ฝากข้อความนิรนามข้ามคณะ</Text>
           </View>
         </View>
@@ -54,12 +65,12 @@ export default function WhisperWallScreen() {
       >
         {/* Whisper Composer Box */}
         <View style={styles.composerCard}>
-          <Text style={styles.composerHeader}>แอบกระซิบอะไรบางอย่างถึงเพื่อนต่างคณะ...</Text>
+          <Text style={styles.composerHeader}>ฝากข้อความถึงเพื่อนต่างคณะ...</Text>
 
           <TextInput
             style={styles.composerInput}
-            placeholder="บ่นเรื่องเรียน ชวนคุย หรือระบายความในใจแบบไม่เปิดเผยตัวตน..."
-            placeholderTextColor="#64748b"
+            placeholder="บ่นเรื่องเรียน ชวนคุย หรือระบายความในใจแบบนิรนาม..."
+            placeholderTextColor="#64748B"
             multiline
             maxLength={280}
             value={whisperText}
@@ -67,8 +78,12 @@ export default function WhisperWallScreen() {
           />
 
           <View style={styles.tagSelectSection}>
-            <Text style={styles.tagLabel}>สวมบทบาทเป็น:</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tagsScroll}>
+            <Text style={styles.tagLabel}>ส่งในนาม:</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.tagsScroll}
+            >
               {FACULTY_TAGS.map((tag) => {
                 const isSelected = selectedTag === tag;
                 return (
@@ -78,7 +93,12 @@ export default function WhisperWallScreen() {
                     activeOpacity={0.8}
                     onPress={() => setSelectedTag(tag)}
                   >
-                    <Text style={[styles.tagPillText, isSelected && styles.tagPillTextSelected]}>
+                    <Text
+                      style={[
+                        styles.tagPillText,
+                        isSelected && styles.tagPillTextSelected,
+                      ]}
+                    >
                       {tag}
                     </Text>
                   </TouchableOpacity>
@@ -95,8 +115,19 @@ export default function WhisperWallScreen() {
               activeOpacity={0.85}
               onPress={handlePost}
             >
-              <Ionicons name="paper-plane" size={13} color="#090d16" />
-              <Text style={styles.postBtnText}>ส่งข้อความ</Text>
+              <Ionicons
+                name="paper-plane"
+                size={13}
+                color={whisperText.trim() ? "#FFFFFF" : "#64748B"}
+              />
+              <Text
+                style={[
+                  styles.postBtnText,
+                  !whisperText.trim() && styles.postBtnTextDisabled,
+                ]}
+              >
+                โพสต์
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -105,7 +136,7 @@ export default function WhisperWallScreen() {
         <View style={styles.feedHeaderRow}>
           <Text style={styles.feedTitle}>ข้อความลับล่าสุด</Text>
           <View style={styles.onlineBadge}>
-            <View style={styles.greenDot} />
+            <View style={styles.dotIndicator} />
             <Text style={styles.onlineText}>กำลังเคลื่อนไหว</Text>
           </View>
         </View>
@@ -117,7 +148,7 @@ export default function WhisperWallScreen() {
                 <Ionicons
                   name={item.authorIcon || "chatbubble-ellipses-outline"}
                   size={12}
-                  color="#38bdf8"
+                  color="#818CF8"
                 />
                 <Text style={styles.facultyBadgeText}>{item.authorFaculty}</Text>
               </View>
@@ -133,15 +164,27 @@ export default function WhisperWallScreen() {
                 onPress={() => toggleWhisperPop(item.id)}
               >
                 <Ionicons
-                  name={item.hasPopped ? "sparkles" : "sparkles-outline"}
+                  name={item.hasPopped ? "radio-button-on" : "ellipse-outline"}
                   size={14}
-                  color={item.hasPopped ? "#a3e635" : "#94a3b8"}
+                  color={item.hasPopped ? "#F59E0B" : "#94A3B8"}
                 />
                 <Text style={[styles.popText, item.hasPopped && styles.popTextActive]}>
-                  {item.hasPopped ? "ส่งพลังแล้ว" : "ส่งพลัง"}
+                  Bubble Pop
                 </Text>
-                <View style={styles.popCountBadge}>
-                  <Text style={styles.popCountText}>{item.pops}</Text>
+                <View
+                  style={[
+                    styles.popCountBadge,
+                    item.hasPopped && styles.popCountBadgeActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.popCountText,
+                      item.hasPopped && styles.popCountTextActive,
+                    ]}
+                  >
+                    {item.pops}
+                  </Text>
                 </View>
               </TouchableOpacity>
             </View>
@@ -155,15 +198,15 @@ export default function WhisperWallScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#090d16",
+    backgroundColor: "#0F172A",
   },
   topHeader: {
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 14,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#0F172A",
     borderBottomWidth: 1,
-    borderBottomColor: "#1e293b",
+    borderBottomColor: "#1E293B",
   },
   titleRow: {
     flexDirection: "row",
@@ -174,22 +217,21 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(192, 132, 252, 0.15)",
+    backgroundColor: "rgba(99, 102, 241, 0.12)",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#c084fc",
+    borderColor: "#334155",
   },
   headerTitle: {
-    color: "#f8fafc",
+    color: "#F8FAFC",
     fontSize: 16,
-    fontWeight: "900",
-    letterSpacing: 0.5,
+    fontWeight: "800",
   },
   headerSubtitle: {
-    color: "#94a3b8",
+    color: "#94A3B8",
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: "500",
   },
   container: {
     flex: 1,
@@ -199,26 +241,26 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
   composerCard: {
-    backgroundColor: "#0f172a",
+    backgroundColor: "#1E293B",
     borderRadius: 14,
     padding: 14,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: "#334155",
     marginBottom: 20,
   },
   composerHeader: {
-    color: "#cbd5e1",
+    color: "#F8FAFC",
     fontSize: 12.5,
     fontWeight: "700",
     marginBottom: 8,
   },
   composerInput: {
-    backgroundColor: "#1e293b",
-    color: "#f8fafc",
+    backgroundColor: "#0F172A",
+    color: "#F8FAFC",
     borderRadius: 10,
     padding: 12,
     fontSize: 13,
-    minHeight: 70,
+    minHeight: 68,
     textAlignVertical: "top",
     borderWidth: 1,
     borderColor: "#334155",
@@ -228,16 +270,16 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   tagLabel: {
-    color: "#94a3b8",
+    color: "#94A3B8",
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "600",
     marginBottom: 6,
   },
   tagsScroll: {
     gap: 6,
   },
   tagPill: {
-    backgroundColor: "#1e293b",
+    backgroundColor: "#0F172A",
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 14,
@@ -245,45 +287,51 @@ const styles = StyleSheet.create({
     borderColor: "#334155",
   },
   tagPillSelected: {
-    backgroundColor: "rgba(192, 132, 252, 0.2)",
-    borderColor: "#c084fc",
+    backgroundColor: "rgba(99, 102, 241, 0.15)",
+    borderColor: "#818CF8",
   },
   tagPillText: {
-    color: "#94a3b8",
+    color: "#94A3B8",
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   tagPillTextSelected: {
-    color: "#c084fc",
+    color: "#818CF8",
+    fontWeight: "700",
   },
   composerFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     borderTopWidth: 1,
-    borderTopColor: "#1e293b",
+    borderTopColor: "#334155",
     paddingTop: 8,
   },
   charCount: {
-    color: "#64748b",
+    color: "#64748B",
     fontSize: 11,
   },
   postBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#a3e635",
+    backgroundColor: "#6366F1",
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 8,
   },
   postBtnDisabled: {
-    backgroundColor: "#334155",
+    backgroundColor: "#1E293B",
+    borderWidth: 1,
+    borderColor: "#334155",
   },
   postBtnText: {
-    color: "#090d16",
+    color: "#FFFFFF",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "700",
+  },
+  postBtnTextDisabled: {
+    color: "#64748B",
   },
   feedHeaderRow: {
     flexDirection: "row",
@@ -292,36 +340,38 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   feedTitle: {
-    color: "#f8fafc",
-    fontSize: 15,
-    fontWeight: "900",
+    color: "#F8FAFC",
+    fontSize: 14,
+    fontWeight: "800",
   },
   onlineBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "rgba(34, 197, 94, 0.15)",
+    backgroundColor: "rgba(99, 102, 241, 0.12)",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#334155",
   },
-  greenDot: {
+  dotIndicator: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#22c55e",
+    backgroundColor: "#818CF8",
   },
   onlineText: {
-    color: "#4ade80",
+    color: "#818CF8",
     fontSize: 10.5,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   whisperCard: {
-    backgroundColor: "#0f172a",
+    backgroundColor: "#1E293B",
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: "#1e293b",
+    borderColor: "#334155",
     marginBottom: 12,
   },
   whisperHeaderRow: {
@@ -333,44 +383,41 @@ const styles = StyleSheet.create({
   facultyBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "#1e293b",
+    gap: 5,
+    backgroundColor: "#0F172A",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1,
     borderColor: "#334155",
   },
-  authorIcon: {
-    fontSize: 12,
-  },
   facultyBadgeText: {
-    color: "#38bdf8",
+    color: "#818CF8",
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   timeText: {
-    color: "#64748b",
+    color: "#64748B",
     fontSize: 10.5,
   },
   whisperContent: {
-    color: "#e2e8f0",
-    fontSize: 13.5,
-    lineHeight: 20,
-    marginBottom: 12,
+    color: "#E2E8F0",
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 10,
   },
   whisperFooter: {
     flexDirection: "row",
     alignItems: "center",
     borderTopWidth: 1,
-    borderTopColor: "#1e293b",
+    borderTopColor: "#334155",
     paddingTop: 8,
   },
   popBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: "#1e293b",
+    backgroundColor: "#0F172A",
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 16,
@@ -378,27 +425,34 @@ const styles = StyleSheet.create({
     borderColor: "#334155",
   },
   popBtnActive: {
-    borderColor: "#a3e635",
-    backgroundColor: "rgba(163, 230, 53, 0.1)",
+    borderColor: "#F59E0B",
+    backgroundColor: "rgba(245, 158, 11, 0.1)",
   },
   popText: {
-    color: "#94a3b8",
+    color: "#94A3B8",
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "600",
   },
   popTextActive: {
-    color: "#a3e635",
+    color: "#F59E0B",
+    fontWeight: "700",
   },
   popCountBadge: {
-    backgroundColor: "#334155",
+    backgroundColor: "#1E293B",
     paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: 8,
     marginLeft: 2,
   },
+  popCountBadgeActive: {
+    backgroundColor: "rgba(245, 158, 11, 0.2)",
+  },
   popCountText: {
-    color: "#f8fafc",
+    color: "#94A3B8",
     fontSize: 10,
-    fontWeight: "800",
+    fontWeight: "700",
+  },
+  popCountTextActive: {
+    color: "#F59E0B",
   },
 });

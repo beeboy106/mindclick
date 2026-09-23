@@ -30,13 +30,13 @@ const ALIAS_PREFIXES = [
 ];
 
 const DEFAULT_RADAR_DATA = [
-  { faculty: "วิศวกรรมศาสตร์", matchRate: 94, studentsCount: 42, color: "#38bdf8", isConnected: true },
-  { faculty: "พยาบาลศาสตร์", matchRate: 88, studentsCount: 35, color: "#f43f5e", isConnected: true },
-  { faculty: "อักษรศาสตร์", matchRate: 85, studentsCount: 29, color: "#c084fc", isConnected: true },
-  { faculty: "พาณิชยศาสตร์และการบัญชี", matchRate: 79, studentsCount: 38, color: "#4ade80", isConnected: true },
-  { faculty: "สถาปัตยกรรมศาสตร์", matchRate: 76, studentsCount: 24, color: "#fbbf24", isConnected: true },
-  { faculty: "แพทยศาสตร์", matchRate: 71, studentsCount: 18, color: "#2dd4bf", isConnected: false },
-  { faculty: "นิติศาสตร์", matchRate: 68, studentsCount: 22, color: "#fb7185", isConnected: false },
+  { faculty: "วิศวกรรมศาสตร์", matchRate: 94, studentsCount: 42, color: "#818CF8", isConnected: true },
+  { faculty: "พยาบาลศาสตร์", matchRate: 88, studentsCount: 35, color: "#FB7185", isConnected: true },
+  { faculty: "อักษรศาสตร์", matchRate: 85, studentsCount: 29, color: "#A78BFA", isConnected: true },
+  { faculty: "พาณิชยศาสตร์และการบัญชี", matchRate: 79, studentsCount: 38, color: "#38BDF8", isConnected: true },
+  { faculty: "สถาปัตยกรรมศาสตร์", matchRate: 76, studentsCount: 24, color: "#F59E0B", isConnected: true },
+  { faculty: "แพทยศาสตร์", matchRate: 71, studentsCount: 18, color: "#2DD4BF", isConnected: false },
+  { faculty: "นิติศาสตร์", matchRate: 68, studentsCount: 22, color: "#F472B6", isConnected: false },
 ];
 
 const INITIAL_WHISPERS = [
@@ -160,7 +160,7 @@ export function CrossBubbleProvider({ children }) {
     {
       id: "msg_sys_1",
       isSystem: true,
-      text: "ยินดีต้อนรับสู่แชทกลุ่มลับ (Blind Lounge): คุณและเพื่อนอีก 4 คนจากต่างคณะที่สไตล์ตรงกันถูกจัดกลุ่มมารวมกันที่นี่ พูดคุยและทำภารกิจเพื่อสะสมพลังกลุ่มสำหรับเปิดเผยตัวตนจริงร่วมกัน (Mutual Reveal)",
+      text: "ยินดีต้อนรับสู่ห้องสังสรรค์ (Blind Lounge): คุณและเพื่อนอีก 4 คนจากต่างคณะที่สไตล์ตรงกันถูกจัดกลุ่มมารวมกันที่นี่ ชวนคุยและเปิดบทสนทนาเพื่อสะสมความสนิทในห้องสำหรับเปิดเผยตัวตนจริงร่วมกัน (Mutual Reveal)",
       createdAt: "22:00",
     },
     {

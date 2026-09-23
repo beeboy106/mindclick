@@ -4,11 +4,10 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   StatusBar,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { useCrossBubble } from "../../context/CrossBubbleContext";
 
 export default function BubbleRadarScreen() {
@@ -19,16 +18,16 @@ export default function BubbleRadarScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <StatusBar barStyle="light-content" backgroundColor="#090d16" translucent={true} />
+      <StatusBar barStyle="light-content" backgroundColor="#0F172A" translucent={true} />
 
       {/* Header */}
       <View style={styles.topHeader}>
         <View style={styles.titleRow}>
           <View style={styles.headerIconCircle}>
-            <MaterialCommunityIcons name="radar" size={18} color="#38bdf8" />
+            <Ionicons name="radio-outline" size={18} color="#818CF8" />
           </View>
           <View>
-            <Text style={styles.headerTitle}>เรดาร์คณะ (CROSS-FACULTY RADAR)</Text>
+            <Text style={styles.headerTitle}>เรดาร์คณะ</Text>
             <Text style={styles.headerSubtitle}>วิเคราะห์ความเข้ากันได้ของไลฟ์สไตล์ต่างคณะ</Text>
           </View>
         </View>
@@ -39,7 +38,7 @@ export default function BubbleRadarScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Radar Graphic Card */}
+        {/* Radar Graphic Card (Social Orbit) */}
         <View style={styles.radarGraphicCard}>
           <View style={styles.radarHeaderRow}>
             <Text style={styles.radarCardTitle}>แผนที่ทลายกรอบคณะ</Text>
@@ -49,9 +48,9 @@ export default function BubbleRadarScreen() {
             </View>
           </View>
 
-          {/* Concentric Radar Canvas Simulation */}
+          {/* Concentric Social Orbit Canvas */}
           <View style={styles.radarCanvas}>
-            {/* Radar Orbits */}
+            {/* Concentric Rings */}
             <View style={[styles.radarOrbit, { width: 220, height: 220, borderRadius: 110 }]} />
             <View style={[styles.radarOrbit, { width: 160, height: 160, borderRadius: 80 }]} />
             <View style={[styles.radarOrbit, { width: 100, height: 100, borderRadius: 50 }]} />
@@ -61,22 +60,22 @@ export default function BubbleRadarScreen() {
               <Ionicons
                 name={userAlias?.icon || "finger-print-outline"}
                 size={22}
-                color="#a3e635"
+                color="#818CF8"
               />
               <Text style={styles.centerLabel}>คุณ ({userAlias?.shortFaculty || "ฉัน"})</Text>
             </View>
 
             {/* Orbiting Faculty Bubbles */}
-            <View style={[styles.orbitBubble, { top: 18, left: 35, borderColor: "#f43f5e" }]}>
+            <View style={[styles.orbitBubble, { top: 18, left: 35, borderColor: "#FB7185" }]}>
               <Text style={styles.orbitBubbleText}>พยาบาล 88%</Text>
             </View>
-            <View style={[styles.orbitBubble, { top: 25, right: 30, borderColor: "#c084fc" }]}>
+            <View style={[styles.orbitBubble, { top: 25, right: 30, borderColor: "#818CF8" }]}>
               <Text style={styles.orbitBubbleText}>อักษร 85%</Text>
             </View>
-            <View style={[styles.orbitBubble, { bottom: 25, left: 30, borderColor: "#4ade80" }]}>
+            <View style={[styles.orbitBubble, { bottom: 25, left: 30, borderColor: "#38BDF8" }]}>
               <Text style={styles.orbitBubbleText}>บัญชี 79%</Text>
             </View>
-            <View style={[styles.orbitBubble, { bottom: 20, right: 35, borderColor: "#fbbf24" }]}>
+            <View style={[styles.orbitBubble, { bottom: 20, right: 35, borderColor: "#F59E0B" }]}>
               <Text style={styles.orbitBubbleText}>สถาปัตย์ 76%</Text>
             </View>
           </View>
@@ -98,7 +97,7 @@ export default function BubbleRadarScreen() {
             </Text>
           </View>
           <View style={styles.trophyBox}>
-            <Ionicons name="trophy" size={28} color="#a3e635" />
+            <Ionicons name="trophy-outline" size={26} color="#F59E0B" />
           </View>
         </View>
 
@@ -119,7 +118,7 @@ export default function BubbleRadarScreen() {
                 </Text>
               </View>
 
-              {/* Progress Bar */}
+              {/* Minimal Progress Bar (4px) */}
               <View style={styles.miniProgressTrack}>
                 <View
                   style={[
@@ -137,12 +136,12 @@ export default function BubbleRadarScreen() {
             <View style={styles.statusCol}>
               {item.isConnected ? (
                 <View style={styles.connectedPill}>
-                  <Ionicons name="checkmark-circle" size={12} color="#a3e635" />
+                  <Ionicons name="checkmark-circle" size={11} color="#818CF8" />
                   <Text style={styles.connectedText}>เจอกันแล้ว</Text>
                 </View>
               ) : (
                 <View style={styles.unconnectedPill}>
-                  <Ionicons name="lock-closed" size={11} color="#64748b" />
+                  <Ionicons name="lock-closed-outline" size={11} color="#64748B" />
                   <Text style={styles.unconnectedText}>ยังไม่เจอ</Text>
                 </View>
               )}
@@ -157,15 +156,15 @@ export default function BubbleRadarScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#090d16",
+    backgroundColor: "#0F172A",
   },
   topHeader: {
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 14,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#0F172A",
     borderBottomWidth: 1,
-    borderBottomColor: "#1e293b",
+    borderBottomColor: "#1E293B",
   },
   titleRow: {
     flexDirection: "row",
@@ -176,22 +175,21 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "rgba(56, 189, 248, 0.15)",
+    backgroundColor: "rgba(99, 102, 241, 0.12)",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#38bdf8",
+    borderColor: "#334155",
   },
   headerTitle: {
-    color: "#f8fafc",
+    color: "#F8FAFC",
     fontSize: 16,
-    fontWeight: "900",
-    letterSpacing: 0.5,
+    fontWeight: "800",
   },
   headerSubtitle: {
-    color: "#94a3b8",
+    color: "#94A3B8",
     fontSize: 11,
-    fontWeight: "600",
+    fontWeight: "500",
   },
   container: {
     flex: 1,
@@ -201,10 +199,10 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
   radarGraphicCard: {
-    backgroundColor: "#0f172a",
+    backgroundColor: "#1E293B",
     borderRadius: 16,
     padding: 16,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: "#334155",
     marginBottom: 16,
     alignItems: "center",
@@ -217,7 +215,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   radarCardTitle: {
-    color: "#f8fafc",
+    color: "#F8FAFC",
     fontSize: 14,
     fontWeight: "800",
   },
@@ -225,21 +223,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: "rgba(56, 189, 248, 0.15)",
+    backgroundColor: "rgba(99, 102, 241, 0.12)",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#334155",
   },
   pulseDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#38bdf8",
+    backgroundColor: "#818CF8",
   },
   livePulseText: {
-    color: "#38bdf8",
+    color: "#818CF8",
     fontSize: 10,
-    fontWeight: "900",
+    fontWeight: "800",
   },
   radarCanvas: {
     width: 250,
@@ -252,45 +252,42 @@ const styles = StyleSheet.create({
   radarOrbit: {
     position: "absolute",
     borderWidth: 1,
-    borderColor: "rgba(51, 65, 85, 0.8)",
+    borderColor: "#334155",
     borderStyle: "dashed",
   },
   centerBubble: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "#1e293b",
-    borderWidth: 2,
-    borderColor: "#a3e635",
+    backgroundColor: "#0F172A",
+    borderWidth: 1.5,
+    borderColor: "#818CF8",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 10,
   },
-  centerIcon: {
-    fontSize: 20,
-  },
   centerLabel: {
-    color: "#a3e635",
+    color: "#818CF8",
     fontSize: 9.5,
-    fontWeight: "800",
+    fontWeight: "700",
     marginTop: 2,
   },
   orbitBubble: {
     position: "absolute",
-    backgroundColor: "#0f172a",
+    backgroundColor: "#0F172A",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    borderWidth: 1.5,
+    borderWidth: 1,
     zIndex: 5,
   },
   orbitBubbleText: {
-    color: "#f8fafc",
+    color: "#F8FAFC",
     fontSize: 10,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   radarCaption: {
-    color: "#64748b",
+    color: "#64748B",
     fontSize: 11,
     textAlign: "center",
     marginTop: 6,
@@ -299,11 +296,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: "#161f36",
+    backgroundColor: "#1E293B",
     padding: 16,
     borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: "#8b5cf6",
+    borderWidth: 1,
+    borderColor: "#334155",
     marginBottom: 20,
   },
   scoreLeft: {
@@ -311,62 +308,61 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   scoreLabel: {
-    color: "#c084fc",
-    fontSize: 10.5,
-    fontWeight: "900",
-    letterSpacing: 0.5,
+    color: "#818CF8",
+    fontSize: 11,
+    fontWeight: "700",
     marginBottom: 4,
   },
   scoreValue: {
-    color: "#f8fafc",
+    color: "#F8FAFC",
     fontSize: 22,
-    fontWeight: "900",
+    fontWeight: "800",
     marginBottom: 4,
   },
   scoreUnit: {
-    color: "#94a3b8",
+    color: "#94A3B8",
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "500",
   },
   scoreDesc: {
-    color: "#94a3b8",
+    color: "#94A3B8",
     fontSize: 11.5,
     lineHeight: 16,
   },
   trophyBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: "rgba(163, 230, 53, 0.15)",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(245, 158, 11, 0.12)",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: "#a3e635",
+    borderColor: "#334155",
   },
   listSectionTitle: {
-    color: "#f8fafc",
+    color: "#F8FAFC",
     fontSize: 14,
-    fontWeight: "900",
+    fontWeight: "800",
     marginBottom: 12,
   },
   facultyMatchRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#0f172a",
+    backgroundColor: "#1E293B",
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#1e293b",
+    borderColor: "#334155",
     marginBottom: 10,
   },
   rankNumBox: {
-    width: 26,
+    width: 24,
     marginRight: 8,
   },
   rankNum: {
-    color: "#64748b",
+    color: "#64748B",
     fontSize: 12,
-    fontWeight: "900",
+    fontWeight: "800",
   },
   facultyInfoCol: {
     flex: 1,
@@ -379,17 +375,17 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   facultyNameText: {
-    color: "#f8fafc",
+    color: "#F8FAFC",
     fontSize: 12.5,
     fontWeight: "700",
   },
   matchRateText: {
     fontSize: 11.5,
-    fontWeight: "900",
+    fontWeight: "800",
   },
   miniProgressTrack: {
     height: 4,
-    backgroundColor: "#1e293b",
+    backgroundColor: "#0F172A",
     borderRadius: 2,
     overflow: "hidden",
     marginBottom: 6,
@@ -399,7 +395,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   studentsCountText: {
-    color: "#64748b",
+    color: "#64748B",
     fontSize: 10.5,
   },
   statusCol: {
@@ -409,30 +405,32 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(163, 230, 53, 0.1)",
+    backgroundColor: "rgba(99, 102, 241, 0.15)",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: "#a3e635",
+    borderColor: "#818CF8",
   },
   connectedText: {
-    color: "#a3e635",
+    color: "#818CF8",
     fontSize: 10,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   unconnectedPill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#1e293b",
+    backgroundColor: "#0F172A",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#334155",
   },
   unconnectedText: {
-    color: "#64748b",
+    color: "#64748B",
     fontSize: 10,
-    fontWeight: "700",
+    fontWeight: "600",
   },
 });
