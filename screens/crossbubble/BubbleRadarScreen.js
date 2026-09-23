@@ -51,9 +51,9 @@ export default function BubbleRadarScreen() {
           {/* Concentric Social Orbit Canvas */}
           <View style={styles.radarCanvas}>
             {/* Concentric Rings */}
-            <View style={[styles.radarOrbit, { width: 220, height: 220, borderRadius: 110 }]} />
-            <View style={[styles.radarOrbit, { width: 160, height: 160, borderRadius: 80 }]} />
-            <View style={[styles.radarOrbit, { width: 100, height: 100, borderRadius: 50 }]} />
+            <View style={[styles.radarOrbit, { width: 250, height: 250, borderRadius: 125 }]} />
+            <View style={[styles.radarOrbit, { width: 175, height: 175, borderRadius: 87.5 }]} />
+            <View style={[styles.radarOrbit, { width: 105, height: 105, borderRadius: 52.5 }]} />
 
             {/* Center User Bubble */}
             <View style={styles.centerBubble}>
@@ -62,21 +62,30 @@ export default function BubbleRadarScreen() {
                 size={22}
                 color="#818CF8"
               />
-              <Text style={styles.centerLabel}>คุณ ({userAlias?.shortFaculty || "ฉัน"})</Text>
+              <Text style={styles.centerLabel} numberOfLines={1}>
+                คุณ ({userAlias?.shortFaculty || "ฉัน"})
+              </Text>
             </View>
 
-            {/* Orbiting Faculty Bubbles */}
-            <View style={[styles.orbitBubble, { top: 18, left: 35, borderColor: "#FB7185" }]}>
-              <Text style={styles.orbitBubbleText}>พยาบาล 88%</Text>
+            {/* Orbiting Faculty Bubbles (Stacked 2-line layout to prevent text overflow) */}
+            <View style={[styles.orbitBubble, { top: 16, left: 14, borderColor: "#FB7185" }]}>
+              <Text style={styles.orbitFacultyText} numberOfLines={1}>พยาบาล</Text>
+              <Text style={[styles.orbitPercentText, { color: "#FB7185" }]}>88%</Text>
             </View>
-            <View style={[styles.orbitBubble, { top: 25, right: 30, borderColor: "#818CF8" }]}>
-              <Text style={styles.orbitBubbleText}>อักษร 85%</Text>
+
+            <View style={[styles.orbitBubble, { top: 20, right: 14, borderColor: "#818CF8" }]}>
+              <Text style={styles.orbitFacultyText} numberOfLines={1}>อักษร</Text>
+              <Text style={[styles.orbitPercentText, { color: "#818CF8" }]}>85%</Text>
             </View>
-            <View style={[styles.orbitBubble, { bottom: 25, left: 30, borderColor: "#38BDF8" }]}>
-              <Text style={styles.orbitBubbleText}>บัญชี 79%</Text>
+
+            <View style={[styles.orbitBubble, { bottom: 20, left: 14, borderColor: "#38BDF8" }]}>
+              <Text style={styles.orbitFacultyText} numberOfLines={1}>บัญชี</Text>
+              <Text style={[styles.orbitPercentText, { color: "#38BDF8" }]}>79%</Text>
             </View>
-            <View style={[styles.orbitBubble, { bottom: 20, right: 35, borderColor: "#F59E0B" }]}>
-              <Text style={styles.orbitBubbleText}>สถาปัตย์ 76%</Text>
+
+            <View style={[styles.orbitBubble, { bottom: 16, right: 14, borderColor: "#F59E0B" }]}>
+              <Text style={styles.orbitFacultyText} numberOfLines={1}>สถาปัตย์</Text>
+              <Text style={[styles.orbitPercentText, { color: "#F59E0B" }]}>76%</Text>
             </View>
           </View>
 
@@ -212,7 +221,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   radarCardTitle: {
     color: "#F8FAFC",
@@ -242,12 +251,12 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   radarCanvas: {
-    width: 250,
-    height: 250,
+    width: 270,
+    height: 270,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
-    marginVertical: 8,
+    marginVertical: 6,
   },
   radarOrbit: {
     position: "absolute",
@@ -256,41 +265,53 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
   },
   centerBubble: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: "#0F172A",
     borderWidth: 1.5,
     borderColor: "#818CF8",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 10,
+    paddingHorizontal: 4,
   },
   centerLabel: {
     color: "#818CF8",
     fontSize: 9.5,
     fontWeight: "700",
     marginTop: 2,
+    textAlign: "center",
   },
   orbitBubble: {
     position: "absolute",
     backgroundColor: "#0F172A",
+    minWidth: 58,
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1.5,
     zIndex: 5,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  orbitBubbleText: {
+  orbitFacultyText: {
     color: "#F8FAFC",
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: "700",
+    textAlign: "center",
+  },
+  orbitPercentText: {
+    fontSize: 9,
+    fontWeight: "800",
+    marginTop: 1,
+    textAlign: "center",
   },
   radarCaption: {
     color: "#64748B",
     fontSize: 11,
     textAlign: "center",
-    marginTop: 6,
+    marginTop: 8,
   },
   scoreCard: {
     flexDirection: "row",

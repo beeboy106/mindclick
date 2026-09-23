@@ -11,6 +11,7 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,54 +19,239 @@ import { useCrossBubble } from "../../context/CrossBubbleContext";
 
 export default function BlindLoungeScreen() {
   const {
-    currentLounge,
-    loungeMessages,
+    loungeRooms,
+    activeLoungeRoomId,
+    setActiveLoungeRoomId,
     sendLoungeMessage,
     voteLoungePoll,
-    bubbleEnergy,
-    mutualRevealState,
     requestMutualReveal,
+    createNewRandomLoungeRoom,
     toggleCrossBubbleMode,
   } = useCrossBubble();
 
   const [inputMsg, setInputMsg] = useState("");
   const [showRevealModal, setShowRevealModal] = useState(false);
+  const [isMatching, setIsMatching] = useState(false);
   const scrollViewRef = useRef(null);
 
+  // Current active room
+  const currentRoom =
+    loungeRooms.find((r) => r.id === activeLoungeRoomId) || null;
+
+  // Handle Send message in active room
   const handleSend = () => {
-    if (!inputMsg.trim()) return;
-    sendLoungeMessage(inputMsg);
+    if (!inputMsg.trim() || !currentRoom) return;
+    sendLoungeMessage(inputMsg, currentRoom.id);
     setInputMsg("");
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 150);
   };
 
-  const isEnergyFull = bubbleEnergy >= 100;
-  const facultyInlineText = `${currentLounge.faculties
+  // Handle Random Matching new group
+  const handleRandomMatch = () => {
+    setIsMatching(true);
+    setTimeout(() => {
+      createNewRandomLoungeRoom();
+      setIsMatching(false);
+    }, 1500);
+  };
+
+  // ==========================================
+  // VIEW 1: LOBBY VIEW (เมื่อยังไม่ได้เลือกห้อง)
+  // ==========================================
+  if (!currentRoom) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+        <StatusBar barStyle="light-content" backgroundColor="#0F172A" translucent={true} />
+
+        {/* Lobby Header */}
+        <View style={styles.lobbyHeader}>
+          <View style={styles.lobbyTitleRow}>
+            <View>
+              <Text style={styles.lobbyPreTitle}>UNDERGROUND LOUNGE</Text>
+              <Text style={styles.lobbyTitle}>ห้องสังสรรค์</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.exitModeBtn}
+              activeOpacity={0.8}
+              onPress={() => toggleCrossBubbleMode(false)}
+            >
+              <Ionicons name="log-out-outline" size={15} color="#94A3B8" />
+              <Text style={styles.exitModeText}>กลับโหมดปกติ</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.lobbySubtitle}>
+            พื้นที่รวมกลุ่มเพื่อน 4 คณะตามไลฟ์สไตล์ สุ่มเข้ากลุ่มใหม่หรือคุยต่อในห้องเก่าได้ตลอดเวลา
+          </Text>
+        </View>
+
+        <ScrollView
+          style={styles.lobbyScroll}
+          contentContainerStyle={styles.lobbyContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Action Card: สุ่มกลุ่มใหม่ */}
+          <TouchableOpacity
+            style={styles.randomMatchCard}
+            activeOpacity={0.85}
+            onPress={handleRandomMatch}
+            disabled={isMatching}
+          >
+            <View style={styles.randomMatchIconBox}>
+              <Ionicons name="sparkles" size={24} color="#818CF8" />
+            </View>
+            <View style={styles.randomMatchTextBox}>
+              <Text style={styles.randomMatchTitle}>สุ่มกลุ่มสังสรรค์ใหม่</Text>
+              <Text style={styles.randomMatchDesc}>
+                จับคู่เพื่อน 4 คณะที่ไลฟ์สไตล์และความคิดตรงกันในสัปดาห์นี้
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#818CF8" />
+          </TouchableOpacity>
+
+          {/* Rooms List Section */}
+          <View style={styles.sectionHeaderRow}>
+            <Text style={styles.sectionHeading}>ห้องที่คุณเข้าร่วม</Text>
+            <Text style={styles.sectionBadge}>{loungeRooms.length} ห้อง</Text>
+          </View>
+
+          {loungeRooms.map((room) => {
+            const facultySummary = room.faculties
+              .map((f) => f.replace("คณะ", "").replace("ศาสตร์", ""))
+              .join(" • ");
+            const isFullIntimacy = (room.bubbleEnergy || 0) >= 100;
+
+            return (
+              <TouchableOpacity
+                key={room.id}
+                style={styles.roomCard}
+                activeOpacity={0.75}
+                onPress={() => setActiveLoungeRoomId(room.id)}
+              >
+                <View style={styles.roomCardHeader}>
+                  <View style={styles.roomThemeTag}>
+                    <Ionicons name="chatbubbles-outline" size={12} color="#818CF8" />
+                    <Text style={styles.roomThemeTagText} numberOfLines={1}>
+                      {room.theme || "สังสรรค์ข้ามคณะ"}
+                    </Text>
+                  </View>
+                  <View style={styles.roomStatusPill}>
+                    {room.isActive ? (
+                      <View style={styles.activeDot} />
+                    ) : (
+                      <Ionicons name="time-outline" size={11} color="#64748B" />
+                    )}
+                    <Text
+                      style={[
+                        styles.roomStatusText,
+                        room.isActive && styles.roomStatusTextActive,
+                      ]}
+                    >
+                      {room.isActive ? "กำลังคุย" : "ห้องในอดีต"}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={styles.roomTitleText}>{room.title}</Text>
+
+                {/* Inline Faculties */}
+                <Text style={styles.roomFacultiesText} numberOfLines={1}>
+                  {facultySummary} ({room.memberCount || 4} คน)
+                </Text>
+
+                {/* Last Message Snippet */}
+                {Boolean(room.lastMessage) && (
+                  <View style={styles.lastMsgBox}>
+                    <Text style={styles.lastMsgText} numberOfLines={1}>
+                      {room.lastMessage}
+                    </Text>
+                    <Text style={styles.lastMsgTime}>{room.lastMessageTime}</Text>
+                  </View>
+                )}
+
+                {/* Intimacy Bar Snippet */}
+                <View style={styles.roomCardFooter}>
+                  <View style={styles.intimacyMiniTrack}>
+                    <View
+                      style={[
+                        styles.intimacyMiniFill,
+                        {
+                          width: `${room.bubbleEnergy || 0}%`,
+                          backgroundColor: isFullIntimacy ? "#F59E0B" : "#818CF8",
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.intimacyMiniText}>
+                    ความสนิท: {room.bubbleEnergy || 0}%
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {/* Matching Loading Modal */}
+        <Modal visible={isMatching} transparent={true} animationType="fade">
+          <View style={styles.matchingOverlay}>
+            <View style={styles.matchingCard}>
+              <ActivityIndicator size="large" color="#818CF8" />
+              <Text style={styles.matchingTitle}>กำลังค้นหาห้องสังสรรค์...</Text>
+              <Text style={styles.matchingSubtitle}>
+                สแกนหาเพื่อนต่างคณะที่ความสนใจและเคมีตรงกัน
+              </Text>
+              <View style={styles.matchingFacultyRow}>
+                <Text style={styles.matchingFacultyChip}>วิศวะ</Text>
+                <Text style={styles.matchingFacultyChip}>พยาบาล</Text>
+                <Text style={styles.matchingFacultyChip}>อักษร</Text>
+                <Text style={styles.matchingFacultyChip}>บัญชี</Text>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </SafeAreaView>
+    );
+  }
+
+  // ==========================================
+  // VIEW 2: CHAT VIEW (เมื่อกดเข้าห้องใดห้องหนึ่ง)
+  // ==========================================
+  const isEnergyFull = (currentRoom.bubbleEnergy || 0) >= 100;
+  const facultyInlineText = `${currentRoom.faculties
     .map((fac) => fac.replace("คณะ", "").replace("ศาสตร์", ""))
-    .join(" • ")} (${currentLounge.memberCount} คน)`;
+    .join(" • ")} (${currentRoom.memberCount || 4} คน)`;
+  const currentMessages = currentRoom.messages || [];
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
       <StatusBar barStyle="light-content" backgroundColor="#0F172A" translucent={true} />
 
-      {/* Flattened Modern Header */}
+      {/* Flattened Modern Header with Back Button */}
       <View style={styles.topHeader}>
         <View style={styles.headerTopRow}>
+          <TouchableOpacity
+            style={styles.backButton}
+            activeOpacity={0.7}
+            onPress={() => setActiveLoungeRoomId(null)}
+          >
+            <Ionicons name="arrow-back" size={20} color="#F8FAFC" />
+          </TouchableOpacity>
+
           <View style={styles.headerTitleGroup}>
             <Text style={styles.loungePreTitle}>ห้องสังสรรค์</Text>
             <Text style={styles.groupTitle} numberOfLines={1}>
-              {currentLounge.title}
+              {currentRoom.title}
             </Text>
           </View>
+
           <TouchableOpacity
             style={styles.exitModeBtn}
             activeOpacity={0.8}
             onPress={() => toggleCrossBubbleMode(false)}
           >
             <Ionicons name="log-out-outline" size={15} color="#94A3B8" />
-            <Text style={styles.exitModeText}>กลับโหมดปกติ</Text>
+            <Text style={styles.exitModeText}>ออก</Text>
           </TouchableOpacity>
         </View>
 
@@ -82,7 +268,7 @@ export default function BlindLoungeScreen() {
       <View style={styles.intimacyContainer}>
         <View style={styles.intimacyMetaRow}>
           <Text style={styles.intimacyLabel}>
-            ความสนิทในห้อง: {bubbleEnergy}%{" "}
+            ความสนิทในห้อง: {currentRoom.bubbleEnergy || 0}%{" "}
             <Text style={styles.intimacySubHint}>
               (ชวนคุยอีกนิดเพื่อเปิดเผยตัวตนจริงร่วมกัน)
             </Text>
@@ -103,7 +289,7 @@ export default function BlindLoungeScreen() {
             style={[
               styles.intimacyFill,
               {
-                width: `${bubbleEnergy}%`,
+                width: `${currentRoom.bubbleEnergy || 0}%`,
                 backgroundColor: isEnergyFull ? "#F59E0B" : "#818CF8",
               },
             ]}
@@ -123,7 +309,7 @@ export default function BlindLoungeScreen() {
           onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
         >
           {/* Icebreaker Question (Open System Message Bubble) */}
-          {Boolean(currentLounge.activePoll) && (
+          {Boolean(currentRoom.activePoll) && (
             <View style={styles.icebreakerBubble}>
               <View style={styles.icebreakerHeader}>
                 <View style={styles.icebreakerTag}>
@@ -134,13 +320,13 @@ export default function BlindLoungeScreen() {
               </View>
 
               <Text style={styles.icebreakerQuestion}>
-                {currentLounge.activePoll.question}
+                {currentRoom.activePoll.question}
               </Text>
 
               <View style={styles.pollOptionsContainer}>
-                {currentLounge.activePoll.options.map((option, idx) => {
-                  const isVoted = currentLounge.activePoll.userVotedIndex === idx;
-                  const hasAnyVote = currentLounge.activePoll.userVotedIndex !== null;
+                {currentRoom.activePoll.options.map((option, idx) => {
+                  const isVoted = currentRoom.activePoll.userVotedIndex === idx;
+                  const hasAnyVote = currentRoom.activePoll.userVotedIndex !== null;
 
                   return (
                     <TouchableOpacity
@@ -151,7 +337,9 @@ export default function BlindLoungeScreen() {
                       ]}
                       activeOpacity={0.8}
                       disabled={hasAnyVote}
-                      onPress={() => voteLoungePoll(currentLounge.activePoll.id, idx)}
+                      onPress={() =>
+                        voteLoungePoll(currentRoom.activePoll.id, idx, currentRoom.id)
+                      }
                     >
                       <View style={styles.pollOptionLeft}>
                         <View
@@ -182,7 +370,7 @@ export default function BlindLoungeScreen() {
           )}
 
           {/* Messages Feed */}
-          {loungeMessages.map((msg) => {
+          {currentMessages.map((msg) => {
             if (msg.isSystem) {
               return (
                 <View key={msg.id} style={styles.systemMessageContainer}>
@@ -286,7 +474,8 @@ export default function BlindLoungeScreen() {
               <View style={styles.consentRow}>
                 <Text style={styles.consentTitle}>ระดับความยินยอม</Text>
                 <Text style={styles.consentCount}>
-                  {mutualRevealState.consentCount} จาก {mutualRevealState.totalRequired} คน
+                  {currentRoom.mutualRevealState?.consentCount || 0} จาก{" "}
+                  {currentRoom.mutualRevealState?.totalRequired || 4} คน
                 </Text>
               </View>
               <View style={styles.consentTrack}>
@@ -294,7 +483,11 @@ export default function BlindLoungeScreen() {
                   style={[
                     styles.consentFill,
                     {
-                      width: `${(mutualRevealState.consentCount / mutualRevealState.totalRequired) * 100}%`,
+                      width: `${
+                        ((currentRoom.mutualRevealState?.consentCount || 0) /
+                          (currentRoom.mutualRevealState?.totalRequired || 4)) *
+                        100
+                      }%`,
                     },
                   ]}
                 />
@@ -302,11 +495,11 @@ export default function BlindLoungeScreen() {
             </View>
 
             {/* Consent Action */}
-            {!mutualRevealState.userHasConsented ? (
+            {!currentRoom.mutualRevealState?.userHasConsented ? (
               <TouchableOpacity
                 style={styles.consentActionBtn}
                 activeOpacity={0.85}
-                onPress={requestMutualReveal}
+                onPress={() => requestMutualReveal(currentRoom.id)}
               >
                 <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
                 <Text style={styles.consentActionText}>
@@ -323,24 +516,26 @@ export default function BlindLoungeScreen() {
             )}
 
             {/* Members List */}
-            <Text style={styles.membersListHeader}>เพื่อนในห้องสังสรรค์สัปดาห์นี้:</Text>
+            <Text style={styles.membersListHeader}>เพื่อนในห้องสังสรรค์:</Text>
             <ScrollView style={styles.membersScroll} showsVerticalScrollIndicator={false}>
-              {currentLounge.members.map((member) => (
+              {currentRoom.members?.map((member) => (
                 <View key={member.id} style={styles.memberItem}>
-                  {mutualRevealState.allConsented && member.realAvatar ? (
+                  {currentRoom.mutualRevealState?.allConsented && member.realAvatar ? (
                     <Image source={{ uri: member.realAvatar }} style={styles.memberAvatarImg} />
                   ) : (
                     <View style={styles.memberAvatarCircle}>
                       <Text style={styles.memberAvatarInitial}>
-                        {mutualRevealState.allConsented
-                          ? member.realName.charAt(0)
-                          : member.alias.charAt(0)}
+                        {currentRoom.mutualRevealState?.allConsented
+                          ? member.realName?.charAt(0)
+                          : member.alias?.charAt(0)}
                       </Text>
                     </View>
                   )}
                   <View style={styles.memberDetails}>
                     <Text style={styles.memberDisplayName}>
-                      {mutualRevealState.allConsented ? member.realName : member.alias}
+                      {currentRoom.mutualRevealState?.allConsented
+                        ? member.realName
+                        : member.alias}
                     </Text>
                     <Text style={styles.memberFacultyName}>{member.faculty}</Text>
                   </View>
@@ -387,6 +582,244 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#0F172A",
   },
+  // Lobby Styles
+  lobbyHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 14,
+    backgroundColor: "#0F172A",
+    borderBottomWidth: 1,
+    borderBottomColor: "#1E293B",
+  },
+  lobbyTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  lobbyPreTitle: {
+    color: "#818CF8",
+    fontSize: 10.5,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  lobbyTitle: {
+    color: "#F8FAFC",
+    fontSize: 20,
+    fontWeight: "900",
+  },
+  lobbySubtitle: {
+    color: "#94A3B8",
+    fontSize: 11.5,
+    lineHeight: 16,
+  },
+  lobbyScroll: {
+    flex: 1,
+  },
+  lobbyContent: {
+    padding: 16,
+    paddingBottom: 30,
+  },
+  randomMatchCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1E293B",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: "#818CF8",
+    marginBottom: 20,
+    gap: 12,
+  },
+  randomMatchIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(129, 140, 248, 0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  randomMatchTextBox: {
+    flex: 1,
+  },
+  randomMatchTitle: {
+    color: "#F8FAFC",
+    fontSize: 14.5,
+    fontWeight: "800",
+    marginBottom: 3,
+  },
+  randomMatchDesc: {
+    color: "#94A3B8",
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  sectionHeading: {
+    color: "#F8FAFC",
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  sectionBadge: {
+    color: "#64748B",
+    fontSize: 11.5,
+    fontWeight: "700",
+  },
+  roomCard: {
+    backgroundColor: "#1E293B",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#334155",
+    marginBottom: 12,
+  },
+  roomCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  roomThemeTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#0F172A",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#334155",
+    maxWidth: "68%",
+  },
+  roomThemeTagText: {
+    color: "#818CF8",
+    fontSize: 10.5,
+    fontWeight: "700",
+  },
+  roomStatusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  activeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#818CF8",
+  },
+  roomStatusText: {
+    color: "#64748B",
+    fontSize: 10.5,
+    fontWeight: "600",
+  },
+  roomStatusTextActive: {
+    color: "#818CF8",
+    fontWeight: "700",
+  },
+  roomTitleText: {
+    color: "#F8FAFC",
+    fontSize: 14,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+  roomFacultiesText: {
+    color: "#94A3B8",
+    fontSize: 11.5,
+    fontWeight: "500",
+    marginBottom: 8,
+  },
+  lastMsgBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#0F172A",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginBottom: 10,
+    gap: 8,
+  },
+  lastMsgText: {
+    color: "#CBD5E1",
+    fontSize: 11,
+    flex: 1,
+  },
+  lastMsgTime: {
+    color: "#64748B",
+    fontSize: 10,
+  },
+  roomCardFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  intimacyMiniTrack: {
+    flex: 1,
+    height: 4,
+    backgroundColor: "#0F172A",
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  intimacyMiniFill: {
+    height: "100%",
+    borderRadius: 2,
+  },
+  intimacyMiniText: {
+    color: "#94A3B8",
+    fontSize: 10.5,
+    fontWeight: "600",
+  },
+  matchingOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  matchingCard: {
+    width: "100%",
+    backgroundColor: "#1E293B",
+    borderRadius: 18,
+    padding: 24,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+  matchingTitle: {
+    color: "#F8FAFC",
+    fontSize: 15.5,
+    fontWeight: "800",
+    marginTop: 14,
+    marginBottom: 4,
+  },
+  matchingSubtitle: {
+    color: "#94A3B8",
+    fontSize: 11.5,
+    textAlign: "center",
+    lineHeight: 16,
+    marginBottom: 16,
+  },
+  matchingFacultyRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  matchingFacultyChip: {
+    backgroundColor: "#0F172A",
+    color: "#818CF8",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    fontSize: 11,
+    fontWeight: "700",
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+
+  // Chat Screen Styles
   topHeader: {
     paddingHorizontal: 16,
     paddingTop: 10,
@@ -398,7 +831,10 @@ const styles = StyleSheet.create({
   headerTopRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+  },
+  backButton: {
+    paddingRight: 10,
+    paddingVertical: 4,
   },
   headerTitleGroup: {
     flex: 1,

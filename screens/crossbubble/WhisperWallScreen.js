@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TextInput,
   StatusBar,
   Alert,
+  Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,6 +24,95 @@ const FACULTY_TAGS = [
   "เด็กนิติ",
   "เด็กวิทยา",
 ];
+
+// Interactive Bubble Pop Button with popping animation & bubble tones
+function BubblePopButton({ item, onToggle }) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const burstScale = useRef(new Animated.Value(0.8)).current;
+  const burstOpacity = useRef(new Animated.Value(0)).current;
+
+  const handlePress = () => {
+    // Run Pop Animation
+    burstScale.setValue(0.8);
+    burstOpacity.setValue(1);
+
+    Animated.parallel([
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.25,
+          duration: 120,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 4,
+          tension: 80,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.timing(burstScale, {
+        toValue: 1.8,
+        duration: 350,
+        useNativeDriver: true,
+      }),
+      Animated.timing(burstOpacity, {
+        toValue: 0,
+        duration: 350,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    onToggle();
+  };
+
+  return (
+    <View style={styles.bubbleBtnWrapper}>
+      {/* Animated Ripple / Burst Aura */}
+      <Animated.View
+        style={[
+          styles.burstRipple,
+          {
+            opacity: burstOpacity,
+            transform: [{ scale: burstScale }],
+          },
+        ]}
+        pointerEvents="none"
+      />
+
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <TouchableOpacity
+          style={[styles.popBtn, item.hasPopped && styles.popBtnActive]}
+          activeOpacity={0.8}
+          onPress={handlePress}
+        >
+          <Ionicons
+            name={item.hasPopped ? "sparkles" : "ellipse-outline"}
+            size={13}
+            color={item.hasPopped ? "#38BDF8" : "#94A3B8"}
+          />
+          <Text style={[styles.popText, item.hasPopped && styles.popTextActive]}>
+            {item.hasPopped ? "Bubble Pops" : "Bubble"}
+          </Text>
+          <View
+            style={[
+              styles.popCountBadge,
+              item.hasPopped && styles.popCountBadgeActive,
+            ]}
+          >
+            <Text
+              style={[
+                styles.popCountText,
+                item.hasPopped && styles.popCountTextActive,
+              ]}
+            >
+              {item.pops}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
+  );
+}
 
 export default function WhisperWallScreen() {
   const { whisperPosts, addWhisperPost, toggleWhisperPop, userAlias } = useCrossBubble();
@@ -158,35 +248,10 @@ export default function WhisperWallScreen() {
             <Text style={styles.whisperContent}>{item.content}</Text>
 
             <View style={styles.whisperFooter}>
-              <TouchableOpacity
-                style={[styles.popBtn, item.hasPopped && styles.popBtnActive]}
-                activeOpacity={0.7}
-                onPress={() => toggleWhisperPop(item.id)}
-              >
-                <Ionicons
-                  name={item.hasPopped ? "radio-button-on" : "ellipse-outline"}
-                  size={14}
-                  color={item.hasPopped ? "#F59E0B" : "#94A3B8"}
-                />
-                <Text style={[styles.popText, item.hasPopped && styles.popTextActive]}>
-                  Bubble Pop
-                </Text>
-                <View
-                  style={[
-                    styles.popCountBadge,
-                    item.hasPopped && styles.popCountBadgeActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.popCountText,
-                      item.hasPopped && styles.popCountTextActive,
-                    ]}
-                  >
-                    {item.pops}
-                  </Text>
-                </View>
-              </TouchableOpacity>
+              <BubblePopButton
+                item={item}
+                onToggle={() => toggleWhisperPop(item.id)}
+              />
             </View>
           </View>
         ))}
@@ -413,20 +478,34 @@ const styles = StyleSheet.create({
     borderTopColor: "#334155",
     paddingTop: 8,
   },
+  bubbleBtnWrapper: {
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  burstRipple: {
+    position: "absolute",
+    width: "100%",
+    height: "100%",
+    borderRadius: 18,
+    backgroundColor: "rgba(56, 189, 248, 0.35)",
+    borderWidth: 1,
+    borderColor: "#38BDF8",
+  },
   popBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     backgroundColor: "#0F172A",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: "#334155",
   },
   popBtnActive: {
-    borderColor: "#F59E0B",
-    backgroundColor: "rgba(245, 158, 11, 0.1)",
+    borderColor: "rgba(56, 189, 248, 0.6)",
+    backgroundColor: "rgba(56, 189, 248, 0.12)",
   },
   popText: {
     color: "#94A3B8",
@@ -434,18 +513,18 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   popTextActive: {
-    color: "#F59E0B",
+    color: "#38BDF8",
     fontWeight: "700",
   },
   popCountBadge: {
     backgroundColor: "#1E293B",
-    paddingHorizontal: 5,
-    paddingVertical: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
     borderRadius: 8,
     marginLeft: 2,
   },
   popCountBadgeActive: {
-    backgroundColor: "rgba(245, 158, 11, 0.2)",
+    backgroundColor: "rgba(56, 189, 248, 0.2)",
   },
   popCountText: {
     color: "#94A3B8",
@@ -453,6 +532,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   popCountTextActive: {
-    color: "#F59E0B",
+    color: "#38BDF8",
   },
 });

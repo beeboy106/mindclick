@@ -5,8 +5,8 @@ import { useData } from "./DataContext";
 
 const CROSS_BUBBLE_STORAGE_KEY = "@mindclick_cross_bubble_active";
 const CROSS_BUBBLE_ALIAS_KEY = "@mindclick_cross_bubble_alias";
-const CROSS_BUBBLE_ENERGY_KEY = "@mindclick_cross_bubble_energy";
-const CROSS_BUBBLE_CHATS_KEY = "@mindclick_cross_bubble_chats";
+const CROSS_BUBBLE_LOUNGE_ROOMS_KEY = "@mindclick_cross_bubble_lounge_rooms";
+const CROSS_BUBBLE_ONE_ON_ONE_KEY = "@mindclick_cross_bubble_one_on_one";
 const CROSS_BUBBLE_WHISPER_KEY = "@mindclick_cross_bubble_whispers";
 
 // รายการไอคอนมาสคอต (Vector Icons จาก @expo/vector-icons Ionicons)
@@ -78,29 +78,23 @@ const INITIAL_WHISPERS = [
   },
 ];
 
-const CrossBubbleContext = createContext();
-
-export function CrossBubbleProvider({ children }) {
-  const { user } = useAuth();
-  const { profile } = useData();
-
-  const [isCrossBubbleMode, setIsCrossBubbleMode] = useState(false);
-  const [userAlias, setUserAlias] = useState(null);
-  const [bubbleEnergy, setBubbleEnergy] = useState(45); // 0-100%
-  const [mutualRevealState, setMutualRevealState] = useState({
-    userHasConsented: false,
-    allConsented: false,
-    consentCount: 3,
-    totalRequired: 4,
-  });
-
-  // ข้อมูล Weekly Micro-Lounge
-  const [currentLounge, setCurrentLounge] = useState({
-    id: "lounge_week_12",
+const INITIAL_LOUNGE_ROOMS = [
+  {
+    id: "lounge_active_1",
     title: "กลุ่มคนรักดนตรีอินดี้ที่ชอบนอนดึก",
     theme: "ดนตรี & ไลฟ์สไตล์กลางคืน",
     faculties: ["วิศวกรรมศาสตร์", "พยาบาลศาสตร์", "อักษรศาสตร์", "พาณิชยศาสตร์และการบัญชี"],
     memberCount: 5,
+    bubbleEnergy: 45,
+    isActive: true,
+    lastMessage: "สวัสดีครับทุกคน เราเด็กบัญชีแต่วันนี้ขอหนีงบดุลมาฟังเพลงด้วยคน",
+    lastMessageTime: "22:12",
+    mutualRevealState: {
+      userHasConsented: false,
+      allConsented: false,
+      consentCount: 3,
+      totalRequired: 4,
+    },
     activePoll: {
       id: "poll_night_music",
       question: "ถ้าคืนนี้มีเวลาว่าง 3 ชั่วโมงก่อนนอน คุณจะเลือกทำอะไร?",
@@ -154,45 +148,259 @@ export function CrossBubbleProvider({ children }) {
         consented: false,
       },
     ],
-  });
+    messages: [
+      {
+        id: "msg_sys_1",
+        isSystem: true,
+        text: "ยินดีต้อนรับสู่ห้องสังสรรค์ (Blind Lounge): คุณและเพื่อนอีก 4 คนจากต่างคณะที่สไตล์ตรงกันถูกจัดกลุ่มมารวมกันที่นี่ ชวนคุยและเปิดบทสนทนาเพื่อสะสมความสนิทในห้องสำหรับเปิดเผยตัวตนจริงร่วมกัน (Mutual Reveal)",
+        createdAt: "22:00",
+      },
+      {
+        id: "msg_lounge_1",
+        senderId: "member_nurse",
+        senderAlias: "พยาบาลเวรดึกติดกาแฟ",
+        senderIcon: "cafe-outline",
+        text: "สวัสดีทุกคน เพิ่งลงเวรมาพอดีเลย ใครชอบฟังวง Dept หรือ Anatomy Rabbit บ้าง",
+        createdAt: "22:05",
+      },
+      {
+        id: "msg_lounge_2",
+        senderId: "member_arts",
+        senderAlias: "อักษรฟังเพลงนอกกระแส",
+        senderIcon: "headset-outline",
+        text: "เราชอบมาก เพลง 'คงต้องบอกลา' ฟังวนทุกคืนเลย ยินดีที่ได้รู้จักเพื่อนๆ นะ",
+        createdAt: "22:08",
+      },
+      {
+        id: "msg_lounge_3",
+        senderId: "member_acc",
+        senderAlias: "บัญชีเล่นบอร์ดเกมยันเช้า",
+        senderIcon: "game-controller-outline",
+        text: "สวัสดีครับทุกคน เราเด็กบัญชีแต่วันนี้ขอหนีงบดุลมาฟังเพลงด้วยคน",
+        createdAt: "22:12",
+      },
+    ],
+  },
+  {
+    id: "lounge_archived_2",
+    title: "กลุ่มสายปั่นงานดึกเด็กหอ",
+    theme: "เอาตัวรอดช่วงมิดเทอม",
+    faculties: ["สถาปัตยกรรมศาสตร์", "วิศวกรรมศาสตร์", "นิติศาสตร์"],
+    memberCount: 4,
+    bubbleEnergy: 100,
+    isActive: false,
+    lastMessage: "สอบเสร็จแล้วไว้ไปกินชาบูกันนะทุกคน!",
+    lastMessageTime: "เมื่อสัปดาห์ที่แล้ว",
+    mutualRevealState: {
+      userHasConsented: true,
+      allConsented: true,
+      consentCount: 4,
+      totalRequired: 4,
+    },
+    activePoll: null,
+    members: [
+      {
+        id: "m_arch_old",
+        alias: "สถาปัตย์นอนเช้า",
+        icon: "color-palette-outline",
+        faculty: "สถาปัตยกรรมศาสตร์",
+        realName: "ก้องภพ ปรีดา",
+        realAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
+        realBio: "สายโมเดลและกาแฟสด",
+        consented: true,
+      },
+      {
+        id: "m_law_old",
+        alias: "นิติท่องมาตราตีสาม",
+        icon: "book-outline",
+        faculty: "นิติศาสตร์",
+        realName: "พิชชาภา วัฒนา",
+        realAvatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&auto=format&fit=crop&q=80",
+        realBio: "อ่านหนังสือกองโตทุกค่ำคืน",
+        consented: true,
+      },
+    ],
+    messages: [
+      {
+        id: "msg_old_1",
+        isSystem: true,
+        text: "ห้องสังสรรค์ในอดีต (ประวัติการสนทนายังคงถูกเก็บไว้เพื่อทบทวนความทรงจำ)",
+        createdAt: "18:00",
+      },
+      {
+        id: "msg_old_2",
+        senderId: "m_arch_old",
+        senderAlias: "สถาปัตย์นอนเช้า",
+        senderIcon: "color-palette-outline",
+        text: "ส่งไฟนอลโมเดลเสร็จแล้ว รอดตายอย่างปาฏิหาริย์!",
+        createdAt: "04:30",
+      },
+      {
+        id: "msg_old_3",
+        senderId: "m_law_old",
+        senderAlias: "นิติท่องมาตราตีสาม",
+        senderIcon: "book-outline",
+        text: "สอบเสร็จแล้วไว้ไปกินชาบูกันนะทุกคน!",
+        createdAt: "11:20",
+      },
+    ],
+  },
+];
 
-  const [loungeMessages, setLoungeMessages] = useState([
-    {
-      id: "msg_sys_1",
-      isSystem: true,
-      text: "ยินดีต้อนรับสู่ห้องสังสรรค์ (Blind Lounge): คุณและเพื่อนอีก 4 คนจากต่างคณะที่สไตล์ตรงกันถูกจัดกลุ่มมารวมกันที่นี่ ชวนคุยและเปิดบทสนทนาเพื่อสะสมความสนิทในห้องสำหรับเปิดเผยตัวตนจริงร่วมกัน (Mutual Reveal)",
-      createdAt: "22:00",
-    },
-    {
-      id: "msg_lounge_1",
-      senderId: "member_nurse",
-      senderAlias: "พยาบาลเวรดึกติดกาแฟ",
-      senderIcon: "cafe-outline",
-      text: "สวัสดีทุกคน เพิ่งลงเวรมาพอดีเลย ใครชอบฟังวง Dept หรือ Anatomy Rabbit บ้าง",
-      createdAt: "22:05",
-    },
-    {
-      id: "msg_lounge_2",
-      senderId: "member_arts",
-      senderAlias: "อักษรฟังเพลงนอกกระแส",
-      senderIcon: "headset-outline",
-      text: "เราชอบมาก เพลง 'คงต้องบอกลา' ฟังวนทุกคืนเลย ยินดีที่ได้รู้จักเพื่อนๆ นะ",
-      createdAt: "22:08",
-    },
-    {
-      id: "msg_lounge_3",
-      senderId: "member_acc",
-      senderAlias: "บัญชีเล่นบอร์ดเกมยันเช้า",
-      senderIcon: "game-controller-outline",
-      text: "สวัสดีครับทุกคน เราเด็กบัญชีแต่วันนี้ขอหนีงบดุลมาฟังเพลงด้วยคน",
-      createdAt: "22:12",
-    },
-  ]);
+const INITIAL_ONE_ON_ONE_ROOMS = [
+  {
+    id: "one_1",
+    partnerAlias: "เด็กอักษรชอบดูดาว #421",
+    partnerFaculty: "อักษรศาสตร์",
+    partnerIcon: "planet-outline",
+    partnerRealName: "วริศรา เจริญสุข",
+    partnerRealAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
+    partnerRealBio: "ชอบดูดาว ถ่ายรูปฟิล์ม และอ่านวรรณกรรมอินดี้",
+    userRequestedReveal: false,
+    partnerRequestedReveal: false,
+    isRevealed: false,
+    lastMessage: "ถ้าเธอชอบฟังเพลงนอกกระแส เรามีเพลย์ลิสต์อยากแชร์เยอะเลย",
+    lastMessageTime: "21:40",
+    messages: [
+      {
+        id: "m_1_1",
+        senderAlias: "เด็กอักษรชอบดูดาว #421",
+        senderIcon: "planet-outline",
+        text: "สวัสดีจ้า! ยินดีที่ได้คุยกันนะ วันนี้เรียนเหนื่อยไหม",
+        createdAt: "21:35",
+        isMe: false,
+      },
+      {
+        id: "m_1_2",
+        senderAlias: "คุณ",
+        senderIcon: "finger-print-outline",
+        text: "เหนื่อยมากกก นั่งทำแล็บทั้งบ่ายเลย",
+        createdAt: "21:38",
+        isMe: true,
+      },
+      {
+        id: "m_1_3",
+        senderAlias: "เด็กอักษรชอบดูดาว #421",
+        senderIcon: "planet-outline",
+        text: "ถ้าเธอชอบฟังเพลงนอกกระแส เรามีเพลย์ลิสต์อยากแชร์เยอะเลย",
+        createdAt: "21:40",
+        isMe: false,
+      },
+    ],
+  },
+];
+
+const RANDOM_GROUP_THEMES = [
+  {
+    title: "บอร์ดเกมคาเฟ่ & ตี้หาเพื่อนเล่นเกม",
+    theme: "บอร์ดเกม & กิจกรรมยามว่าง",
+    faculties: ["วิทยาศาสตร์", "วิศวกรรมศาสตร์", "สถาปัตยกรรมศาสตร์", "นิเทศศาสตร์"],
+    question: "บอร์ดเกมแนวไหนที่คุณชอบเล่นมากที่สุดเวลาอยู่กับเพื่อน?",
+    options: [
+      { text: "แนวบลัฟฟ์/โกหกจับคนร้าย (Werewolf, Avalon)", votes: 2 },
+      { text: "แนววางแผน ยึดพื้นที่ สร้างเมือง (Catan, Carcassonne)", votes: 1 },
+      { text: "แนวปาร์ตี้เกม เฮฮา หัวเราะท้องแข็ง (Exploding Kittens)", votes: 2 },
+      { text: "เกมอะไรก็ได้ ขอแค่มีของกินอร่อยๆ", votes: 0 },
+    ],
+  },
+  {
+    title: "คอมมูนิตี้กาแฟดริป & เพลย์ลิสต์ Lo-Fi",
+    theme: "กาแฟ & ดนตรีผ่อนคลาย",
+    faculties: ["พยาบาลศาสตร์", "แพทยศาสตร์", "อักษรศาสตร์", "พาณิชยศาสตร์และการบัญชี"],
+    question: "เครื่องดื่มแก้วโปรดที่ช่วยให้คุณตาสว่างตอนปั่นงานดึกคืออะไร?",
+    options: [
+      { text: "อเมริกาโน่เย็น ไม่หวานเลย เข้มๆ", votes: 3 },
+      { text: "ชาเขียวมัทฉะลาเต้ หวานน้อย", votes: 2 },
+      { text: "ชานมไข่มุก เยียวยาจิตใจ", votes: 1 },
+      { text: "น้ำเปล่าเย็นจัดๆ สดชื่นที่สุด", votes: 0 },
+    ],
+  },
+  {
+    title: "ชมรมคนรักภาพยนตร์นอกกระแส & คอนเสิร์ต",
+    theme: "ภาพยนตร์ ศิลปะ & ดนตรีสด",
+    faculties: ["อักษรศาสตร์", "นิเทศศาสตร์", "วิจิตรศิลป์", "สถาปัตยกรรมศาสตร์"],
+    question: "โรงภาพยนตร์หรือบรรยากาศดูหนังแบบไหนที่คุณชอบที่สุด?",
+    options: [
+      { text: "โรงหนังอินดี้เงียบๆ คนไม่เยอะ (เช่น House Samyan)", votes: 3 },
+      { text: "นอนคลุมโปงดูซีรีย์คนเดียวในห้อง", votes: 2 },
+      { text: "ดูหนังกับเพื่อนในหอ พร้อมป๊อปคอร์น", votes: 1 },
+      { text: "ชอบไปดูดนตรีสดมากกว่าดูหนัง", votes: 0 },
+    ],
+  },
+];
+
+const RANDOM_ONE_ON_ONE_PARTNERS = [
+  {
+    alias: "เด็กแพทย์แอบมาฟังเพลง #812",
+    faculty: "แพทยศาสตร์",
+    icon: "headset-outline",
+    realName: "นันทิภัทร โชคอนันต์",
+    realAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80",
+    realBio: "นักศึกษาแพทย์ปี 3 ชอบเล่นกีตาร์โปร่งและวิ่งมาราธอน",
+    greeting: "สวัสดีครับ เพิ่งอ่านแล็บกายวิภาคเสร็จ ขอแวะมาคุยคลายเครียดหน่อย ยินดีที่ได้รู้จักนะ!",
+  },
+  {
+    alias: "เด็กสถาปัตย์ตัดโมเดลยันเช้า #634",
+    faculty: "สถาปัตยกรรมศาสตร์",
+    icon: "color-palette-outline",
+    realName: "จิรัฏฐ์ อนันตศิลป์",
+    realAvatar: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=400&auto=format&fit=crop&q=80",
+    realBio: "เด็กสถาปัตย์ชอบดื่มชาเขียวและถ่ายภาพ Street",
+    greeting: "สวัสดี! คืนนี้มีใครยังไม่นอนบ้าง เรานั่งตัดโมเดลคนเดียวเหงามาก มาคุยกันนะ",
+  },
+  {
+    alias: "เด็กพยาบาลเวรบ่ายชอบดูการ์ตูน #319",
+    faculty: "พยาบาลศาสตร์",
+    icon: "cafe-outline",
+    realName: "ปวริศา รัตนโชติ",
+    realAvatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&auto=format&fit=crop&q=80",
+    realBio: "เด็กพยาบาลรักแมวและติดอนิเมะ Ghibli",
+    greeting: "ฮัลโหลลล เพิ่งลงเวรมาเลย วันนี้เจอคนไข้น่ารักมาก เลยอยากมาแบ่งปันพลังบวกให้เพื่อนๆ",
+  },
+  {
+    alias: "เด็กนิติรักความยุติธรรม #755",
+    faculty: "นิติศาสตร์",
+    icon: "terminal-outline",
+    realName: "ธนกฤต ศิริพงษ์",
+    realAvatar: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400&auto=format&fit=crop&q=80",
+    realBio: "เด็กนิติจอมขบคิด ชอบดูซีรีย์สืบสวนและฟังพอดแคสต์",
+    greeting: "สวัสดีครับ พักสายตาจากการอ่านประมวลกฎหมายมาคุยด้วยครับ มีเรื่องอะไรสนุกๆ แลกเปลี่ยนกันได้นะ",
+  },
+];
+
+const CrossBubbleContext = createContext();
+
+export function CrossBubbleProvider({ children }) {
+  const { user } = useAuth();
+  const { profile } = useData();
+
+  const [isCrossBubbleMode, setIsCrossBubbleMode] = useState(false);
+  const [userAlias, setUserAlias] = useState(null);
+
+  // Blind Lounge Multiple Rooms State
+  const [loungeRooms, setLoungeRooms] = useState(INITIAL_LOUNGE_ROOMS);
+  const [activeLoungeRoomId, setActiveLoungeRoomId] = useState(null); // null means in Lobby!
+
+  // 1 on 1 Multiple Rooms State
+  const [oneOnOneRooms, setOneOnOneRooms] = useState(INITIAL_ONE_ON_ONE_ROOMS);
+  const [activeOneOnOneRoomId, setActiveOneOnOneRoomId] = useState(null); // null means in 1 on 1 Lobby!
 
   const [whisperPosts, setWhisperPosts] = useState(INITIAL_WHISPERS);
   const [radarData] = useState(DEFAULT_RADAR_DATA);
 
-  // ฟังก์ชันสร้างหรือสุ่มตัวตนนามแฝง
+  // Current active lounge room object (fallback to first room)
+  const currentLounge =
+    loungeRooms.find((r) => r.id === activeLoungeRoomId) || loungeRooms[0];
+  const loungeMessages = currentLounge?.messages || [];
+  const bubbleEnergy = currentLounge?.bubbleEnergy || 50;
+  const mutualRevealState = currentLounge?.mutualRevealState || {
+    userHasConsented: false,
+    allConsented: false,
+    consentCount: 2,
+    totalRequired: 4,
+  };
+
+  // Generate random alias
   const generateRandomAlias = useCallback((customFaculty = null) => {
     const facultyName = customFaculty || profile?.faculty || "วิศวกรรมศาสตร์";
     const shortFaculty = facultyName.replace("คณะ", "").split(" ")[0].trim() || "นิรนาม";
@@ -209,9 +417,9 @@ export function CrossBubbleProvider({ children }) {
     };
   }, [profile?.faculty]);
 
-  // โหลดสถานะโหมดมืดและนามแฝงจาก AsyncStorage
+  // Load saved state from AsyncStorage
   useEffect(() => {
-    async function loadCrossBubbleStorage() {
+    async function loadStorage() {
       try {
         const storedActive = await AsyncStorage.getItem(CROSS_BUBBLE_STORAGE_KEY);
         if (storedActive === "true") {
@@ -232,9 +440,14 @@ export function CrossBubbleProvider({ children }) {
           await AsyncStorage.setItem(CROSS_BUBBLE_ALIAS_KEY, JSON.stringify(newAlias));
         }
 
-        const storedEnergy = await AsyncStorage.getItem(CROSS_BUBBLE_ENERGY_KEY);
-        if (storedEnergy) {
-          setBubbleEnergy(parseInt(storedEnergy, 10));
+        const storedRooms = await AsyncStorage.getItem(CROSS_BUBBLE_LOUNGE_ROOMS_KEY);
+        if (storedRooms) {
+          setLoungeRooms(JSON.parse(storedRooms));
+        }
+
+        const storedOneOnOne = await AsyncStorage.getItem(CROSS_BUBBLE_ONE_ON_ONE_KEY);
+        if (storedOneOnOne) {
+          setOneOnOneRooms(JSON.parse(storedOneOnOne));
         }
 
         const storedWhispers = await AsyncStorage.getItem(CROSS_BUBBLE_WHISPER_KEY);
@@ -242,14 +455,14 @@ export function CrossBubbleProvider({ children }) {
           setWhisperPosts(JSON.parse(storedWhispers));
         }
       } catch (e) {
-        console.warn("loadCrossBubbleStorage error:", e);
+        console.warn("CrossBubble loadStorage error:", e);
       }
     }
 
-    loadCrossBubbleStorage();
+    loadStorage();
   }, [generateRandomAlias]);
 
-  // สลับโหมด Cross-Bubble
+  // Toggle Cross-Bubble Mode
   const toggleCrossBubbleMode = useCallback(async (forcedState) => {
     setIsCrossBubbleMode((prev) => {
       const nextState = forcedState !== undefined ? forcedState : !prev;
@@ -258,7 +471,7 @@ export function CrossBubbleProvider({ children }) {
     });
   }, []);
 
-  // สุ่มฉายาใหม่
+  // Regenerate Alias
   const regenerateAlias = useCallback(async () => {
     const newAlias = generateRandomAlias();
     setUserAlias(newAlias);
@@ -266,7 +479,7 @@ export function CrossBubbleProvider({ children }) {
     return newAlias;
   }, [generateRandomAlias]);
 
-  // เปลี่ยนมาสคอต
+  // Change Mascot
   const changeMascot = useCallback(async (newIcon) => {
     if (!userAlias) return;
     const updated = { ...userAlias, icon: newIcon };
@@ -274,10 +487,11 @@ export function CrossBubbleProvider({ children }) {
     await AsyncStorage.setItem(CROSS_BUBBLE_ALIAS_KEY, JSON.stringify(updated));
   }, [userAlias]);
 
-  // ส่งข้อความในห้องแชทกลุ่มลับ (เพิ่มพลัง Bubble Energy)
-  const sendLoungeMessage = useCallback(async (text) => {
+  // Send message in Blind Lounge (supports specific roomId or currently active room)
+  const sendLoungeMessage = useCallback(async (text, targetRoomId = null) => {
     if (!text || !text.trim()) return;
 
+    const roomId = targetRoomId || activeLoungeRoomId || loungeRooms[0]?.id;
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
@@ -291,60 +505,265 @@ export function CrossBubbleProvider({ children }) {
       isMe: true,
     };
 
-    setLoungeMessages((prev) => [...prev, newMsg]);
-
-    // เพิ่มพลังเกจ Bubble Energy (+10% ทุกครั้งที่คุย)
-    setBubbleEnergy((prev) => {
-      const next = Math.min(100, prev + 10);
-      AsyncStorage.setItem(CROSS_BUBBLE_ENERGY_KEY, String(next));
-      return next;
+    setLoungeRooms((prev) => {
+      const updated = prev.map((room) => {
+        if (room.id !== roomId) return room;
+        const newEnergy = Math.min(100, (room.bubbleEnergy || 0) + 10);
+        return {
+          ...room,
+          messages: [...(room.messages || []), newMsg],
+          lastMessage: text.trim(),
+          lastMessageTime: timeStr,
+          bubbleEnergy: newEnergy,
+        };
+      });
+      AsyncStorage.setItem(CROSS_BUBBLE_LOUNGE_ROOMS_KEY, JSON.stringify(updated));
+      return updated;
     });
-  }, [user?.id, userAlias]);
+  }, [activeLoungeRoomId, loungeRooms, user?.id, userAlias]);
 
-  // โหวตคำถาม Icebreaker ในกลุ่ม (+15% พลัง Bubble Energy)
-  const voteLoungePoll = useCallback((pollId, optionIndex) => {
-    setCurrentLounge((prev) => {
-      if (!prev.activePoll || prev.activePoll.userVotedIndex !== null) return prev;
+  // Vote icebreaker poll in Blind Lounge
+  const voteLoungePoll = useCallback((pollId, optionIndex, targetRoomId = null) => {
+    const roomId = targetRoomId || activeLoungeRoomId || loungeRooms[0]?.id;
 
-      const updatedOptions = prev.activePoll.options.map((opt, idx) => {
-        if (idx === optionIndex) {
-          return { ...opt, votes: opt.votes + 1 };
+    setLoungeRooms((prev) => {
+      const updated = prev.map((room) => {
+        if (room.id !== roomId || !room.activePoll || room.activePoll.userVotedIndex !== null) {
+          return room;
         }
-        return opt;
+
+        const updatedOptions = room.activePoll.options.map((opt, idx) => {
+          if (idx === optionIndex) {
+            return { ...opt, votes: opt.votes + 1 };
+          }
+          return opt;
+        });
+
+        const newEnergy = Math.min(100, (room.bubbleEnergy || 0) + 15);
+
+        return {
+          ...room,
+          bubbleEnergy: newEnergy,
+          activePoll: {
+            ...room.activePoll,
+            options: updatedOptions,
+            userVotedIndex: optionIndex,
+          },
+        };
       });
 
-      return {
-        ...prev,
-        activePoll: {
-          ...prev.activePoll,
-          options: updatedOptions,
-          userVotedIndex: optionIndex,
+      AsyncStorage.setItem(CROSS_BUBBLE_LOUNGE_ROOMS_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, [activeLoungeRoomId, loungeRooms]);
+
+  // Request mutual reveal in Blind Lounge
+  const requestMutualReveal = useCallback((targetRoomId = null) => {
+    const roomId = targetRoomId || activeLoungeRoomId || loungeRooms[0]?.id;
+
+    setLoungeRooms((prev) => {
+      const updated = prev.map((room) => {
+        if (room.id !== roomId) return room;
+
+        const currentConsent = room.mutualRevealState || {
+          userHasConsented: false,
+          allConsented: false,
+          consentCount: 2,
+          totalRequired: 4,
+        };
+
+        const newCount = currentConsent.consentCount + (currentConsent.userHasConsented ? 0 : 1);
+        const isAll = newCount >= currentConsent.totalRequired;
+
+        return {
+          ...room,
+          mutualRevealState: {
+            ...currentConsent,
+            userHasConsented: true,
+            consentCount: newCount,
+            allConsented: isAll,
+          },
+        };
+      });
+
+      AsyncStorage.setItem(CROSS_BUBBLE_LOUNGE_ROOMS_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, [activeLoungeRoomId, loungeRooms]);
+
+  // Create & match a new random Blind Lounge group
+  const createNewRandomLoungeRoom = useCallback(() => {
+    const template =
+      RANDOM_GROUP_THEMES[Math.floor(Math.random() * RANDOM_GROUP_THEMES.length)];
+    const newRoomId = `lounge_${Date.now()}`;
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+    const newRoom = {
+      id: newRoomId,
+      title: template.title,
+      theme: template.theme,
+      faculties: template.faculties,
+      memberCount: 5,
+      bubbleEnergy: 15,
+      isActive: true,
+      lastMessage: "เริ่มเปิดห้องสังสรรค์ใหม่แล้ว มาทักทายกัน!",
+      lastMessageTime: timeStr,
+      mutualRevealState: {
+        userHasConsented: false,
+        allConsented: false,
+        consentCount: 1,
+        totalRequired: 4,
+      },
+      activePoll: {
+        id: `poll_${Date.now()}`,
+        question: template.question,
+        options: template.options,
+        userVotedIndex: null,
+      },
+      members: [
+        {
+          id: `mem_rand_1_${Date.now()}`,
+          alias: "เด็กสายชิลล์ #204",
+          icon: "headset-outline",
+          faculty: template.faculties[0] || "วิศวกรรมศาสตร์",
+          realName: "ศิริชัย เลิศวิมล",
+          realAvatar: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=400&auto=format&fit=crop&q=80",
+          realBio: "ชอบคุยเรื่องเพลงและของกิน",
+          consented: true,
         },
-      };
+        {
+          id: `mem_rand_2_${Date.now()}`,
+          alias: "เด็กชอบนอนดึก #588",
+          icon: "moon-outline",
+          faculty: template.faculties[1] || "อักษรศาสตร์",
+          realName: "กัญญาณัฐ สุวรรณ",
+          realAvatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&auto=format&fit=crop&q=80",
+          realBio: "เด็กอักษรชอบดูภาพยนตร์และถ่ายรูป",
+          consented: false,
+        },
+      ],
+      messages: [
+        {
+          id: `msg_sys_${Date.now()}`,
+          isSystem: true,
+          text: `ยินดีต้อนรับสู่ห้องสังสรรค์ใหม่: "${template.title}" สมาชิกถูกจัดกลุ่มจาก 4 คณะ ตอบคำถามและชวนคุยเพื่อปลดล็อกโปรไฟล์จริงร่วมกัน!`,
+          createdAt: timeStr,
+        },
+        {
+          id: `msg_init_${Date.now()}`,
+          senderId: `mem_rand_1`,
+          senderAlias: "เด็กสายชิลล์ #204",
+          senderIcon: "headset-outline",
+          text: "สวัสดีทุกคน เพิ่งสุ่มได้มาเจอกลุ่มนี้ ยินดีที่ได้คุยกับเพื่อนต่างคณะครับ!",
+          createdAt: timeStr,
+        },
+      ],
+    };
+
+    setLoungeRooms((prev) => {
+      const updated = [newRoom, ...prev];
+      AsyncStorage.setItem(CROSS_BUBBLE_LOUNGE_ROOMS_KEY, JSON.stringify(updated));
+      return updated;
     });
 
-    setBubbleEnergy((prev) => {
-      const next = Math.min(100, prev + 15);
-      AsyncStorage.setItem(CROSS_BUBBLE_ENERGY_KEY, String(next));
-      return next;
+    setActiveLoungeRoomId(newRoomId);
+    return newRoom;
+  }, []);
+
+  // 1 on 1 Messaging Operations
+  const sendOneOnOneMessage = useCallback(async (roomId, text) => {
+    if (!text || !text.trim()) return;
+
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+    const newMsg = {
+      id: `m_1on1_${Date.now()}`,
+      senderAlias: userAlias?.nickname || "คุณ",
+      senderIcon: userAlias?.icon || "finger-print-outline",
+      text: text.trim(),
+      createdAt: timeStr,
+      isMe: true,
+    };
+
+    setOneOnOneRooms((prev) => {
+      const updated = prev.map((room) => {
+        if (room.id !== roomId) return room;
+        return {
+          ...room,
+          messages: [...(room.messages || []), newMsg],
+          lastMessage: text.trim(),
+          lastMessageTime: timeStr,
+        };
+      });
+      AsyncStorage.setItem(CROSS_BUBBLE_ONE_ON_ONE_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, [userAlias]);
+
+  // Request or toggle real profile reveal in 1 on 1
+  const requestOneOnOneReveal = useCallback((roomId) => {
+    setOneOnOneRooms((prev) => {
+      const updated = prev.map((room) => {
+        if (room.id !== roomId) return room;
+        // When user requests reveal, immediately reveal both or mark requested
+        const nowRevealed = !room.isRevealed;
+        return {
+          ...room,
+          userRequestedReveal: nowRevealed,
+          isRevealed: nowRevealed,
+        };
+      });
+      AsyncStorage.setItem(CROSS_BUBBLE_ONE_ON_ONE_KEY, JSON.stringify(updated));
+      return updated;
     });
   }, []);
 
-  // ส่งความยินยอมเปิดเผยตัวตนจริง (Mutual Reveal)
-  const requestMutualReveal = useCallback(() => {
-    setMutualRevealState((prev) => {
-      const newCount = prev.consentCount + (prev.userHasConsented ? 0 : 1);
-      const isAll = newCount >= prev.totalRequired;
-      return {
-        ...prev,
-        userHasConsented: true,
-        consentCount: newCount,
-        allConsented: isAll,
-      };
+  // Create new random 1 on 1 match
+  const createNewOneOnOneRoom = useCallback(() => {
+    const partner =
+      RANDOM_ONE_ON_ONE_PARTNERS[Math.floor(Math.random() * RANDOM_ONE_ON_ONE_PARTNERS.length)];
+    const newRoomId = `one_${Date.now()}`;
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+    const newRoom = {
+      id: newRoomId,
+      partnerAlias: partner.alias,
+      partnerFaculty: partner.faculty,
+      partnerIcon: partner.icon,
+      partnerRealName: partner.realName,
+      partnerRealAvatar: partner.realAvatar,
+      partnerRealBio: partner.realBio,
+      userRequestedReveal: false,
+      partnerRequestedReveal: false,
+      isRevealed: false,
+      lastMessage: partner.greeting,
+      lastMessageTime: timeStr,
+      messages: [
+        {
+          id: `m_init_${Date.now()}`,
+          senderAlias: partner.alias,
+          senderIcon: partner.icon,
+          text: partner.greeting,
+          createdAt: timeStr,
+          isMe: false,
+        },
+      ],
+    };
+
+    setOneOnOneRooms((prev) => {
+      const updated = [newRoom, ...prev];
+      AsyncStorage.setItem(CROSS_BUBBLE_ONE_ON_ONE_KEY, JSON.stringify(updated));
+      return updated;
     });
+
+    setActiveOneOnOneRoomId(newRoomId);
+    return newRoom;
   }, []);
 
-  // โพสต์ข้อความในกระดานกระซิบ (Whisper Wall)
+  // Whisper Post Actions
   const addWhisperPost = useCallback(async (content, facultyTag = null) => {
     if (!content || !content.trim()) return;
 
@@ -365,7 +784,6 @@ export function CrossBubbleProvider({ children }) {
     });
   }, [userAlias]);
 
-  // กด Reaction แตกฟองสบู่ (Bubble Pop)
   const toggleWhisperPop = useCallback((postId) => {
     setWhisperPosts((prev) => {
       const updated = prev.map((p) => {
@@ -391,13 +809,29 @@ export function CrossBubbleProvider({ children }) {
         regenerateAlias,
         changeMascot,
         mascotOptions: MASCOT_ICONS,
+
+        // Blind Lounge State & Functions
+        loungeRooms,
+        activeLoungeRoomId,
+        setActiveLoungeRoomId,
         currentLounge,
         loungeMessages,
-        sendLoungeMessage,
-        voteLoungePoll,
         bubbleEnergy,
         mutualRevealState,
+        sendLoungeMessage,
+        voteLoungePoll,
         requestMutualReveal,
+        createNewRandomLoungeRoom,
+
+        // 1 on 1 State & Functions
+        oneOnOneRooms,
+        activeOneOnOneRoomId,
+        setActiveOneOnOneRoomId,
+        sendOneOnOneMessage,
+        requestOneOnOneReveal,
+        createNewOneOnOneRoom,
+
+        // Whisper & Radar
         whisperPosts,
         addWhisperPost,
         toggleWhisperPop,

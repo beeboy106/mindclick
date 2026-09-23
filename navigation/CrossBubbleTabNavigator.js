@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import BlindLoungeScreen from "../screens/crossbubble/BlindLoungeScreen";
+import OneOnOneScreen from "../screens/crossbubble/OneOnOneScreen";
 import WhisperWallScreen from "../screens/crossbubble/WhisperWallScreen";
 import BubbleRadarScreen from "../screens/crossbubble/BubbleRadarScreen";
 import MyAliasScreen from "../screens/crossbubble/MyAliasScreen";
@@ -28,7 +29,7 @@ export default function CrossBubbleTabNavigator() {
           paddingTop: 6,
         },
         tabBarLabelStyle: {
-          fontSize: 10.5,
+          fontSize: 10,
           fontWeight: "700",
           marginTop: 2,
         },
@@ -37,6 +38,8 @@ export default function CrossBubbleTabNavigator() {
 
           if (route.name === "BlindLoungeTab") {
             iconName = focused ? "chatbubbles" : "chatbubbles-outline";
+          } else if (route.name === "OneOnOneTab") {
+            iconName = focused ? "people" : "people-outline";
           } else if (route.name === "WhisperWallTab") {
             iconName = focused ? "newspaper" : "newspaper-outline";
           } else if (route.name === "BubbleRadarTab") {
@@ -45,7 +48,7 @@ export default function CrossBubbleTabNavigator() {
             iconName = focused ? "shield-checkmark" : "shield-checkmark-outline";
           }
 
-          return <Ionicons name={iconName} size={20} color={color} />;
+          return <Ionicons name={iconName} size={19} color={color} />;
         },
       })}
     >
@@ -53,6 +56,11 @@ export default function CrossBubbleTabNavigator() {
         name="BlindLoungeTab"
         component={BlindLoungeScreen}
         options={{ tabBarLabel: "ห้องสังสรรค์" }}
+      />
+      <Tab.Screen
+        name="OneOnOneTab"
+        component={OneOnOneScreen}
+        options={{ tabBarLabel: "1 on 1" }}
       />
       <Tab.Screen
         name="WhisperWallTab"
