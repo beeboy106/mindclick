@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "./AuthContext";
 import { useData } from "./DataContext";
 import { useFeed } from "./FeedContext";
+import { usePremium } from "./PremiumContext";
 
 const CROSS_BUBBLE_STORAGE_KEY = "@mindclick_cross_bubble_active";
 const CROSS_BUBBLE_ALIAS_KEY = "@mindclick_cross_bubble_alias";
@@ -28,12 +29,12 @@ export const MASCOT_ICONS = [
 
 // รายการอวาตารพรีเมียมที่ปลดล็อคได้จากแต้มสะสม
 export const SHOP_AVATARS = [
-  { id: "rocket-outline", name: "นักท่องอวกาศ", cost: 50 },
-  { id: "sparkles-outline", name: "ประกายเวทมนตร์", cost: 80 },
-  { id: "diamond-outline", name: "เพชรยอดมงกุฎ", cost: 120 },
-  { id: "shield-outline", name: "ผู้พิทักษ์บับเบิ้ล", cost: 150 },
-  { id: "flame-outline", name: "เปลวเพลิงนิรันดร์", cost: 200 },
-  { id: "trophy-outline", name: "แชมป์เปี้ยนคณะ", cost: 250 },
+  { id: "rocket-outline", name: "นักท่องอวกาศ", cost: 30, desc: "สำหรับผู้กล้าที่พร้อมทะยานข้ามขอบเขตเดิมๆ" },
+  { id: "sparkles-outline", name: "ประกายเวทมนตร์", cost: 50, desc: "เปล่งประกายสร้างสีสันและพลังบวกให้เพื่อนรอบตัว" },
+  { id: "diamond-outline", name: "เพชรยอดมงกุฎ", cost: 70, desc: "เปล่งแสงระยิบระยับ ทรงคุณค่าและสง่างาม" },
+  { id: "shield-outline", name: "ผู้พิทักษ์บับเบิ้ล", cost: 90, desc: "พร้อมปกป้องมิตรภาพและเคารพความหลากหลาย" },
+  { id: "flame-outline", name: "เปลวเพลิงนิรันดร์", cost: 120, desc: "ไฟลุกโชนต่อเนื่อง แสดงถึงความกระตือรือร้น" },
+  { id: "trophy-outline", name: "แชมป์เปี้ยนคณะ", cost: 150, desc: "สัญลักษณ์แห่งความสำเร็จของคนรุ่นใหม่" },
 ];
 
 const ALIAS_PREFIXES = [
@@ -218,8 +219,8 @@ const SIMULATED_CLASSMATES = [
   },
 ];
 
-// รายการภารกิจรายวันเริ่มต้น 5 ข้อ
-const INITIAL_DAILY_MISSIONS = [
+// รายการภารกิจรายวันเริ่มต้น 5 ข้อ (เชื่อมโยงกับฟีเจอร์จริง 100% พร้อมระบุแท็บปลายทาง)
+export const INITIAL_DAILY_MISSIONS = [
   {
     id: "m_lounge",
     title: "เข้าร่วมห้องสังสรรค์ประจำวัน",
@@ -229,6 +230,7 @@ const INITIAL_DAILY_MISSIONS = [
     points: 50,
     claimed: false,
     icon: "chatbubbles-outline",
+    targetTab: "BlindLoungeTab",
   },
   {
     id: "m_darkroom",
@@ -239,6 +241,7 @@ const INITIAL_DAILY_MISSIONS = [
     points: 30,
     claimed: false,
     icon: "moon-outline",
+    targetTab: "DarkRoomTab",
   },
   {
     id: "m_add_friend",
@@ -249,6 +252,7 @@ const INITIAL_DAILY_MISSIONS = [
     points: 30,
     claimed: false,
     icon: "person-add-outline",
+    targetTab: "DarkRoomTab",
   },
   {
     id: "m_quiz_guess",
@@ -259,16 +263,18 @@ const INITIAL_DAILY_MISSIONS = [
     points: 40,
     claimed: false,
     icon: "help-buoy-outline",
+    targetTab: "BlindLoungeTab",
   },
   {
     id: "m_change_mascot",
     title: "ปรับแต่งนามแฝงหรือเปลี่ยนอวาตาร",
-    description: "เปลี่ยนไอคอนมาสคอตประจำตัวของคุณ",
+    description: "เปลี่ยนไอคอนมาสคอตหรือตั้งชื่อฉายาใหม่",
     progress: 0,
     target: 1,
     points: 20,
     claimed: false,
     icon: "color-wand-outline",
+    targetTab: "MyAliasTab",
   },
 ];
 
@@ -315,6 +321,7 @@ export function CrossBubbleProvider({ children }) {
   const { user } = useAuth();
   const { profile } = useData();
   const { startChatWithUser, posts: feedPosts } = useFeed();
+  const { addPeekPasses, extendTrial, peekPasses } = usePremium();
 
   // โหมดเปิดใช้งาน Cross-Bubble
   const [isCrossBubbleMode, setIsCrossBubbleMode] = useState(false);
@@ -421,10 +428,45 @@ export function CrossBubbleProvider({ children }) {
         if (storedDark) setDarkRooms(JSON.parse(storedDark));
 
         const storedMissions = await AsyncStorage.getItem(CROSS_BUBBLE_MISSIONS_KEY);
-        if (storedMissions) setDailyMissions(JSON.parse(storedMissions));
+        if (storedMissions) {
+          try {
+            const parsed = JSON.parse(storedMissions);
+            // ล้างภารกิจจำลองที่ถูกยกเลิกไปแล้ว (เช่น m_post_note หรือกระดานลับ) ทันที
+            const sanitized = INITIAL_DAILY_MISSIONS.map((defaultM) => {
+              const existing = Array.isArray(parsed) ? parsed.find((p) => p.id === defaultM.id) : null;
+              if (existing) {
+                return {
+                  ...defaultM,
+                  progress: typeof existing.progress === "number" ? existing.progress : 0,
+                  claimed: Boolean(existing.claimed),
+                };
+              }
+              return defaultM;
+            });
+            setDailyMissions(sanitized);
+            await AsyncStorage.setItem(CROSS_BUBBLE_MISSIONS_KEY, JSON.stringify(sanitized));
+          } catch {
+            setDailyMissions(INITIAL_DAILY_MISSIONS);
+            await AsyncStorage.setItem(CROSS_BUBBLE_MISSIONS_KEY, JSON.stringify(INITIAL_DAILY_MISSIONS));
+          }
+        } else {
+          setDailyMissions(INITIAL_DAILY_MISSIONS);
+          await AsyncStorage.setItem(CROSS_BUBBLE_MISSIONS_KEY, JSON.stringify(INITIAL_DAILY_MISSIONS));
+        }
 
         const storedPoints = await AsyncStorage.getItem(CROSS_BUBBLE_POINTS_KEY);
-        if (storedPoints) setBubblePoints(parseInt(storedPoints, 10));
+        if (storedPoints !== null) {
+          const parsedPts = parseInt(storedPoints, 10);
+          if (isNaN(parsedPts) || parsedPts <= 0) {
+            setBubblePoints(120);
+            await AsyncStorage.setItem(CROSS_BUBBLE_POINTS_KEY, "120");
+          } else {
+            setBubblePoints(parsedPts);
+          }
+        } else {
+          setBubblePoints(120);
+          await AsyncStorage.setItem(CROSS_BUBBLE_POINTS_KEY, "120");
+        }
 
         const storedStreak = await AsyncStorage.getItem(CROSS_BUBBLE_STREAK_KEY);
         if (storedStreak) setStreakDays(parseInt(storedStreak, 10));
@@ -476,19 +518,65 @@ export function CrossBubbleProvider({ children }) {
     });
   }, []);
 
-  // ปลดล็อคอวาตารใหม่จากร้านค้า
+  // ปลดล็อคอวาตารใหม่จากร้านค้าและสวมใส่ทันที
   const unlockAvatar = useCallback((avatarId, cost) => {
     if (bubblePoints < cost) return false;
-    setBubblePoints((prev) => {
-      const next = prev - cost;
-      AsyncStorage.setItem(CROSS_BUBBLE_POINTS_KEY, String(next));
-      return next;
-    });
+    const newPoints = bubblePoints - cost;
+    setBubblePoints(newPoints);
+    AsyncStorage.setItem(CROSS_BUBBLE_POINTS_KEY, String(newPoints));
+
     setUnlockedAvatars((prev) => {
-      if (prev.includes(avatarId)) return prev;
-      const next = [...prev, avatarId];
+      const next = prev.includes(avatarId) ? prev : [...prev, avatarId];
       AsyncStorage.setItem(CROSS_BUBBLE_UNLOCKED_AVATARS_KEY, JSON.stringify(next));
       return next;
+    });
+
+    // สวมใส่อวาตารที่ซื้อทันที
+    setUserAlias((prev) => {
+      const next = { ...prev, icon: avatarId };
+      AsyncStorage.setItem(CROSS_BUBBLE_ALIAS_KEY, JSON.stringify(next));
+      return next;
+    });
+
+    updateMissionProgress("m_change_mascot", 1);
+    return true;
+  }, [bubblePoints, updateMissionProgress]);
+
+  // แลกตั๋วส่องโปรไฟล์ 1 ใบ (ใช้ 40 แต้ม)
+  const exchangePeekPass = useCallback((cost = 40) => {
+    if (bubblePoints < cost) return false;
+    const newPoints = bubblePoints - cost;
+    setBubblePoints(newPoints);
+    AsyncStorage.setItem(CROSS_BUBBLE_POINTS_KEY, String(newPoints));
+    if (addPeekPasses) {
+      addPeekPasses(1);
+    }
+    return true;
+  }, [addPeekPasses, bubblePoints]);
+
+  // แลกขยายเวลาทดลองใช้งานผู้ใช้ฟองสบู่ +1 วัน (ใช้ 80 แต้ม)
+  const exchangeTrialExtension = useCallback((cost = 80) => {
+    if (bubblePoints < cost) return false;
+    const newPoints = bubblePoints - cost;
+    setBubblePoints(newPoints);
+    AsyncStorage.setItem(CROSS_BUBBLE_POINTS_KEY, String(newPoints));
+    if (extendTrial) {
+      extendTrial(1);
+    }
+    return true;
+  }, [bubblePoints, extendTrial]);
+
+  // แลกเกราะพิทักษ์ไฟสตรีค (ใช้ 50 แต้ม)
+  const exchangeFlameShield = useCallback((cost = 50) => {
+    if (bubblePoints < cost) return false;
+    const newPoints = bubblePoints - cost;
+    setBubblePoints(newPoints);
+    AsyncStorage.setItem(CROSS_BUBBLE_POINTS_KEY, String(newPoints));
+    setIsFlameActive(true);
+    setStreakDays((prev) => {
+      const nextStreak = prev + 1;
+      AsyncStorage.setItem(CROSS_BUBBLE_STREAK_KEY, String(nextStreak));
+      return nextStreak;
     });
     return true;
   }, [bubblePoints]);
@@ -547,7 +635,8 @@ export function CrossBubbleProvider({ children }) {
     setQuizScore(0);
     setMatchedMemberIds([]);
     setLoungeMessages([]);
-  }, []);
+    updateMissionProgress("m_lounge", 1);
+  }, [updateMissionProgress]);
 
   const submitPreAnswers = useCallback((answers) => {
     setUserPreAnswers(answers);
@@ -1048,6 +1137,10 @@ export function CrossBubbleProvider({ children }) {
         dailyMissions,
         claimMissionReward,
         updateMissionProgress,
+        exchangePeekPass,
+        exchangeTrialExtension,
+        exchangeFlameShield,
+        peekPasses,
         darkRooms,
         activeDarkRoomId,
         setActiveDarkRoomId,

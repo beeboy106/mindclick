@@ -10,9 +10,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation } from "@react-navigation/native";
 import { useCrossBubble } from "../../context/CrossBubbleContext";
 
 export default function MissionsScreen() {
+  const navigation = useNavigation();
   const {
     streakDays,
     isFlameActive,
@@ -25,6 +27,10 @@ export default function MissionsScreen() {
     userAlias,
     changeMascot,
     toggleCrossBubbleMode,
+    exchangePeekPass,
+    exchangeTrialExtension,
+    exchangeFlameShield,
+    peekPasses,
   } = useCrossBubble();
 
   const handleClaim = (mission) => {
@@ -36,21 +42,21 @@ export default function MissionsScreen() {
     if (unlockedAvatars.includes(item.id)) {
       // สวมใส่ทันที
       changeMascot(item.id);
-      Alert.alert("เปลี่ยนอวาตารสำเร็จ", `คุณได้สวมใส่อวาตาร "${item.name}" เรียบร้อยแล้ว`);
+      Alert.alert("สวมใส่อวาตารสำเร็จ", `คุณได้สวมใส่อวาตาร "${item.name}" เรียบร้อยแล้ว`);
       return;
     }
 
     if (bubblePoints < item.cost) {
       Alert.alert(
         "แต้มไม่เพียงพอ",
-        `คุณมี ${bubblePoints} แต้ม แต่ต้องใช้ ${item.cost} แต้มเพื่อปลดล็อคอวาตารนี้ ทำภารกิจรายวันเพื่อสะสมแต้มเพิ่มได้เลย`
+        `คุณมี ${bubblePoints} แต้ม แต่ต้องใช้ ${item.cost} แต้มเพื่อปลดล็อคอวาตาร "${item.name}" ทำภารกิจรายวันเพื่อสะสมแต้มเพิ่มได้เลย`
       );
       return;
     }
 
     Alert.alert(
       "ยืนยันการปลดล็อค",
-      `ต้องการใช้ ${item.cost} แต้ม เพื่อปลดล็อคอวาตาร "${item.name}" หรือไม่?`,
+      `ต้องการใช้ ${item.cost} แต้ม เพื่อปลดล็อคและสวมใส่อวาตาร "${item.name}" ทันทีหรือไม่?`,
       [
         { text: "ยกเลิก", style: "cancel" },
         {
@@ -58,7 +64,97 @@ export default function MissionsScreen() {
           onPress: () => {
             const success = unlockAvatar(item.id, item.cost);
             if (success) {
-              Alert.alert("ปลดล็อคสำเร็จ", `ปลดล็อค "${item.name}" สำเร็จและพร้อมใช้งานแล้ว`);
+              Alert.alert("ปลดล็อคสำเร็จ", `ปลดล็อคและสวมใส่อวาตาร "${item.name}" ให้คุณเรียบร้อยแล้ว`);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleExchangePeekPass = () => {
+    if (bubblePoints < 40) {
+      Alert.alert(
+        "แต้มไม่เพียงพอ",
+        `คุณมี ${bubblePoints} แต้ม แต่ต้องใช้ 40 แต้มเพื่อแลกตั๋วส่องโปรไฟล์ 1 ใบ ทำภารกิจรายวันเพื่อสะสมแต้มเพิ่มได้เลย`
+      );
+      return;
+    }
+
+    Alert.alert(
+      "ยืนยันการแลกตั๋ว",
+      "ต้องการใช้ 40 Bubble Points เพื่อแลกตั๋วส่องโปรไฟล์ 1 ใบหรือไม่? (ใช้เปิดดูโปรไฟล์และ Shared Insights ของคนที่มาส่องคุณได้ทันทีในหน้าแจ้งเตือน)",
+      [
+        { text: "ยกเลิก", style: "cancel" },
+        {
+          text: "แลกตั๋ว",
+          onPress: () => {
+            const ok = exchangePeekPass(40);
+            if (ok) {
+              Alert.alert(
+                "แลกสิทธิ์สำเร็จ",
+                "คุณได้รับตั๋วส่องโปรไฟล์ 1 ใบเรียบร้อยแล้ว นำไปใช้เปิดดูผู้มาส่องโปรไฟล์ในหน้าแจ้งเตือนได้ทันที"
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleExchangeTrial = () => {
+    if (bubblePoints < 80) {
+      Alert.alert(
+        "แต้มไม่เพียงพอ",
+        `คุณมี ${bubblePoints} แต้ม แต่ต้องใช้ 80 แต้มเพื่อขยายเวลาทดลองใช้งานผู้ใช้ฟองสบู่เพิ่ม 1 วัน`
+      );
+      return;
+    }
+
+    Alert.alert(
+      "ยืนยันการขยายเวลา",
+      "ต้องการใช้ 80 Bubble Points เพื่อขยายเวลาทดลองใช้งานผู้ใช้ฟองสบู่เพิ่ม 1 วันเต็มหรือไม่?",
+      [
+        { text: "ยกเลิก", style: "cancel" },
+        {
+          text: "ขยายเวลา",
+          onPress: () => {
+            const ok = exchangeTrialExtension(80);
+            if (ok) {
+              Alert.alert(
+                "ขยายเวลาสำเร็จ",
+                "ระบบเพิ่มวันทดลองใช้งานผู้ใช้ฟองสบู่ให้คุณอีก 1 วันเรียบร้อยแล้ว คุณสามารถเข้าถึงฟีเจอร์พรีเมียมทั้งหมดได้อย่างต่อเนื่อง"
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleExchangeFlameShield = () => {
+    if (bubblePoints < 50) {
+      Alert.alert(
+        "แต้มไม่เพียงพอ",
+        `คุณมี ${bubblePoints} แต้ม แต่ต้องใช้ 50 แต้มเพื่อแลกเกราะพิทักษ์ไฟสตรีค`
+      );
+      return;
+    }
+
+    Alert.alert(
+      "ยืนยันการแลกเกราะ",
+      "ต้องการใช้ 50 Bubble Points เพื่อจุดไฟสตรีคและคุ้มครองไฟของคุณหรือไม่?",
+      [
+        { text: "ยกเลิก", style: "cancel" },
+        {
+          text: "แลกเกราะ",
+          onPress: () => {
+            const ok = exchangeFlameShield(50);
+            if (ok) {
+              Alert.alert(
+                "คุ้มครองไฟสำเร็จ",
+                "ไฟสตรีคของคุณได้รับการเพิ่มและคุ้มครองสถานะไฟเรียบร้อยแล้ว"
+              );
             }
           },
         },
@@ -185,13 +281,121 @@ export default function MissionsScreen() {
                   <Text style={styles.claimBtnText}>กดรับรางวัล</Text>
                 </TouchableOpacity>
               ) : (
-                <View style={styles.pendingBadge}>
-                  <Text style={styles.pendingText}>กำลังดำเนินการ</Text>
-                </View>
+                <TouchableOpacity
+                  style={styles.goToMissionBtn}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    if (item.targetTab) {
+                      navigation.navigate(item.targetTab);
+                    }
+                  }}
+                >
+                  <Text style={styles.goToMissionBtnText}>ไปทำภารกิจ</Text>
+                  <Ionicons name="arrow-forward" size={14} color="#17171c" />
+                </TouchableOpacity>
               )}
             </View>
           );
         })}
+
+        {/* Points Perk Exchange Section */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionTitle}>แลกสิทธิประโยชน์ด้วยแต้มสะสม</Text>
+          <Text style={styles.sectionBadge}>ใช้งานได้จริง</Text>
+        </View>
+
+        {/* Perk 1: Profile Peek Pass */}
+        <View style={styles.perkCard}>
+          <View style={styles.perkTopRow}>
+            <View style={styles.perkIconBox}>
+              <Ionicons name="eye-outline" size={22} color="#17171c" />
+            </View>
+            <View style={styles.perkInfoCol}>
+              <View style={styles.perkTitleRow}>
+                <Text style={styles.perkTitle}>ตั๋วส่องโปรไฟล์ 1 ครั้ง</Text>
+                <View style={styles.perkCostTag}>
+                  <Text style={styles.perkCostText}>40 PTS</Text>
+                </View>
+              </View>
+              <Text style={styles.perkDesc}>
+                เปิดดูโปรไฟล์และ Shared Insights ของคนที่มาส่องคุณ 1 ครั้ง โดยไม่ต้องสมัครรายเดือน
+              </Text>
+              <Text style={styles.perkBalanceNotice}>
+                ตั๋วที่คุณมีในครอบครอง: {peekPasses || 0} ใบ
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={[styles.perkActionBtn, bubblePoints < 40 && styles.perkActionBtnDisabled]}
+            activeOpacity={0.85}
+            onPress={handleExchangePeekPass}
+          >
+            <Ionicons name="sparkles" size={15} color={bubblePoints >= 40 ? "#17171c" : "#94a3b8"} />
+            <Text style={[styles.perkActionBtnText, bubblePoints < 40 && styles.perkActionBtnTextDisabled]}>
+              {bubblePoints >= 40 ? "แลกตั๋วส่องโปรไฟล์ (40 PTS)" : "แต้มไม่พอ (ต้องการ 40 PTS)"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Perk 2: Extend Bubble Trial */}
+        <View style={styles.perkCard}>
+          <View style={styles.perkTopRow}>
+            <View style={styles.perkIconBox}>
+              <Ionicons name="hourglass-outline" size={22} color="#17171c" />
+            </View>
+            <View style={styles.perkInfoCol}>
+              <View style={styles.perkTitleRow}>
+                <Text style={styles.perkTitle}>ขยายเวลาผู้ใช้ฟองสบู่ +1 วัน</Text>
+                <View style={styles.perkCostTag}>
+                  <Text style={styles.perkCostText}>80 PTS</Text>
+                </View>
+              </View>
+              <Text style={styles.perkDesc}>
+                เพิ่มวันทดลองใช้งานฟีเจอร์พรีเมียมทั้งหมดต่ออีก 1 วันเต็ม เพื่อใช้งานต่อเนื่อง
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={[styles.perkActionBtn, bubblePoints < 80 && styles.perkActionBtnDisabled]}
+            activeOpacity={0.85}
+            onPress={handleExchangeTrial}
+          >
+            <Ionicons name="time" size={15} color={bubblePoints >= 80 ? "#17171c" : "#94a3b8"} />
+            <Text style={[styles.perkActionBtnText, bubblePoints < 80 && styles.perkActionBtnTextDisabled]}>
+              {bubblePoints >= 80 ? "แลกวันใช้งาน (+1 วัน 80 PTS)" : "แต้มไม่พอ (ต้องการ 80 PTS)"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Perk 3: Flame Shield */}
+        <View style={styles.perkCard}>
+          <View style={styles.perkTopRow}>
+            <View style={styles.perkIconBox}>
+              <Ionicons name="shield-checkmark-outline" size={22} color="#17171c" />
+            </View>
+            <View style={styles.perkInfoCol}>
+              <View style={styles.perkTitleRow}>
+                <Text style={styles.perkTitle}>เกราะพิทักษ์ไฟสตรีค</Text>
+                <View style={styles.perkCostTag}>
+                  <Text style={styles.perkCostText}>50 PTS</Text>
+                </View>
+              </View>
+              <Text style={styles.perkDesc}>
+                จุดไฟสตรีคของคุณให้ลุกโชนต่อเนื่อง และป้องกันไฟมอดหากหยุดทำภารกิจ
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={[styles.perkActionBtn, bubblePoints < 50 && styles.perkActionBtnDisabled]}
+            activeOpacity={0.85}
+            onPress={handleExchangeFlameShield}
+          >
+            <Ionicons name="flame" size={15} color={bubblePoints >= 50 ? "#17171c" : "#94a3b8"} />
+            <Text style={[styles.perkActionBtnText, bubblePoints < 50 && styles.perkActionBtnTextDisabled]}>
+              {bubblePoints >= 50 ? "แลกเกราะพิทักษ์ไฟ (50 PTS)" : "แต้มไม่พอ (ต้องการ 50 PTS)"}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Avatar Shop Section */}
         <View style={styles.sectionHeaderRow}>
@@ -205,22 +409,28 @@ export default function MissionsScreen() {
             const isEquipped = userAlias?.icon === item.id;
 
             return (
-              <View key={item.id} style={styles.shopCard}>
+              <TouchableOpacity
+                key={item.id}
+                style={[styles.shopCard, isEquipped && styles.shopCardEquipped]}
+                activeOpacity={0.85}
+                onPress={() => handleUnlockAvatar(item)}
+              >
                 <View style={[styles.avatarIconBox, isEquipped && styles.avatarIconBoxEquipped]}>
                   <Ionicons name={item.id} size={28} color="#17171c" />
                 </View>
                 <Text style={styles.avatarName} numberOfLines={1}>
                   {item.name}
                 </Text>
+                <Text style={styles.avatarDesc} numberOfLines={2}>
+                  {item.desc || "อวาตารสุดพิเศษสำหรับตัวตนของคุณ"}
+                </Text>
 
-                <TouchableOpacity
+                <View
                   style={[
                     styles.avatarActionBtn,
                     isEquipped && styles.avatarBtnEquipped,
                     isUnlocked && !isEquipped && styles.avatarBtnUnlocked,
                   ]}
-                  activeOpacity={0.85}
-                  onPress={() => handleUnlockAvatar(item)}
                 >
                   {isEquipped ? (
                     <Text style={styles.avatarBtnTextEquipped}>ใช้งานอยู่</Text>
@@ -229,8 +439,8 @@ export default function MissionsScreen() {
                   ) : (
                     <Text style={styles.avatarBtnTextLock}>{item.cost} แต้ม</Text>
                   )}
-                </TouchableOpacity>
-              </View>
+                </View>
+              </TouchableOpacity>
             );
           })}
         </View>
@@ -511,6 +721,20 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#15803d",
   },
+  goToMissionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#c7f65a",
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 6,
+  },
+  goToMissionBtnText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#17171c",
+  },
   pendingBadge: {
     alignItems: "center",
     paddingVertical: 6,
@@ -524,6 +748,88 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#94a3b8",
   },
+  perkCard: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    padding: 14,
+    marginBottom: 12,
+  },
+  perkTopRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  perkIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#ffffff",
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  perkInfoCol: {
+    flex: 1,
+  },
+  perkTitleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  perkTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#17171c",
+    flex: 1,
+  },
+  perkCostTag: {
+    backgroundColor: "#c7f65a",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginLeft: 6,
+  },
+  perkCostText: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: "#17171c",
+  },
+  perkDesc: {
+    fontSize: 12,
+    color: "#64748b",
+    lineHeight: 16,
+  },
+  perkBalanceNotice: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#0f766e",
+    marginTop: 6,
+  },
+  perkActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#c7f65a",
+    paddingVertical: 9,
+    borderRadius: 8,
+    marginTop: 12,
+    gap: 6,
+  },
+  perkActionBtnDisabled: {
+    backgroundColor: "#e2e8f0",
+  },
+  perkActionBtnText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#17171c",
+  },
+  perkActionBtnTextDisabled: {
+    color: "#94a3b8",
+  },
   shopGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -533,11 +839,16 @@ const styles = StyleSheet.create({
     width: "48%",
     backgroundColor: "#f8fafc",
     borderRadius: 14,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#e2e8f0",
     padding: 14,
     alignItems: "center",
     marginBottom: 12,
+  },
+  shopCardEquipped: {
+    borderColor: "#c7f65a",
+    borderWidth: 2,
+    backgroundColor: "#fcfdf7",
   },
   avatarIconBox: {
     width: 52,
@@ -556,14 +867,22 @@ const styles = StyleSheet.create({
     backgroundColor: "#f7fee7",
   },
   avatarName: {
-    fontSize: 12.5,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "800",
     color: "#17171c",
+    marginBottom: 4,
+  },
+  avatarDesc: {
+    fontSize: 10.5,
+    color: "#64748b",
+    textAlign: "center",
+    lineHeight: 14,
     marginBottom: 10,
+    height: 28,
   },
   avatarActionBtn: {
     width: "100%",
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 8,
     backgroundColor: "#17171c",
     alignItems: "center",

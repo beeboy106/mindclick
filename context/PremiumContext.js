@@ -14,6 +14,9 @@ const getWarningKey = (userId) => `@mindclick_warning_last_shown_${userId || "gu
 const getDevSimKey = (userId) => `@mindclick_dev_sim_state_${userId || "guest"}`;
 const getIncognitoKey = (userId) => `@mindclick_is_incognito_${userId || "guest"}`;
 const getViewsKey = (userId) => `@mindclick_profile_views_${userId || "guest"}`;
+const getPeekPassesKey = (userId) => `@mindclick_peek_passes_${userId || "guest"}`;
+const getExtraDaysKey = (userId) => `@mindclick_extra_trial_days_${userId || "guest"}`;
+const getUnlockedVisitorsKey = (userId) => `@mindclick_unlocked_visitors_${userId || "guest"}`;
 
 const TRIAL_DAYS = 7;
 
@@ -101,6 +104,11 @@ export function PremiumProvider({ children }) {
   const [profileViews, setProfileViews] = useState([]);
   const [isLoadingPremium, setIsLoadingPremium] = useState(true);
 
+  // สิทธิ์ส่องโปรไฟล์และวันใช้งานพิเศษที่แลกจากแต้มภารกิจ
+  const [peekPasses, setPeekPasses] = useState(1); // เริ่มต้น 1 ใบเพื่อทดสอบใช้งานได้ทันที
+  const [extraTrialDays, setExtraTrialDays] = useState(0);
+  const [unlockedVisitorIds, setUnlockedVisitorIds] = useState([]);
+
   // โหลดข้อมูลสถานะและประวัติคนเข้าชมเมื่อ User เปลี่ยน
   useEffect(() => {
     if (!user) {
@@ -111,6 +119,9 @@ export function PremiumProvider({ children }) {
       setDevSim(null);
       setIsIncognito(false);
       setProfileViews([]);
+      setPeekPasses(1);
+      setExtraTrialDays(0);
+      setUnlockedVisitorIds([]);
       setIsLoadingPremium(false);
       return;
     }
@@ -126,6 +137,9 @@ export function PremiumProvider({ children }) {
           simVal,
           incogVal,
           viewsVal,
+          peekVal,
+          extraDaysVal,
+          unlockedVal,
         ] = await Promise.all([
           AsyncStorage.getItem(getPremiumKey(user.id)),
           AsyncStorage.getItem(getTrialStartKey(user.id)),
@@ -134,6 +148,9 @@ export function PremiumProvider({ children }) {
           AsyncStorage.getItem(getDevSimKey(user.id)),
           AsyncStorage.getItem(getIncognitoKey(user.id)),
           AsyncStorage.getItem(getViewsKey(user.id)),
+          AsyncStorage.getItem(getPeekPassesKey(user.id)),
+          AsyncStorage.getItem(getExtraDaysKey(user.id)),
+          AsyncStorage.getItem(getUnlockedVisitorsKey(user.id)),
         ]);
 
         if (isMounted) {
@@ -142,6 +159,25 @@ export function PremiumProvider({ children }) {
           setLastWarningDate(warningVal || "");
           setDevSim(simVal || null);
           setIsIncognito(incogVal === "true");
+
+          if (peekVal !== null) {
+            setPeekPasses(parseInt(peekVal, 10) || 0);
+          } else {
+            setPeekPasses(1);
+            await AsyncStorage.setItem(getPeekPassesKey(user.id), "1");
+          }
+
+          if (extraDaysVal) {
+            setExtraTrialDays(parseInt(extraDaysVal, 10) || 0);
+          }
+
+          if (unlockedVal) {
+            try {
+              setUnlockedVisitorIds(JSON.parse(unlockedVal) || []);
+            } catch {
+              setUnlockedVisitorIds([]);
+            }
+          }
 
           if (trialStartVal) {
             setTrialStartDate(trialStartVal);
@@ -180,7 +216,7 @@ export function PremiumProvider({ children }) {
     };
   }, [user?.id]);
 
-  // คำนวณจำนวนวันที่เหลือและสถานะการทดลองใช้
+  // คำนวณจำนวนวันที่เหลือและสถานะการทดลองใช้ (รวมวันพิเศษที่แลกจากแต้ม)
   const { daysRemaining, isTrialActive, isBubbleUser } = useMemo(() => {
     if (devSim === "paid") {
       return { daysRemaining: 0, isTrialActive: false, isBubbleUser: true };
@@ -190,11 +226,11 @@ export function PremiumProvider({ children }) {
     }
     if (devSim === "day5") {
       // จำลองเหลือ 3 วัน (วันที่ 5 ของการทดลองใช้)
-      return { daysRemaining: 3, isTrialActive: true, isBubbleUser: true };
+      return { daysRemaining: 3 + (extraTrialDays || 0), isTrialActive: true, isBubbleUser: true };
     }
     if (devSim === "day1") {
       // จำลองเหลือ 7 วัน
-      return { daysRemaining: 7, isTrialActive: true, isBubbleUser: true };
+      return { daysRemaining: 7 + (extraTrialDays || 0), isTrialActive: true, isBubbleUser: true };
     }
 
     if (isPaid) {
@@ -202,11 +238,12 @@ export function PremiumProvider({ children }) {
     }
 
     if (!trialStartDate) {
-      return { daysRemaining: TRIAL_DAYS, isTrialActive: true, isBubbleUser: true };
+      return { daysRemaining: TRIAL_DAYS + (extraTrialDays || 0), isTrialActive: true, isBubbleUser: true };
     }
 
+    const totalAllowedDays = TRIAL_DAYS + (extraTrialDays || 0);
     const elapsedMs = Date.now() - new Date(trialStartDate).getTime();
-    const daysLeft = Math.max(0, Math.ceil(TRIAL_DAYS - elapsedMs / (24 * 60 * 60 * 1000)));
+    const daysLeft = Math.max(0, Math.ceil(totalAllowedDays - elapsedMs / (24 * 60 * 60 * 1000)));
     const active = daysLeft > 0;
 
     return {
@@ -214,7 +251,7 @@ export function PremiumProvider({ children }) {
       isTrialActive: active,
       isBubbleUser: active || isPaid,
     };
-  }, [devSim, isPaid, trialStartDate]);
+  }, [devSim, extraTrialDays, isPaid, trialStartDate]);
 
   // ฟังก์ชันตรวจสอบและส่งสัญญาณแจ้งเตือน 3 วันสุดท้าย (ทำงานในครั้งแรกของวันเมื่อเข้าใช้ฟีเจอร์)
   const checkAndTriggerWarning = useCallback(
@@ -413,6 +450,58 @@ export function PremiumProvider({ children }) {
     await AsyncStorage.setItem(getViewsKey(user.id), JSON.stringify([]));
   }, [user?.id]);
 
+  // ขยายวันใช้งานฟีเจอร์พรีเมียม (แลกจากแต้มภารกิจ)
+  const extendTrial = useCallback(
+    async (days = 1) => {
+      const nextDays = (extraTrialDays || 0) + days;
+      setExtraTrialDays(nextDays);
+      if (user?.id) {
+        await AsyncStorage.setItem(getExtraDaysKey(user.id), String(nextDays));
+      }
+      return nextDays;
+    },
+    [extraTrialDays, user?.id]
+  );
+
+  // เพิ่มตั๋วส่องโปรไฟล์ (แลกจากแต้มภารกิจ)
+  const addPeekPasses = useCallback(
+    async (count = 1) => {
+      const nextCount = (peekPasses || 0) + count;
+      setPeekPasses(nextCount);
+      if (user?.id) {
+        await AsyncStorage.setItem(getPeekPassesKey(user.id), String(nextCount));
+      }
+      return nextCount;
+    },
+    [peekPasses, user?.id]
+  );
+
+  // ใช้งานตั๋วส่องโปรไฟล์ 1 ใบสำหรับผู้เข้าชมรายนี้
+  const usePeekPass = useCallback(
+    async (visitorId) => {
+      if ((peekPasses || 0) <= 0) return false;
+      const nextCount = peekPasses - 1;
+      setPeekPasses(nextCount);
+      const nextUnlocked = [...unlockedVisitorIds, visitorId];
+      setUnlockedVisitorIds(nextUnlocked);
+      if (user?.id) {
+        await AsyncStorage.setItem(getPeekPassesKey(user.id), String(nextCount));
+        await AsyncStorage.setItem(getUnlockedVisitorsKey(user.id), JSON.stringify(nextUnlocked));
+      }
+      return true;
+    },
+    [peekPasses, unlockedVisitorIds, user?.id]
+  );
+
+  // ตรวจสอบว่าผู้เข้าชมคนนี้ได้รับการปลดล็อคแล้วหรือไม่
+  const isVisitorUnlocked = useCallback(
+    (visitorId) => {
+      if (isBubbleUser) return true;
+      return unlockedVisitorIds.includes(visitorId);
+    },
+    [isBubbleUser, unlockedVisitorIds]
+  );
+
   const viewCount = profileViews.length;
   const sparkVisitors = profileViews.filter((v) => v.isSpark || v.matchPercentage >= 80);
   const hasSparkVisitor = sparkVisitors.length > 0;
@@ -444,6 +533,12 @@ export function PremiumProvider({ children }) {
         recordProfileView,
         addMockProfileView,
         clearProfileViews,
+        peekPasses,
+        extraTrialDays,
+        extendTrial,
+        addPeekPasses,
+        usePeekPass,
+        isVisitorUnlocked,
       }}
     >
       {children}

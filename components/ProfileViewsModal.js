@@ -45,6 +45,9 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
     toggleIncognito,
     addMockProfileView,
     checkAndTriggerWarning,
+    peekPasses,
+    usePeekPass,
+    isVisitorUnlocked,
   } = usePremium();
   const { startChatWithUser } = useFeed();
 
@@ -70,43 +73,121 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
   }, [visible, isBubbleUser, checkAndTriggerWarning]);
 
   const handleOpenVisitor = (visitor) => {
-    if (!isBubbleUser) {
-      setPaywallVisible(true);
+    const canView = isBubbleUser || (isVisitorUnlocked && isVisitorUnlocked(visitor.visitorId));
+    if (canView) {
+      if (onSelectUser && visitor.visitorId) {
+        onClose();
+        onSelectUser(visitor.visitorId);
+      }
       return;
     }
-    if (onSelectUser && visitor.visitorId) {
-      onClose();
-      onSelectUser(visitor.visitorId);
+
+    if ((peekPasses || 0) > 0) {
+      Alert.alert(
+        "ใช้ตั๋วส่องโปรไฟล์",
+        `คุณมีตั๋วส่องโปรไฟล์คงเหลือ ${peekPasses} ใบ (ได้จากการแลกแต้มภารกิจ)\nต้องการใช้ 1 ใบเพื่อเปิดดูโปรไฟล์ของ "${visitor.visitorName}" หรือไม่?`,
+        [
+          { text: "ยกเลิก", style: "cancel" },
+          {
+            text: "ใช้ตั๋ว 1 ใบ",
+            onPress: async () => {
+              const ok = await usePeekPass(visitor.visitorId);
+              if (ok && onSelectUser && visitor.visitorId) {
+                onClose();
+                onSelectUser(visitor.visitorId);
+              }
+            },
+          },
+        ]
+      );
+      return;
     }
+
+    setPaywallVisible(true);
   };
 
   const handleQuickWave = (visitor) => {
-    if (!isBubbleUser) {
-      setPaywallVisible(true);
+    const canView = isBubbleUser || (isVisitorUnlocked && isVisitorUnlocked(visitor.visitorId));
+    if (canView) {
+      const topic = visitor.sharedInsights?.[0];
+      const starter = getRandomIcebreaker(topic, visitor.visitorName);
+      setActiveVisitor(visitor);
+      setIcebreakerText(starter);
+      setWavedUsers((prev) => ({ ...prev, [visitor.visitorId]: true }));
+      setIcebreakerModalVisible(true);
       return;
     }
 
-    const topic = visitor.sharedInsights?.[0];
-    const starter = getRandomIcebreaker(topic, visitor.visitorName);
-    setActiveVisitor(visitor);
-    setIcebreakerText(starter);
-    setWavedUsers((prev) => ({ ...prev, [visitor.visitorId]: true }));
-    setIcebreakerModalVisible(true);
+    if ((peekPasses || 0) > 0) {
+      Alert.alert(
+        "ใช้ตั๋วส่องโปรไฟล์",
+        `คุณมีตั๋วส่องโปรไฟล์คงเหลือ ${peekPasses} ใบ ต้องการใช้ 1 ใบเพื่อส่งทักทาย "${visitor.visitorName}" หรือไม่?`,
+        [
+          { text: "ยกเลิก", style: "cancel" },
+          {
+            text: "ใช้ตั๋ว 1 ใบ",
+            onPress: async () => {
+              const ok = await usePeekPass(visitor.visitorId);
+              if (ok) {
+                const topic = visitor.sharedInsights?.[0];
+                const starter = getRandomIcebreaker(topic, visitor.visitorName);
+                setActiveVisitor(visitor);
+                setIcebreakerText(starter);
+                setWavedUsers((prev) => ({ ...prev, [visitor.visitorId]: true }));
+                setIcebreakerModalVisible(true);
+              }
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    setPaywallVisible(true);
   };
 
   const handleOpenChat = async (visitor) => {
-    if (!isBubbleUser) {
-      setPaywallVisible(true);
+    const canView = isBubbleUser || (isVisitorUnlocked && isVisitorUnlocked(visitor.visitorId));
+    if (canView) {
+      const targetObj = {
+        id: visitor.visitorId,
+        name: visitor.visitorName,
+        image: visitor.visitorImage,
+      };
+      await startChatWithUser(targetObj);
+      setChatTargetUser(targetObj);
+      setChatVisible(true);
       return;
     }
-    const targetObj = {
-      id: visitor.visitorId,
-      name: visitor.visitorName,
-      image: visitor.visitorImage,
-    };
-    await startChatWithUser(targetObj);
-    setChatTargetUser(targetObj);
-    setChatVisible(true);
+
+    if ((peekPasses || 0) > 0) {
+      Alert.alert(
+        "ใช้ตั๋วส่องโปรไฟล์",
+        `คุณมีตั๋วส่องโปรไฟล์คงเหลือ ${peekPasses} ใบ ต้องการใช้ 1 ใบเพื่อเปิดแชทกับ "${visitor.visitorName}" หรือไม่?`,
+        [
+          { text: "ยกเลิก", style: "cancel" },
+          {
+            text: "ใช้ตั๋ว 1 ใบ",
+            onPress: async () => {
+              const ok = await usePeekPass(visitor.visitorId);
+              if (ok) {
+                const targetObj = {
+                  id: visitor.visitorId,
+                  name: visitor.visitorName,
+                  image: visitor.visitorImage,
+                };
+                await startChatWithUser(targetObj);
+                setChatTargetUser(targetObj);
+                setChatVisible(true);
+              }
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    setPaywallVisible(true);
   };
 
   const filteredVisitors =
@@ -197,6 +278,23 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
                 </View>
               </View>
             </View>
+
+            {/* Peek Pass Banner */}
+            {!isBubbleUser && (
+              <View style={styles.peekPassBanner}>
+                <View style={styles.peekPassIcon}>
+                  <Ionicons name="sparkles" size={18} color="#17171c" />
+                </View>
+                <View style={styles.peekPassTextCol}>
+                  <Text style={styles.peekPassTitle}>
+                    ตั๋วส่องโปรไฟล์ของคุณ: {peekPasses || 0} ใบ
+                  </Text>
+                  <Text style={styles.peekPassSubtitle}>
+                    สะสม Bubble Points จากภารกิจรายวันเพื่อแลกตั๋วส่องโปรไฟล์ได้ในโหมด Cross-Bubble
+                  </Text>
+                </View>
+              </View>
+            )}
 
             {/* Incognito Mode Banner */}
             <View style={styles.incognitoBanner}>
@@ -354,14 +452,15 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
                 {filteredVisitors.map((visitor, index) => {
                   const isSpark = visitor.isSpark || (visitor.matchPercentage && visitor.matchPercentage >= 80);
                   const isWaved = wavedUsers[visitor.visitorId];
+                  const canView = isBubbleUser || (isVisitorUnlocked && isVisitorUnlocked(visitor.visitorId));
 
                   return (
                     <TouchableOpacity
                       key={visitor.visitorId || index}
                       style={[
                         styles.visitorCard,
-                        isSpark && isBubbleUser && styles.visitorCardSpark,
-                        !isBubbleUser && styles.visitorCardBlurred,
+                        isSpark && canView && styles.visitorCardSpark,
+                        !canView && styles.visitorCardBlurred,
                       ]}
                       activeOpacity={0.88}
                       onPress={() => handleOpenVisitor(visitor)}
@@ -370,12 +469,12 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
                       <View style={styles.cardTopRow}>
                         {/* Avatar Box */}
                         <View style={styles.avatarBox}>
-                          {isBubbleUser && visitor.visitorImage ? (
+                          {canView && visitor.visitorImage ? (
                             <Image
                               source={{ uri: visitor.visitorImage }}
                               style={styles.visitorAvatar}
                             />
-                          ) : isBubbleUser ? (
+                          ) : canView ? (
                             <View style={styles.visitorAvatarInitial}>
                               <Text style={styles.visitorAvatarInitialText}>
                                 {(visitor.visitorName || "U").charAt(0).toUpperCase()}
@@ -395,7 +494,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
 
                         {/* Info Box */}
                         <View style={styles.visitorInfo}>
-                          {isBubbleUser ? (
+                          {canView ? (
                             <>
                               <View style={styles.nameRow}>
                                 <Text style={styles.visitorName} numberOfLines={1}>
@@ -459,7 +558,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
                               {visitor.matchPercentage}%
                             </Text>
                           </View>
-                          {isBubbleUser && (
+                          {canView && (
                             <Text style={styles.visitorTime}>
                               {formatTimeAgo(visitor.visitedAt)}
                             </Text>
@@ -469,7 +568,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
 
                       {/* Middle Row: Shared Mind-Insights */}
                       <View style={styles.mindInsightRow}>
-                        {isBubbleUser ? (
+                        {canView ? (
                           <>
                             <Text style={styles.mindInsightLabel}>จุดร่วมที่ตอบตรงกัน:</Text>
                             <View style={styles.insightsList}>
@@ -503,7 +602,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
                       </View>
 
                       {/* Bottom Action Row */}
-                      {isBubbleUser ? (
+                      {canView ? (
                         <View style={styles.cardActionsRow}>
                           <TouchableOpacity
                             style={[
@@ -537,7 +636,9 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
                         <View style={styles.teaserCardFooter}>
                           <Ionicons name="key-outline" size={13} color="#0284c7" style={{ marginRight: 6 }} />
                           <Text style={styles.teaserCardFooterText}>
-                            แตะเพื่อปลดล็อกดูตัวจริงและจุดเชื่อมโยง
+                            {(peekPasses || 0) > 0
+                              ? `แตะเพื่อใช้ตั๋วส่องโปรไฟล์ (เหลือ ${peekPasses} ใบ)`
+                              : "แตะเพื่อปลดล็อกดูตัวจริงและจุดเชื่อมโยง"}
                           </Text>
                         </View>
                       )}
@@ -843,6 +944,43 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.mutedForeground,
     lineHeight: 14,
+  },
+  peekPassBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#eff6ff",
+    borderWidth: 2,
+    borderColor: "#93c5fd",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 16,
+    ...shadows.neo,
+  },
+  peekPassIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: "#dbeafe",
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  peekPassTextCol: {
+    flex: 1,
+  },
+  peekPassTitle: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: colors.ink,
+    marginBottom: 2,
+  },
+  peekPassSubtitle: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: colors.mutedForeground,
+    lineHeight: 15,
   },
   incognitoBanner: {
     flexDirection: "row",
