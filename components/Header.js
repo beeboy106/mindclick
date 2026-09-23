@@ -4,10 +4,12 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 import { useData } from "../context/DataContext";
+import { usePremium } from "../context/PremiumContext";
 
 export default function Header({ rightComponent, onProfilePress }) {
   const { user } = useAuth();
   const { profile } = useData();
+  const { isBubbleUser } = usePremium();
   const [imgError, setImgError] = useState(false);
 
   const displayImage = profile?.image || user?.image || null;
@@ -35,26 +37,34 @@ export default function Header({ rightComponent, onProfilePress }) {
           rightComponent
         ) : user ? (
           <TouchableOpacity
-            style={styles.userProfileBtn}
+            style={[
+              styles.userProfileBtn,
+              isBubbleUser && styles.userProfileBtnBubble,
+            ]}
             activeOpacity={0.8}
             onPress={onProfilePress}
           >
-            {!imgError && displayImage ? (
-              <Image
-                source={{ uri: displayImage }}
-                style={styles.avatarImage}
-                onError={() => setImgError(true)}
-              />
-            ) : (
-              <View style={styles.avatarFallback}>
-                <Text style={styles.avatarInitial}>
-                  {displayName ? displayName.charAt(0).toUpperCase() : "U"}
-                </Text>
-              </View>
-            )}
+            <View style={[styles.headerAvatarBox, isBubbleUser && styles.headerAvatarBoxBubble]}>
+              {!imgError && displayImage ? (
+                <Image
+                  source={{ uri: displayImage }}
+                  style={styles.avatarImage}
+                  onError={() => setImgError(true)}
+                />
+              ) : (
+                <View style={styles.avatarFallback}>
+                  <Text style={styles.avatarInitial}>
+                    {displayName ? displayName.charAt(0).toUpperCase() : "U"}
+                  </Text>
+                </View>
+              )}
+            </View>
             <Text style={styles.userNameText} numberOfLines={1}>
               {displayName}
             </Text>
+            {isBubbleUser && (
+              <MaterialCommunityIcons name="chart-bubble" size={13} color="#0284c7" />
+            )}
           </TouchableOpacity>
         ) : null}
       </View>
@@ -133,5 +143,18 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: colors.ink,
     maxWidth: 130,
+  },
+  userProfileBtnBubble: {
+    borderColor: "#bae6fd",
+    backgroundColor: "#f0f9ff",
+  },
+  headerAvatarBox: {
+    position: "relative",
+  },
+  headerAvatarBoxBubble: {
+    padding: 1.5,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "#0284c7",
   },
 });

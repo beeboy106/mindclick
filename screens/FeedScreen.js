@@ -435,7 +435,12 @@ export default function FeedScreen({ navigation }) {
                 activeOpacity={0.8}
                 onPress={() => handleOpenChatWith(friend.id)}
               >
-                <View style={styles.friendBubbleAvatarWrapper}>
+                <View
+                  style={[
+                    styles.friendBubbleAvatarWrapper,
+                    friend.isBubbleUser && styles.friendBubbleAvatarWrapperBubble,
+                  ]}
+                >
                   {friend.avatar ? (
                     <Image
                       source={{ uri: friend.avatar }}
@@ -446,6 +451,11 @@ export default function FeedScreen({ navigation }) {
                       <Text style={styles.friendBubbleInitial}>
                         {friend.name.charAt(0).toUpperCase()}
                       </Text>
+                    </View>
+                  )}
+                  {friend.isBubbleUser && (
+                    <View style={styles.friendBubbleMiniBadge}>
+                      <MaterialCommunityIcons name="chart-bubble" size={10} color={colors.white} />
                     </View>
                   )}
                   <View
@@ -527,46 +537,6 @@ export default function FeedScreen({ navigation }) {
               </TouchableOpacity>
             </View>
           )}
-
-          {/* Post Quota Info Bar */}
-          <View style={styles.postQuotaRow}>
-            {isBubbleUser ? (
-              <View style={styles.quotaPillUnlimited}>
-                <Ionicons name="sparkles" size={12} color="#047857" style={{ marginRight: 4 }} />
-                <Text style={styles.quotaPillUnlimitedText}>
-                  ผู้ใช้ฟองสบู่ (โพสต์ได้ไม่จำกัด)
-                </Text>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={[
-                  styles.quotaPillNormal,
-                  dailyPostCount >= (dailyPostLimit || 2) && styles.quotaPillFull,
-                ]}
-                activeOpacity={0.8}
-                onPress={() => {
-                  setUpgradeReason("post_limit");
-                  setUpgradeModalMode("paywall");
-                  setUpgradeModalVisible(true);
-                }}
-              >
-                <Ionicons
-                  name={dailyPostCount >= (dailyPostLimit || 2) ? "lock-closed" : "create-outline"}
-                  size={12}
-                  color={dailyPostCount >= (dailyPostLimit || 2) ? "#b91c1c" : colors.ink}
-                  style={{ marginRight: 4 }}
-                />
-                <Text
-                  style={[
-                    styles.quotaPillNormalText,
-                    dailyPostCount >= (dailyPostLimit || 2) && styles.quotaPillFullText,
-                  ]}
-                >
-                  สิทธิ์โพสต์วันนี้: {dailyPostCount}/{dailyPostLimit || 2} ครั้ง (แตะเพื่ออัปเกรด)
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
 
           {/* Bottom Controls */}
           <View style={styles.createActionsRow}>
@@ -716,6 +686,7 @@ export default function FeedScreen({ navigation }) {
               post={post}
               currentUserId={user?.id || "guest"}
               currentUserProfile={profile}
+              currentUserIsBubbleUser={isBubbleUser}
               onToggleLike={toggleLike}
               onDelete={deletePost}
               onAddComment={addComment}
@@ -1341,46 +1312,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.mutedForeground,
   },
-  postQuotaRow: {
-    marginBottom: 8,
+  friendBubbleAvatarWrapperBubble: {
+    padding: 2,
+    borderRadius: 30,
+    borderWidth: 2,
+    borderColor: "#0284c7",
+    backgroundColor: "#e0f2fe",
   },
-  quotaPillUnlimited: {
-    flexDirection: "row",
+  friendBubbleMiniBadge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    width: 17,
+    height: 17,
+    borderRadius: 8.5,
+    backgroundColor: "#0284c7",
+    borderWidth: 1.5,
+    borderColor: colors.white,
+    justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#ecfdf5",
-    borderWidth: 1,
-    borderColor: "#a7f3d0",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    alignSelf: "flex-start",
-  },
-  quotaPillUnlimitedText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#047857",
-  },
-  quotaPillNormal: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f8fafc",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    alignSelf: "flex-start",
-  },
-  quotaPillNormalText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: colors.mutedForeground,
-  },
-  quotaPillFull: {
-    backgroundColor: "#fef2f2",
-    borderColor: "#fecaca",
-  },
-  quotaPillFullText: {
-    color: "#b91c1c",
+    zIndex: 2,
   },
 });

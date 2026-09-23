@@ -8,7 +8,7 @@ import {
   TextInput,
   Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors, shadows } from "../lib/theme";
 
 // ข้อมูลสีสำหรับแต่ละกระทู้ (ไม่มีไอคอน/อิโมจิ)
@@ -23,6 +23,7 @@ export default function PostCard({
   post,
   currentUserId,
   currentUserProfile,
+  currentUserIsBubbleUser,
   onToggleLike,
   onDelete,
   onAddComment,
@@ -42,6 +43,12 @@ export default function PostCard({
   const isAuthor = post.authorId === currentUserId;
   const topicConfig = post.topicId ? TOPIC_CONFIG[post.topicId] : null;
 
+  // ตรวจสอบสถานะผู้ใช้ฟองสบู่ (ถ้าเป็นโพสต์ของตนเอง ให้ตรวจจากสถานะปัจจุบันของผู้ใช้)
+  const authorIsBubble =
+    isAuthor
+      ? Boolean(currentUserIsBubbleUser)
+      : Boolean(post.authorIsBubbleUser || post.isBubbleUser);
+
   // โปรไฟล์ผู้โพสต์ (หากเป็นโพสต์ของตนเอง ให้ใช้โปรไฟล์ที่ตั้งไว้ล่าสุดเสมอ)
   const authorDisplayName =
     isAuthor && currentUserProfile?.name
@@ -53,7 +60,7 @@ export default function PostCard({
       : post.authorAvatar || null;
 
   // ฟังก์ชันช่วยเหลือสำหรับแสดงชื่อและรูปคอมเมนต์
-  const getCommentAuthorInfo = (itemUserId, itemUserName, itemUserAvatar) => {
+  const getCommentAuthorInfo = (itemUserId, itemUserName, itemUserAvatar, itemIsBubble) => {
     const isCurrentUser = itemUserId === currentUserId;
     const name =
       isCurrentUser && currentUserProfile?.name
@@ -63,7 +70,8 @@ export default function PostCard({
       isCurrentUser && currentUserProfile?.image !== undefined
         ? currentUserProfile.image
         : itemUserAvatar || null;
-    return { name, avatar };
+    const isBubble = isCurrentUser ? Boolean(currentUserIsBubbleUser) : Boolean(itemIsBubble);
+    return { name, avatar, isBubble };
   };
 
   const handleDelete = () => {
@@ -143,23 +151,41 @@ export default function PostCard({
           onPress={() => onPressAuthor && onPressAuthor(post.authorId)}
           disabled={!onPressAuthor}
         >
-          {authorDisplayAvatar && !avatarError ? (
-            <Image
-              source={{ uri: authorDisplayAvatar }}
-              style={styles.avatar}
-              onError={() => setAvatarError(true)}
-            />
-          ) : (
-            <View style={styles.avatarFallback}>
-              <Text style={styles.avatarInitial}>
-                {authorDisplayName ? authorDisplayName.charAt(0).toUpperCase() : "U"}
-              </Text>
-            </View>
-          )}
+          <View
+            style={[
+              styles.authorAvatarWrapper,
+              authorIsBubble && styles.bubbleAvatarWrapper,
+            ]}
+          >
+            {authorDisplayAvatar && !avatarError ? (
+              <Image
+                source={{ uri: authorDisplayAvatar }}
+                style={styles.avatar}
+                onError={() => setAvatarError(true)}
+              />
+            ) : (
+              <View style={styles.avatarFallback}>
+                <Text style={styles.avatarInitial}>
+                  {authorDisplayName ? authorDisplayName.charAt(0).toUpperCase() : "U"}
+                </Text>
+              </View>
+            )}
+            {authorIsBubble && (
+              <View style={styles.bubbleAvatarMiniBadge}>
+                <MaterialCommunityIcons name="chart-bubble" size={10} color={colors.white} />
+              </View>
+            )}
+          </View>
 
           <View style={styles.authorMeta}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
               <Text style={styles.authorName}>{authorDisplayName}</Text>
+              {authorIsBubble && (
+                <View style={styles.bubbleTagBadge}>
+                  <MaterialCommunityIcons name="chart-bubble" size={12} color="#0284c7" />
+                  <Text style={styles.bubbleTagText}>ฟองสบู่</Text>
+                </View>
+              )}
               {onPressAuthor && (
                 <Ionicons name="chevron-forward" size={12} color={colors.mutedForeground} />
               )}
@@ -248,14 +274,14 @@ export default function PostCard({
             <View style={styles.commentsList}>
               {rootComments.map((root) => {
                 const rootReplies = repliesMap[root.id] || [];
-                const { name: rootDisplayName, avatar: rootDisplayAvatar } =
-                  getCommentAuthorInfo(root.userId, root.userName, root.userAvatar);
+                const { name: rootDisplayName, avatar: rootDisplayAvatar, isBubble: rootIsBubble } =
+                  getCommentAuthorInfo(root.userId, root.userName, root.userAvatar, root.isBubbleUser);
 
                 return (
                   <View key={root.id} style={styles.commentThreadWrapper}>
                     {/* Root Comment Row */}
                     <View style={styles.commentRow}>
-                      <View style={styles.commentAvatar}>
+                      <View style={[styles.commentAvatar, rootIsBubble && styles.commentAvatarBubble]}>
                         {rootDisplayAvatar ? (
                           <Image source={{ uri: rootDisplayAvatar }} style={styles.avatarImg} />
                         ) : (
@@ -266,7 +292,12 @@ export default function PostCard({
                       </View>
                       <View style={styles.commentMainCol}>
                         <View style={styles.commentBubble}>
-                          <Text style={styles.commentAuthorName}>{rootDisplayName}</Text>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                            <Text style={styles.commentAuthorName}>{rootDisplayName}</Text>
+                            {rootIsBubble && (
+                              <MaterialCommunityIcons name="chart-bubble" size={11} color="#0284c7" />
+                            )}
+                          </View>
                           <Text style={styles.commentContent}>{root.content}</Text>
                         </View>
                         {/* Meta Action Row: Time • Reply */}
@@ -296,16 +327,17 @@ export default function PostCard({
                     {rootReplies.length > 0 && (
                       <View style={styles.repliesThreadContainer}>
                         {rootReplies.map((reply) => {
-                          const { name: replyDisplayName, avatar: replyDisplayAvatar } =
+                          const { name: replyDisplayName, avatar: replyDisplayAvatar, isBubble: replyIsBubble } =
                             getCommentAuthorInfo(
                               reply.userId,
                               reply.userName,
-                              reply.userAvatar
+                              reply.userAvatar,
+                              reply.isBubbleUser
                             );
 
                           return (
                             <View key={reply.id} style={styles.replyRow}>
-                              <View style={styles.replyAvatar}>
+                              <View style={[styles.replyAvatar, replyIsBubble && styles.commentAvatarBubble]}>
                                 {replyDisplayAvatar ? (
                                   <Image
                                     source={{ uri: replyDisplayAvatar }}
@@ -321,7 +353,12 @@ export default function PostCard({
                               </View>
                               <View style={styles.commentMainCol}>
                                 <View style={styles.replyBubble}>
-                                  <Text style={styles.commentAuthorName}>{replyDisplayName}</Text>
+                                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                                    <Text style={styles.commentAuthorName}>{replyDisplayName}</Text>
+                                    {replyIsBubble && (
+                                      <MaterialCommunityIcons name="chart-bubble" size={11} color="#0284c7" />
+                                    )}
+                                  </View>
                                   <Text style={styles.commentContent}>
                                     {reply.replyTo?.userName &&
                                       reply.replyTo.userName !== replyDisplayName && (
@@ -470,6 +507,50 @@ const styles = StyleSheet.create({
     borderColor: colors.darkBorder,
     justifyContent: "center",
     alignItems: "center",
+  },
+  authorAvatarWrapper: {
+    position: "relative",
+  },
+  bubbleAvatarWrapper: {
+    padding: 2,
+    borderRadius: 26,
+    borderWidth: 2,
+    borderColor: "#0284c7",
+    backgroundColor: "#e0f2fe",
+  },
+  bubbleAvatarMiniBadge: {
+    position: "absolute",
+    bottom: -2,
+    right: -2,
+    width: 17,
+    height: 17,
+    borderRadius: 8.5,
+    backgroundColor: "#0284c7",
+    borderWidth: 1.5,
+    borderColor: colors.white,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 2,
+  },
+  bubbleTagBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#e0f2fe",
+    borderWidth: 1,
+    borderColor: "#bae6fd",
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 10,
+    gap: 3,
+  },
+  bubbleTagText: {
+    fontSize: 10.5,
+    fontWeight: "800",
+    color: "#0284c7",
+  },
+  commentAvatarBubble: {
+    borderColor: "#0284c7",
+    borderWidth: 2,
   },
   avatarInitial: {
     color: colors.white,

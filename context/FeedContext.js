@@ -29,6 +29,7 @@ const INITIAL_POSTS = [
     authorName: "Aphisak Phutsupha",
     authorAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
     authorEmail: "aphisak@example.com",
+    authorIsBubbleUser: true,
     topicId: "hobbies",
     content: "สวัสดีเพื่อนๆ Mindclick ทุกคนครับ ใครที่ชอบด้านดนตรีหรือไปเที่ยววันหยุด ทักมาคุยแลกเปลี่ยนกันได้นะ",
     image: null,
@@ -40,6 +41,7 @@ const INITIAL_POSTS = [
         userId: "user_mock_1",
         userName: "ฟ้าใส ธนภัทร",
         userAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80",
+        isBubbleUser: true,
         content: "สวัสดีค่ะ ไว้ชวนไปฟังดนตรีสดด้วยกันนะคะ",
         createdAt: "16 ก.ย. 2569 15:45",
         parentId: null,
@@ -50,6 +52,7 @@ const INITIAL_POSTS = [
         userId: "user_mock_aphisak",
         userName: "Aphisak Phutsupha",
         userAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
+        isBubbleUser: true,
         content: "ยินดีเลยครับ มีร้านแถวเอกมัยเล่นดีมาก ไว้ไปด้วยกันนะ",
         createdAt: "16 ก.ย. 2569 15:50",
         parentId: "c_1",
@@ -66,6 +69,7 @@ const INITIAL_POSTS = [
     authorName: "ฟ้าใส ธนภัทร",
     authorAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&auto=format&fit=crop&q=80",
     authorEmail: "fasai@example.com",
+    authorIsBubbleUser: true,
     topicId: "movies_series",
     content: "เพิ่งดูซีรีย์เรื่องใหม่จบไป เนื้อเรื่องลุ้นหักมุมมาก มีใครกำลังดูเรื่องนี้อยู่บ้าง มาคุยกันได้นะ",
     image: "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&auto=format&fit=crop&q=80",
@@ -77,6 +81,7 @@ const INITIAL_POSTS = [
         userId: "user_mock_janon",
         userName: "Janon Kingkohyao",
         userAvatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=400&auto=format&fit=crop&q=80",
+        isBubbleUser: false,
         content: "เรื่องอะไรเหรอครับ กำลังหาซีรีย์ดูวันหยุดพอดีเลย แนะนำหน่อยครับ",
         createdAt: "16 ก.ย. 2569 16:30",
         parentId: null,
@@ -90,6 +95,7 @@ const INITIAL_POSTS = [
     authorName: "KEDTISAK RAKRUAUG",
     authorAvatar: null,
     authorEmail: "kedtisak@example.com",
+    authorIsBubbleUser: false,
     topicId: "boardgames",
     content: "เสาร์-อาทิตย์นี้ มีใครสนใจเล่น Catan หรือ Dixit แถวสยามไหมครับ ขาดอีก 2 คน บอร์ดเกมเมอร์มือใหม่ยินดีต้อนรับครับ",
     image: "https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?w=800&auto=format&fit=crop&q=80",
@@ -101,6 +107,7 @@ const INITIAL_POSTS = [
         userId: "user_mock_aphisak",
         userName: "Aphisak Phutsupha",
         userAvatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
+        isBubbleUser: true,
         content: "สนใจครับ เล่น Catan ประจำเลย ว่างช่วงบ่ายครับ",
         createdAt: "16 ก.ย. 2569 11:15",
         parentId: null,
@@ -111,6 +118,7 @@ const INITIAL_POSTS = [
         userId: "user_mock_kedtisak",
         userName: "KEDTISAK RAKRUAUG",
         userAvatar: null,
+        isBubbleUser: false,
         content: "ยอดเยี่ยมเลยครับ เดี๋ยวส่งโลเคชั่นร้านให้ในแชทนะ",
         createdAt: "16 ก.ย. 2569 11:20",
         parentId: "c_b1",
@@ -127,6 +135,7 @@ const INITIAL_POSTS = [
     authorName: "Sarawut Dara",
     authorAvatar: null,
     authorEmail: "sarawut@example.com",
+    authorIsBubbleUser: false,
     topicId: "news",
     content: "อัปเดตเทรนด์ AI และเทคโนโลยีในปี 2026 ตอนนี้มีเครื่องมือใหม่ๆ ช่วยพัฒนาแอปได้เร็วขึ้นเยอะมาก มีใครลองใช้ตัวไหนบ้างแล้วครับ",
     image: null,
@@ -140,6 +149,7 @@ const INITIAL_POSTS = [
     authorName: "Janon Kingkohyao",
     authorAvatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=400&auto=format&fit=crop&q=80",
     authorEmail: "janon@example.com",
+    authorIsBubbleUser: false,
     topicId: null,
     content: "วันนี้มีใครไปอ่านหนังสือหรือทำงานที่หอสมุดบ้างไหมครับ หาเพื่อนติวและพูดคุยเรื่องโปรเจกต์",
     image: null,
@@ -155,6 +165,7 @@ const DEFAULT_FRIENDS = [
     id: "user_mock_aphisak",
     name: "Aphisak Phutsupha",
     avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
+    isBubbleUser: true,
     status: "online",
     lastMessage: "สะดวกคุยไหมครับเรื่องผลแมตช์",
     lastTime: "15:38",
@@ -164,6 +175,7 @@ const DEFAULT_FRIENDS = [
     id: "user_mock_janon",
     name: "Janon Kingkohyao",
     avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=400&auto=format&fit=crop&q=80",
+    isBubbleUser: false,
     status: "offline",
     lastMessage: "ขอบคุณครับ เจอกันพรุ่งนี้",
     lastTime: "14:15",
@@ -351,6 +363,7 @@ export function FeedProvider({ children }) {
         createdAt: dateStr,
         likes: [],
         comments: [],
+        authorIsBubbleUser: Boolean(isBubbleUser),
       };
 
       const updated = [newPost, ...posts];
@@ -416,6 +429,7 @@ export function FeedProvider({ children }) {
         userId: userId,
         userName: resolvedName,
         userAvatar: resolvedAvatar,
+        isBubbleUser: Boolean(isBubbleUser),
         content: commentText.trim(),
         createdAt: dateStr,
         parentId: parentId,
@@ -437,7 +451,7 @@ export function FeedProvider({ children }) {
 
       await savePosts(updated);
     },
-    [posts, user, userId, profile]
+    [posts, user, userId, profile, isBubbleUser]
   );
 
   // ซิงค์โพสต์และคอมเมนต์ของผู้ใช้ปัจจุบันเมื่อมีการแก้ไขชื่อหรือรูปโปรไฟล์

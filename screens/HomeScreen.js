@@ -80,35 +80,6 @@ export default function HomeScreen({ navigation }) {
             <View style={{ flex: 1 }}>
               <Text style={styles.eyebrow}>YOUR MINDCLICK</Text>
               <Text style={styles.greetingTitle}>สวัสดี {firstName}</Text>
-              <TouchableOpacity
-                style={[
-                  styles.bubbleStatusBadge,
-                  isPaid
-                    ? styles.bubbleStatusBadgePaid
-                    : isTrialActive
-                    ? styles.bubbleStatusBadgeTrial
-                    : styles.bubbleStatusBadgeFree,
-                ]}
-                activeOpacity={0.8}
-                onPress={() => {
-                  setBubbleModalMode("paywall");
-                  setBubbleModalVisible(true);
-                }}
-              >
-                <Ionicons
-                  name="planet"
-                  size={12}
-                  color={isPaid ? colors.primary : colors.ink}
-                  style={{ marginRight: 4 }}
-                />
-                <Text style={styles.bubbleStatusText}>
-                  {isPaid
-                    ? "ผู้ใช้ฟองสบู่"
-                    : isTrialActive
-                    ? `ทดลองใช้ฟองสบู่ (เหลือ ${daysRemaining} วัน)`
-                    : "ผู้ใช้ทั่วไป (อัปเกรด)"}
-                </Text>
-              </TouchableOpacity>
             </View>
 
             {/* Streak Flame Badge (Visible when completed all or has streak) */}
@@ -738,32 +709,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
     maxWidth: 280,
-  },
-  bubbleStatusBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    marginTop: 6,
-    alignSelf: "flex-start",
-  },
-  bubbleStatusBadgePaid: {
-    backgroundColor: "#e0e7ff",
-    borderColor: colors.primary,
-  },
-  bubbleStatusBadgeTrial: {
-    backgroundColor: "#f0fdf4",
-    borderColor: "#86efac",
-  },
-  bubbleStatusBadgeFree: {
-    backgroundColor: "#f1f5f9",
-    borderColor: "#cbd5e1",
-  },
-  bubbleStatusText: {
-    fontSize: 11.5,
-    fontWeight: "800",
-    color: colors.ink,
   },
 });

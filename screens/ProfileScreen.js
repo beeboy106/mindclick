@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 import { useData } from "../context/DataContext";
@@ -324,7 +324,7 @@ export default function ProfileScreen({ navigation }) {
 
         {/* User Card */}
         <View style={styles.userCard}>
-          <View style={styles.avatarWrapper}>
+          <View style={[styles.avatarWrapper, isBubbleUser && styles.bubbleAvatarWrapperProfile]}>
             {!avatarError && (avatarUri || profile?.image || user?.image) ? (
               <Image
                 source={{ uri: avatarUri || profile?.image || user?.image }}
@@ -350,10 +350,10 @@ export default function ProfileScreen({ navigation }) {
             >
               <Ionicons name="pencil" size={14} color={colors.white} />
             </TouchableOpacity>
-            {isPremium && (
-              <View style={styles.goldCrownBadge}>
-                <Ionicons name="sparkles" size={11} color={colors.ink} />
-                <Text style={styles.goldCrownBadgeText}>GOLD</Text>
+            {isBubbleUser && (
+              <View style={styles.bubbleCrownBadge}>
+                <MaterialCommunityIcons name="chart-bubble" size={13} color={colors.white} />
+                <Text style={styles.bubbleCrownBadgeText}>ฟองสบู่</Text>
               </View>
             )}
           </View>
@@ -690,18 +690,18 @@ export default function ProfileScreen({ navigation }) {
         <View style={styles.membershipCard}>
           <View style={styles.membershipHeader}>
             <View style={styles.membershipBadge}>
-              <Ionicons
-                name={isBubbleUser ? "planet" : "shield-outline"}
-                size={16}
-                color={colors.ink}
+              <MaterialCommunityIcons
+                name="chart-bubble"
+                size={18}
+                color={isBubbleUser ? "#0284c7" : colors.mutedForeground}
                 style={{ marginRight: 6 }}
               />
               <Text style={styles.membershipBadgeText}>
                 {isPaid
                   ? "ผู้ใช้ฟองสบู่ (สมาชิก)"
                   : isTrialActive
-                  ? `ทดลองใช้ฟรี (เหลืออีก ${daysRemaining} วัน)`
-                  : "ผู้ใช้ทั่วไป (หมดอายุแล้ว)"}
+                  ? `ผู้ใช้ฟองสบู่ (ทดลองใช้ฟรี เหลืออีก ${daysRemaining} วัน)`
+                  : "ผู้ใช้ทั่วไป (หมดช่วงทดลองใช้แล้ว)"}
               </Text>
             </View>
             {!isPaid ? (
@@ -1229,24 +1229,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
-  goldCrownBadge: {
+  bubbleAvatarWrapperProfile: {
+    padding: 3,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: "#0284c7",
+    backgroundColor: "#e0f2fe",
+  },
+  bubbleCrownBadge: {
     position: "absolute",
-    top: -8,
+    top: -6,
     right: -4,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFE600",
+    backgroundColor: "#0284c7",
     borderWidth: 2,
-    borderColor: colors.ink,
+    borderColor: colors.white,
     borderRadius: 12,
     paddingHorizontal: 7,
     paddingVertical: 2,
+    gap: 3,
   },
-  goldCrownBadgeText: {
-    fontSize: 9,
+  bubbleCrownBadgeText: {
+    fontSize: 9.5,
     fontWeight: "900",
-    color: colors.ink,
-    marginLeft: 2,
+    color: colors.white,
   },
   viewsEntryBanner: {
     flexDirection: "row",
