@@ -9,7 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors, shadows } from "../lib/theme";
 import { usePremium } from "../context/PremiumContext";
 
@@ -22,44 +22,59 @@ const PLANS = [
     subtext: "79 บาท / เดือน",
     tag: null,
     isPopular: false,
+    badgeBg: "#f1f5f9",
   },
   {
     id: "semester",
     title: "1 ภาคเรียน (4 เดือน)",
     price: "199 บาท",
-    subtext: "ประหยัด 37% (~50 บาท/เดือน)",
+    subtext: "เฉลี่ย ~50 บาท / เดือน (ประหยัด 37%)",
     tag: "แนะนำสำหรับนักศึกษา",
     isPopular: true,
+    badgeBg: "#bbf44a",
   },
   {
     id: "annual",
-    title: "1 ปี (12 เดือน)",
+    title: "1 ปีการศึกษา (12 เดือน)",
     price: "499 บาท",
-    subtext: "ประหยัด 47% (~41 บาท/เดือน)",
+    subtext: "เฉลี่ย ~41 บาท / เดือน (ประหยัด 47%)",
     tag: "คุ้มค่าสูงสุด",
     isPopular: false,
+    badgeBg: "#67e8f9",
   },
 ];
 
-// 3 สิทธิประโยชน์หลักของผู้ใช้ฟองสบู่ (Zero Emoji Policy)
-const BUBBLE_PERKS = [
+// ตารางเปรียบเทียบสิทธิประโยชน์ (ผู้ใช้ทั่วไป vs ผู้ใช้ฟองสบู่)
+const PERK_COMPARISON = [
   {
+    title: "ดูประวัติคนมาส่องโปรไฟล์ 30 วัน",
+    free: "เซนเซอร์รูปและชื่อ",
+    bubble: "เห็นรูป คณะ และ Mind-Insight ครบ",
     icon: "eye-outline",
-    color: "#FFE600",
-    title: "ดูประวัติคนส่องโปรไฟล์พร้อม Mind-Insight",
-    desc: "เห็นชื่อ รูป คณะ และจุดร่วมความคิดที่ตอบตรงกัน พร้อมโหมดซ่อนตัวเพื่อแอบดูได้แบบไร้ร่องรอย",
   },
   {
+    title: "โหมดสังสรรค์ลับ Cross-Bubble",
+    free: "ไม่สามารถเข้าได้",
+    bubble: "สุ่มกลุ่ม 5 คนทุกวันเวลา 19:00 น.",
     icon: "planet-outline",
-    color: "#67E8F9",
-    title: "ปลดล็อกโหมด Cross-Bubble",
-    desc: "ทะลุขอบเขตคอมมูนิตี้เดิม เข้าสู่ห้องสังสรรค์ลับเวลา 19:00 และค้นหาเพื่อนต่างคณะ",
   },
   {
+    title: "การแชร์เรื่องราวและโพสต์บนฟีด",
+    free: "จำกัด 2 โพสต์ / วัน",
+    bubble: "โพสต์ได้ไม่จำกัดตลอดทั้งวัน",
     icon: "chatbubble-ellipses-outline",
-    color: "#86EFAC",
-    title: "โพสต์บนฟีดได้ไม่จำกัด",
-    desc: "แชร์ความคิด แนะนำหนัง หรือชวนเล่นบอร์ดเกมได้ตลอดทั้งวัน (ผู้ใช้ทั่วไปจำกัด 2 ครั้ง/วัน)",
+  },
+  {
+    title: "กรอบและสัญลักษณ์ฟองสบู่พิเศษ",
+    free: "ไม่มีสัญลักษณ์",
+    bubble: "แสดงกรอบสีฟ้าและไอคอนฟองสบู่",
+    icon: "shield-checkmark-outline",
+  },
+  {
+    title: "โหมดซ่อนตัว (Incognito Mode)",
+    free: "ไม่รองรับ",
+    bubble: "ส่องโปรไฟล์ผู้อื่นได้แบบไร้ร่องรอย",
+    icon: "glasses-outline",
   },
 ];
 
@@ -97,44 +112,75 @@ export default function BubbleUpgradeModal({
     onClose();
   };
 
-  // กำหนดข้อความส่วนหัวตามโหมด
-  const getHeaderInfo = () => {
+  // กำหนดเนื้อหาและการนำเสนอตามโหมด
+  const getModeConfig = () => {
     if (mode === "welcome") {
       return {
-        badge: "สิทธิ์พิเศษสำหรับสมาชิกใหม่",
-        title: "ยินดีต้อนรับสู่ Mindclick",
-        subtitle: "คุณได้รับสิทธิ์ทดลองเป็น 'ผู้ใช้ฟองสบู่' เต็มรูปแบบฟรี 7 วัน พร้อมใช้งานทุกฟีเจอร์พรีเมียม",
-        accentColor: "#bbf44a",
+        badgeText: "สิทธิ์พิเศษสำหรับสมาชิกใหม่",
+        badgeBg: "#bbf44a",
+        badgeColor: colors.ink,
+        badgeIcon: "sparkles",
+        headline: "ยินดีต้อนรับสู่ Mindclick",
+        subheadline: "คุณได้รับสิทธิ์ทดลองเป็น 'ผู้ใช้ฟองสบู่' ฟรี 7 วันแรก พร้อมใช้งานทุกฟังก์ชันระดับพรีเมียมได้ทันที",
+        heroBg: "#f0fdf4",
+        heroBorder: "#86efac",
+        heroIcon: "gift-outline",
+        heroIconColor: "#059669",
+        heroIconBg: "#dcfce7",
       };
     }
+
     if (mode === "warning") {
       return {
-        badge: "แจ้งเตือนสิทธิ์การใช้งาน",
-        title: "สิทธิ์ทดลองใช้ใกล้สิ้นสุด",
-        subtitle: `เหลือเวลาอีก ${daysRemaining} วัน สำหรับสิทธิ์ผู้ใช้ฟองสบู่ อัปเกรดตอนนี้เพื่อใช้งานทุกฟีเจอร์ได้อย่างต่อเนื่อง`,
-        accentColor: colors.coral,
+        badgeText: `เหลือเวลาอีก ${daysRemaining} วันสุดท้าย`,
+        badgeBg: "#fed7aa",
+        badgeColor: "#9a3412",
+        badgeIcon: "hourglass-outline",
+        headline: "สิทธิ์ทดลองใช้ใกล้สิ้นสุด",
+        subheadline: `สิทธิ์ผู้ใช้ฟองสบู่ของคุณจะหมดอายุในอีก ${daysRemaining} วัน อัปเกรดวันนี้เพื่อใช้งานห้องสังสรรค์ ส่องประวัติโปรไฟล์ และโพสต์ฟีดต่อเนื่องแบบไม่สะดุด`,
+        heroBg: "#fff7ed",
+        heroBorder: "#fb923c",
+        heroIcon: "time-outline",
+        heroIconColor: "#ea580c",
+        heroIconBg: "#ffedd5",
       };
     }
 
     // mode === 'paywall'
-    let reasonText = "สิทธิพิเศษสำหรับผู้ใช้ฟองสบู่ เพื่อประสบการณ์การค้นหาเพื่อนที่ไร้ขีดจำกัด";
+    let reasonTitle = "ปลดล็อกสิทธิ์ 'ผู้ใช้ฟองสบู่'";
+    let reasonText = "อัปเกรดเพื่อประสบการณ์การเชื่อมต่อเพื่อนใหม่ที่ไร้ขีดจำกัด";
+    let iconName = "planet-outline";
+
     if (featureReason === "crossbubble") {
-      reasonText = "โหมด CrossBubble และห้องสังสรรค์ลับ เป็นฟีเจอร์เฉพาะสำหรับผู้ใช้ฟองสบู่";
+      reasonTitle = "ห้องสังสรรค์ลับ CrossBubble";
+      reasonText = "สุ่มเพื่อน 5 คนทุกวันเวลา 19:00 น. พร้อมหัวข้อพูดคุยลับและภารกิจพิเศษ (เฉพาะผู้ใช้ฟองสบู่)";
+      iconName = "planet";
     } else if (featureReason === "post_limit") {
-      reasonText = "คุณใช้โควต้าโพสต์ครบ 2 ครั้งของวันนี้แล้ว อัปเกรดเพื่อโพสต์ได้ไม่จำกัด";
+      reasonTitle = "โพสต์บนฟีดได้ไม่จำกัด";
+      reasonText = "คุณใช้โควต้าโพสต์ครบ 2 ครั้งของวันนี้แล้ว อัปเกรดเพื่อแชร์เรื่องราว แนะนำหนัง และชวนคุยได้ไม่จำกัด";
+      iconName = "chatbubbles";
     } else if (featureReason === "profile_views") {
-      reasonText = "การดูประวัติผู้เข้าชมและบทวิเคราะห์ Mind-Insight เฉพาะผู้ใช้ฟองสบู่";
+      reasonTitle = "ดูประวัติคนมาส่องโปรไฟล์ 30 วัน";
+      reasonText = "เปิดเผยชื่อจริง ภาพชัด คณะ และบทวิเคราะห์ Mind-Insight ของทุกคนที่แวะมาดูคุณ";
+      iconName = "eye";
     }
 
     return {
-      badge: "ฟีเจอร์เฉพาะผู้ใช้ฟองสบู่",
-      title: "ปลดล็อกสิทธิ์ 'ผู้ใช้ฟองสบู่'",
-      subtitle: reasonText,
-      accentColor: colors.primary,
+      badgeText: "ฟีเจอร์เฉพาะผู้ใช้ฟองสบู่",
+      badgeBg: "#e0f2fe",
+      badgeColor: "#0369a1",
+      badgeIcon: "lock-open-outline",
+      headline: reasonTitle,
+      subheadline: reasonText,
+      heroBg: "#f0f9ff",
+      heroBorder: "#38bdf8",
+      heroIcon: iconName,
+      heroIconColor: colors.primary,
+      heroIconBg: "#e0e7ff",
     };
   };
 
-  const headerInfo = getHeaderInfo();
+  const config = getModeConfig();
 
   return (
     <Modal
@@ -144,18 +190,28 @@ export default function BubbleUpgradeModal({
       onRequestClose={onClose}
     >
       <SafeAreaView style={styles.safeArea} edges={["top", "bottom", "left", "right"]}>
-        {/* Header Bar */}
+        {/* Top Header */}
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.closeBtn}
             onPress={onClose}
             activeOpacity={0.8}
           >
-            <Ionicons name="close" size={24} color={colors.ink} />
+            <Ionicons name="close" size={22} color={colors.ink} />
           </TouchableOpacity>
-          <View style={[styles.headerBadge, { backgroundColor: headerInfo.accentColor }]}>
-            <Text style={styles.headerBadgeText}>{headerInfo.badge}</Text>
+
+          <View style={[styles.headerPill, { backgroundColor: config.badgeBg }]}>
+            <Ionicons
+              name={config.badgeIcon}
+              size={13}
+              color={config.badgeColor}
+              style={{ marginRight: 5 }}
+            />
+            <Text style={[styles.headerPillText, { color: config.badgeColor }]}>
+              {config.badgeText}
+            </Text>
           </View>
+
           <View style={{ width: 40 }} />
         </View>
 
@@ -164,52 +220,131 @@ export default function BubbleUpgradeModal({
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          {/* Hero Banner */}
-          <View style={styles.heroCard}>
-            <View style={styles.heroIconBox}>
-              <Ionicons name="planet" size={32} color={colors.primary} />
+          {/* Hero Banner Card */}
+          <View style={[styles.heroCard, { backgroundColor: config.heroBg, borderColor: config.heroBorder }]}>
+            <View style={[styles.heroIconBox, { backgroundColor: config.heroIconBg }]}>
+              <Ionicons name={config.heroIcon} size={30} color={config.heroIconColor} />
             </View>
-            <Text style={styles.heroTitle}>{headerInfo.title}</Text>
-            <Text style={styles.heroSubtitle}>{headerInfo.subtitle}</Text>
+            <Text style={styles.heroTitle}>{config.headline}</Text>
+            <Text style={styles.heroSubtitle}>{config.subheadline}</Text>
+
+            {/* Mode-Specific Interactive Elements */}
+            {mode === "welcome" && (
+              <View style={styles.trialRoadmap}>
+                <View style={styles.roadmapStep}>
+                  <View style={styles.roadmapDotActive}>
+                    <Ionicons name="checkmark" size={12} color={colors.white} />
+                  </View>
+                  <Text style={styles.roadmapStepTitle}>วันที่ 1</Text>
+                  <Text style={styles.roadmapStepSub}>ปลดล็อกครบ</Text>
+                </View>
+
+                <View style={styles.roadmapLineActive} />
+
+                <View style={styles.roadmapStep}>
+                  <View style={styles.roadmapDotWarning}>
+                    <Ionicons name="time-outline" size={12} color={colors.white} />
+                  </View>
+                  <Text style={styles.roadmapStepTitle}>วันที่ 5</Text>
+                  <Text style={styles.roadmapStepSub}>เตือน 3 วันท้าย</Text>
+                </View>
+
+                <View style={styles.roadmapLine} />
+
+                <View style={styles.roadmapStep}>
+                  <View style={styles.roadmapDot}>
+                    <Ionicons name="gift-outline" size={12} color={colors.mutedForeground} />
+                  </View>
+                  <Text style={styles.roadmapStepTitle}>วันที่ 7</Text>
+                  <Text style={styles.roadmapStepSub}>ทดลองครบ 7 วัน</Text>
+                </View>
+              </View>
+            )}
+
+            {mode === "warning" && (
+              <View style={styles.countdownBox}>
+                <View style={styles.countdownTrack}>
+                  <View
+                    style={[
+                      styles.countdownFill,
+                      { width: `${Math.max(10, Math.min(100, ((7 - daysRemaining) / 7) * 100))}%` },
+                    ]}
+                  />
+                </View>
+                <View style={styles.countdownRow}>
+                  <Text style={styles.countdownTextLeft}>เริ่มทดลองใช้วันแรก</Text>
+                  <Text style={styles.countdownTextHighlight}>เหลืออีก {daysRemaining} วัน</Text>
+                  <Text style={styles.countdownTextRight}>ครบ 7 วัน</Text>
+                </View>
+              </View>
+            )}
           </View>
 
-          {/* Perks List */}
+          {/* Perks Comparison Matrix */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>สิทธิประโยชน์ของผู้ใช้ฟองสบู่</Text>
-            <View style={styles.perksList}>
-              {BUBBLE_PERKS.map((perk, idx) => (
-                <View key={idx} style={styles.perkCard}>
-                  <View style={[styles.perkIconBox, { backgroundColor: perk.color }]}>
-                    <Ionicons name={perk.icon} size={22} color={colors.ink} />
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>สิทธิประโยชน์เปรียบเทียบ</Text>
+              <View style={styles.bubbleTag}>
+                <MaterialCommunityIcons name="chart-bubble" size={12} color="#0284c7" />
+                <Text style={styles.bubbleTagText}>ผู้ใช้ฟองสบู่</Text>
+              </View>
+            </View>
+
+            <View style={styles.comparisonTable}>
+              {PERK_COMPARISON.map((perk, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.comparisonRow,
+                    index % 2 === 1 && styles.comparisonRowAlt,
+                  ]}
+                >
+                  <View style={styles.comparisonIconBox}>
+                    <Ionicons name={perk.icon} size={18} color={colors.primary} />
                   </View>
-                  <View style={styles.perkContent}>
-                    <Text style={styles.perkTitle}>{perk.title}</Text>
-                    <Text style={styles.perkDesc}>{perk.desc}</Text>
+                  <View style={styles.comparisonContent}>
+                    <Text style={styles.comparisonTitle}>{perk.title}</Text>
+                    <View style={styles.comparisonSubRow}>
+                      <View style={styles.perkBadgeBubble}>
+                        <Ionicons name="checkmark-circle" size={13} color="#059669" style={{ marginRight: 3 }} />
+                        <Text style={styles.perkBadgeBubbleText}>{perk.bubble}</Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
               ))}
             </View>
           </View>
 
-          {/* Action Area based on Mode */}
+          {/* Pricing Plans Section (Hidden only in Welcome mode if user prefers one-tap start) */}
           {mode === "welcome" ? (
-            <View style={styles.welcomeActionBox}>
+            <View style={styles.welcomeActionCard}>
+              <View style={styles.welcomePerkHighlight}>
+                <Ionicons name="sparkles" size={18} color={colors.primary} />
+                <Text style={styles.welcomePerkHighlightText}>
+                  ไม่ต้องกรอกบัตรเครดิต • ไม่มีข้อผูกมัด • ใช้งานได้ฟรีทันที
+                </Text>
+              </View>
+
               <TouchableOpacity
-                style={styles.primaryActionButton}
+                style={styles.primaryCtaBtn}
                 activeOpacity={0.88}
                 onPress={handleStartTrial}
               >
-                <Text style={styles.primaryActionText}>เริ่มทดลองใช้ฟรี 7 วัน</Text>
+                <Text style={styles.primaryCtaText}>เริ่มทดลองใช้ฟรี 7 วัน</Text>
                 <Ionicons name="arrow-forward" size={20} color={colors.ink} />
               </TouchableOpacity>
-              <Text style={styles.subActionNote}>
-                ไม่ต้องผูกบัตรเครดิต เริ่มต้นทดลองใช้ได้ทันที
-              </Text>
             </View>
           ) : (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>เลือกแพ็กเกจราคานักศึกษา</Text>
-              <View style={styles.plansContainer}>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionTitle}>เลือกแพ็กเกจราคานักศึกษา</Text>
+                <View style={styles.discountBadge}>
+                  <Text style={styles.discountBadgeText}>ลดสูงสุด 47%</Text>
+                </View>
+              </View>
+
+              <View style={styles.plansList}>
                 {PLANS.map((plan) => {
                   const isSelected = selectedPlan === plan.id;
                   return (
@@ -217,57 +352,89 @@ export default function BubbleUpgradeModal({
                       key={plan.id}
                       style={[
                         styles.planCard,
-                        isSelected && styles.planCardSelected,
+                        isSelected && styles.planCardActive,
+                        plan.isPopular && styles.planCardPopular,
                       ]}
                       activeOpacity={0.85}
                       onPress={() => setSelectedPlan(plan.id)}
                     >
                       {plan.tag && (
-                        <View style={styles.planTag}>
-                          <Text style={styles.planTagText}>{plan.tag}</Text>
+                        <View style={[styles.planRibbon, { backgroundColor: plan.badgeBg }]}>
+                          <Text style={styles.planRibbonText}>{plan.tag}</Text>
                         </View>
                       )}
-                      <View style={styles.planTopRow}>
-                        <Text style={[styles.planTitle, isSelected && styles.planTitleSelected]}>
-                          {plan.title}
-                        </Text>
-                        <Text style={[styles.planPrice, isSelected && styles.planPriceSelected]}>
-                          {plan.price}
-                        </Text>
+
+                      <View style={styles.planContentRow}>
+                        {/* Radio Selector */}
+                        <View style={[styles.radioCircle, isSelected && styles.radioCircleActive]}>
+                          {isSelected && (
+                            <View style={styles.radioInnerDot} />
+                          )}
+                        </View>
+
+                        <View style={styles.planInfo}>
+                          <Text style={[styles.planTitleText, isSelected && styles.planTitleTextActive]}>
+                            {plan.title}
+                          </Text>
+                          <Text style={styles.planSubtextText}>{plan.subtext}</Text>
+                        </View>
+
+                        <View style={styles.planPriceBox}>
+                          <Text style={[styles.planPriceText, isSelected && styles.planPriceTextActive]}>
+                            {plan.price}
+                          </Text>
+                        </View>
                       </View>
-                      <Text style={styles.planSubtext}>{plan.subtext}</Text>
                     </TouchableOpacity>
                   );
                 })}
               </View>
 
-              {/* Checkout Button */}
+              {/* Checkout Action Button */}
               <TouchableOpacity
                 style={[
-                  styles.primaryActionButton,
+                  styles.primaryCtaBtn,
                   isProcessing && { opacity: 0.6 },
                 ]}
                 activeOpacity={0.88}
                 onPress={handleSimulatePurchase}
                 disabled={isProcessing}
               >
-                <Text style={styles.primaryActionText}>
+                <Ionicons name="shield-checkmark" size={18} color={colors.ink} />
+                <Text style={styles.primaryCtaText}>
                   {isProcessing ? "กำลังดำเนินการ..." : "ยืนยันการสมัคร (จำลอง)"}
                 </Text>
-                <Ionicons name="checkmark-circle" size={20} color={colors.ink} />
               </TouchableOpacity>
 
               {mode === "warning" && (
                 <TouchableOpacity
-                  style={styles.secondaryButton}
+                  style={styles.secondaryTextBtn}
                   activeOpacity={0.8}
                   onPress={onClose}
                 >
-                  <Text style={styles.secondaryButtonText}>
-                    ใช้งานต่อในระยะเวลาที่เหลือ
+                  <Text style={styles.secondaryTextBtnText}>
+                    ใช้งานต่อในระยะเวลาที่เหลือ ({daysRemaining} วัน)
                   </Text>
                 </TouchableOpacity>
               )}
+
+              {/* Trust Badges */}
+              <View style={styles.trustBadgesRow}>
+                <View style={styles.trustItem}>
+                  <Ionicons name="shield-checkmark-outline" size={14} color={colors.mutedForeground} />
+                  <Text style={styles.trustText}>ปลอดภัย 100%</Text>
+                </View>
+                <Text style={styles.trustDivider}>•</Text>
+                <View style={styles.trustItem}>
+                  <Ionicons name="school-outline" size={14} color={colors.mutedForeground} />
+                  <Text style={styles.trustText}>ราคานักศึกษา</Text>
+                </View>
+                <Text style={styles.trustDivider}>•</Text>
+                <View style={styles.trustItem}>
+                  <Ionicons name="refresh-outline" size={14} color={colors.mutedForeground} />
+                  <Text style={styles.trustText}>ยกเลิกได้ตลอดเวลา</Text>
+                </View>
+              </View>
             </View>
           )}
 
@@ -287,144 +454,218 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1.5,
+    borderBottomWidth: 2,
     borderBottomColor: colors.darkBorder,
     backgroundColor: "#ffffff",
   },
   closeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: "#f1f5f9",
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-  },
-  headerBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.darkBorder,
   },
-  headerBadgeText: {
+  headerPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+  },
+  headerPillText: {
     fontSize: 12,
-    fontWeight: "800",
-    color: colors.ink,
+    fontWeight: "900",
   },
   container: {
     flex: 1,
     backgroundColor: "#f8fafc",
   },
   content: {
-    padding: 20,
+    padding: 18,
     paddingBottom: 40,
   },
   heroCard: {
-    backgroundColor: "#ffffff",
     borderWidth: 2,
-    borderColor: colors.darkBorder,
     borderRadius: 16,
     padding: 20,
     alignItems: "center",
-    marginBottom: 24,
-    ...shadows.box,
+    marginBottom: 20,
+    ...shadows.neo,
   },
   heroIconBox: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#e0e7ff",
+    width: 58,
+    height: 58,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: colors.darkBorder,
-    marginBottom: 12,
+    marginBottom: 14,
+    ...shadows.neo,
   },
   heroTitle: {
     fontSize: 22,
     fontWeight: "900",
     color: colors.ink,
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   heroSubtitle: {
     fontSize: 13.5,
     color: colors.mutedForeground,
     textAlign: "center",
     lineHeight: 20,
+    paddingHorizontal: 10,
+  },
+  trialRoadmap: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1.5,
+    borderTopColor: "rgba(0,0,0,0.08)",
+  },
+  roadmapStep: {
+    alignItems: "center",
+    width: 76,
+  },
+  roadmapDotActive: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#059669",
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  roadmapDotWarning: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#ea580c",
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  roadmapDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "#e2e8f0",
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  roadmapStepTitle: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: colors.ink,
+  },
+  roadmapStepSub: {
+    fontSize: 9.5,
+    fontWeight: "600",
+    color: colors.mutedForeground,
+    textAlign: "center",
+  },
+  roadmapLineActive: {
+    flex: 1,
+    height: 3,
+    backgroundColor: "#059669",
+    marginBottom: 20,
+  },
+  roadmapLine: {
+    flex: 1,
+    height: 3,
+    backgroundColor: "#cbd5e1",
+    marginBottom: 20,
+  },
+  countdownBox: {
+    width: "100%",
+    marginTop: 18,
+    paddingTop: 14,
+    borderTopWidth: 1.5,
+    borderTopColor: "rgba(0,0,0,0.08)",
+  },
+  countdownTrack: {
+    height: 10,
+    backgroundColor: "#fed7aa",
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    overflow: "hidden",
+    marginBottom: 8,
+  },
+  countdownFill: {
+    height: "100%",
+    backgroundColor: "#ea580c",
+    borderRadius: 4,
+  },
+  countdownRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  countdownTextLeft: {
+    fontSize: 11,
+    color: colors.mutedForeground,
+    fontWeight: "600",
+  },
+  countdownTextHighlight: {
+    fontSize: 12,
+    fontWeight: "900",
+    color: "#ea580c",
+  },
+  countdownTextRight: {
+    fontSize: 11,
+    color: colors.mutedForeground,
+    fontWeight: "600",
   },
   section: {
-    marginBottom: 24,
+    marginBottom: 22,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: "900",
     color: colors.ink,
-    marginBottom: 12,
   },
-  perksList: {
-    gap: 12,
-  },
-  perkCard: {
+  bubbleTag: {
     flexDirection: "row",
-    backgroundColor: "#ffffff",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    borderRadius: 12,
-    padding: 14,
     alignItems: "center",
-    gap: 14,
-    ...shadows.card,
+    backgroundColor: "#e0f2fe",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#0284c7",
+    gap: 4,
   },
-  perkIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  perkContent: {
-    flex: 1,
-  },
-  perkTitle: {
-    fontSize: 14,
+  bubbleTagText: {
+    fontSize: 11,
     fontWeight: "800",
-    color: colors.ink,
-    marginBottom: 4,
+    color: "#0284c7",
   },
-  perkDesc: {
-    fontSize: 12,
-    color: colors.mutedForeground,
-    lineHeight: 17,
-  },
-  plansContainer: {
-    gap: 12,
-    marginBottom: 18,
-  },
-  planCard: {
-    backgroundColor: "#ffffff",
-    borderWidth: 1.5,
-    borderColor: "#cbd5e1",
-    borderRadius: 14,
-    padding: 16,
-    position: "relative",
-  },
-  planCardSelected: {
-    borderColor: colors.primary,
-    borderWidth: 2,
-    backgroundColor: "#f5f7ff",
-    ...shadows.card,
-  },
-  planTag: {
-    position: "absolute",
-    top: -10,
-    right: 14,
+  discountBadge: {
     backgroundColor: "#bbf44a",
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -432,72 +673,224 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.darkBorder,
   },
-  planTagText: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: colors.ink,
-  },
-  planTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  planTitle: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: colors.ink,
-  },
-  planTitleSelected: {
-    color: colors.primary,
-  },
-  planPrice: {
-    fontSize: 16,
+  discountBadgeText: {
+    fontSize: 11,
     fontWeight: "900",
     color: colors.ink,
   },
-  planPriceSelected: {
-    color: colors.primary,
+  comparisonTable: {
+    backgroundColor: "#ffffff",
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: colors.darkBorder,
+    overflow: "hidden",
+    ...shadows.neo,
   },
-  planSubtext: {
-    fontSize: 12,
+  comparisonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+  },
+  comparisonRowAlt: {
+    backgroundColor: "#fafafc",
+  },
+  comparisonIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: "#eff6ff",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    marginRight: 10,
+  },
+  comparisonContent: {
+    flex: 1,
+  },
+  comparisonTitle: {
+    fontSize: 13.5,
+    fontWeight: "800",
+    color: colors.ink,
+    marginBottom: 4,
+  },
+  comparisonSubRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  perkBadgeBubble: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ecfdf5",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: "#a7f3d0",
+  },
+  perkBadgeBubbleText: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: "#065f46",
+  },
+  welcomeActionCard: {
+    gap: 12,
+    marginTop: 4,
+  },
+  welcomePerkHighlight: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f8fafc",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    gap: 8,
+  },
+  welcomePerkHighlightText: {
+    fontSize: 11.5,
+    fontWeight: "700",
     color: colors.mutedForeground,
   },
-  primaryActionButton: {
+  primaryCtaBtn: {
     backgroundColor: "#bbf44a",
     borderWidth: 2,
     borderColor: colors.darkBorder,
     borderRadius: 12,
     paddingVertical: 14,
-    paddingHorizontal: 20,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 10,
-    ...shadows.box,
+    gap: 8,
+    ...shadows.neo,
   },
-  primaryActionText: {
+  primaryCtaText: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: colors.ink,
+  },
+  plansList: {
+    gap: 10,
+    marginBottom: 16,
+  },
+  planCard: {
+    backgroundColor: "#ffffff",
+    borderWidth: 2,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    padding: 14,
+    position: "relative",
+  },
+  planCardActive: {
+    borderColor: colors.darkBorder,
+    backgroundColor: "#fdfefe",
+    ...shadows.neo,
+  },
+  planCardPopular: {
+    borderColor: colors.darkBorder,
+  },
+  planRibbon: {
+    position: "absolute",
+    top: -10,
+    right: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    zIndex: 1,
+  },
+  planRibbonText: {
+    fontSize: 10,
+    fontWeight: "900",
+    color: colors.ink,
+  },
+  planContentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  radioCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: "#cbd5e1",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+  },
+  radioCircleActive: {
+    borderColor: colors.darkBorder,
+    backgroundColor: "#bbf44a",
+  },
+  radioInnerDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.ink,
+  },
+  planInfo: {
+    flex: 1,
+  },
+  planTitleText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.ink,
+    marginBottom: 2,
+  },
+  planTitleTextActive: {
+    color: colors.ink,
+  },
+  planSubtextText: {
+    fontSize: 11.5,
+    color: colors.mutedForeground,
+    fontWeight: "500",
+  },
+  planPriceBox: {
+    paddingLeft: 8,
+  },
+  planPriceText: {
     fontSize: 16,
     fontWeight: "900",
     color: colors.ink,
   },
-  subActionNote: {
-    textAlign: "center",
-    fontSize: 12,
-    color: colors.mutedForeground,
-    marginTop: 10,
+  planPriceTextActive: {
+    color: colors.primary,
   },
-  secondaryButton: {
+  secondaryTextBtn: {
     paddingVertical: 12,
     alignItems: "center",
-    marginTop: 8,
+    marginTop: 4,
   },
-  secondaryButtonText: {
-    fontSize: 13.5,
+  secondaryTextBtnText: {
+    fontSize: 13,
     fontWeight: "700",
     color: colors.mutedForeground,
   },
-  welcomeActionBox: {
-    marginTop: 8,
+  trustBadgesRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 16,
+    gap: 8,
+  },
+  trustItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  trustText: {
+    fontSize: 11,
+    color: colors.mutedForeground,
+    fontWeight: "600",
+  },
+  trustDivider: {
+    fontSize: 10,
+    color: "#cbd5e1",
   },
 });
