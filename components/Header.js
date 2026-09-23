@@ -52,9 +52,6 @@ export default function Header({ rightComponent, onProfilePress }) {
                 </Text>
               </View>
             )}
-            <Text style={styles.userNameText} numberOfLines={1}>
-              {displayName}
-            </Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -100,25 +97,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   userProfileBtn: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    backgroundColor: "#f8fafc",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    justifyContent: "center",
+    padding: 2,
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: "#e2e8f0",
+    backgroundColor: "#f8fafc",
   },
   avatarImage: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   avatarFallback: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: colors.primary,
     justifyContent: "center",
     alignItems: "center",
@@ -127,11 +122,5 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 14,
     fontWeight: "800",
-  },
-  userNameText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.ink,
-    maxWidth: 130,
   },
 });
