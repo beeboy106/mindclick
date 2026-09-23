@@ -2,12 +2,15 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "./AuthContext";
 import { useData } from "./DataContext";
+import { usePremium } from "./PremiumContext";
 import { mockUsers } from "../data/mockUsers";
 
 const POSTS_STORAGE_KEY = "@mindclick_feed_posts";
 const STATUS_STORAGE_PREFIX = "@mindclick_user_status_";
 const CHATS_STORAGE_PREFIX = "@mindclick_chats_";
 const FRIENDS_STORAGE_PREFIX = "@mindclick_friends_";
+const DAILY_POST_STORAGE_PREFIX = "@mindclick_daily_posts_";
+export const DAILY_POST_LIMIT = 2;
 
 // 4 หมวดกระทู้หลัก + แท็บฟีด
 export const FORUM_TOPICS = [
@@ -200,9 +203,11 @@ const FeedContext = createContext();
 export function FeedProvider({ children }) {
   const { user } = useAuth();
   const { profile, usersPool } = useData();
+  const { isBubbleUser } = usePremium();
   const userId = user?.id || "guest";
 
   const [posts, setPosts] = useState([]);
+  const [dailyPostCount, setDailyPostCount] = useState(0);
   const [userStatus, setUserStatusState] = useState("online"); // 'online' | 'busy' | 'offline'
   const [friends, setFriends] = useState(DEFAULT_FRIENDS);
   const [chats, setChats] = useState({}); // { [friendId]: [ { id, senderId, text, createdAt } ] }
@@ -278,6 +283,15 @@ export function FeedProvider({ children }) {
           setChats(initialChatMap);
           await AsyncStorage.setItem(`${CHATS_STORAGE_PREFIX}${userId}`, JSON.stringify(initialChatMap));
         }
+
+        // 5. โหลดสถิติจำนวนโพสต์ประจำวัน
+        const todayKey = new Date().toISOString().split("T")[0];
+        const storedDailyPosts = await AsyncStorage.getItem(`${DAILY_POST_STORAGE_PREFIX}${userId}_${todayKey}`);
+        if (storedDailyPosts) {
+          setDailyPostCount(parseInt(storedDailyPosts, 10) || 0);
+        } else {
+          setDailyPostCount(0);
+        }
       } catch (err) {
         console.error("Error loading feed data:", err);
       } finally {
@@ -298,9 +312,27 @@ export function FeedProvider({ children }) {
     }
   };
 
-  // 1. สร้างโพสต์ใหม่ (รองรับ topicId สำหรับกระทู้ และข้อมูลโปรไฟล์ผู้โพสต์)
+  // รีเซ็ตโควต้าโพสต์ประจำวัน (สำหรับทดสอบ Dev Mode)
+  const resetDailyPostQuota = useCallback(async () => {
+    setDailyPostCount(0);
+    const todayKey = new Date().toISOString().split("T")[0];
+    try {
+      await AsyncStorage.removeItem(`${DAILY_POST_STORAGE_PREFIX}${userId}_${todayKey}`);
+    } catch (err) {
+      console.error("Error resetting daily posts:", err);
+    }
+  }, [userId]);
+
+  // 1. สร้างโพสต์ใหม่ (รองรับ topicId สำหรับกระทู้ และตรวจสอบโควต้าโพสต์)
   const addPost = useCallback(
     async ({ content, image = null, topicId = null, authorName = null, authorAvatar = null }) => {
+      // ตรวจสอบโควต้าสำหรับผู้ใช้ปกติ (2 ครั้งต่อวัน)
+      if (!isBubbleUser && dailyPostCount >= DAILY_POST_LIMIT) {
+        const limitErr = new Error("DAILY_LIMIT_REACHED");
+        limitErr.code = "DAILY_LIMIT_REACHED";
+        throw limitErr;
+      }
+
       const now = new Date();
       const dateStr = `${now.getDate()} ${now.toLocaleString("th-TH", { month: "short" })} ${now.getFullYear() + 543} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
@@ -323,9 +355,20 @@ export function FeedProvider({ children }) {
 
       const updated = [newPost, ...posts];
       await savePosts(updated);
+
+      // บันทึกและปรับปรุงสถิติจำนวนโพสต์วันนี้
+      const nextCount = dailyPostCount + 1;
+      setDailyPostCount(nextCount);
+      const todayKey = new Date().toISOString().split("T")[0];
+      try {
+        await AsyncStorage.setItem(`${DAILY_POST_STORAGE_PREFIX}${userId}_${todayKey}`, String(nextCount));
+      } catch (err) {
+        console.error("Error saving daily post count:", err);
+      }
+
       return newPost;
     },
-    [posts, user, userId, profile]
+    [posts, user, userId, profile, isBubbleUser, dailyPostCount]
   );
 
   // 2. ลบโพสต์ (เฉพาะโพสต์ของตนเอง)
@@ -598,6 +641,9 @@ export function FeedProvider({ children }) {
   // คำนวณจำนวนแจ้งเตือนแชทที่ยังไม่ได้อ่าน
   const totalUnreadCount = friends.reduce((sum, f) => sum + (f.unread || 0), 0);
 
+  // คำนวณจำนวนโพสต์ที่เหลือสำหรับวันนี้
+  const remainingPostsToday = isBubbleUser ? Infinity : Math.max(0, DAILY_POST_LIMIT - dailyPostCount);
+
   return (
     <FeedContext.Provider
       value={{
@@ -615,6 +661,10 @@ export function FeedProvider({ children }) {
         markAsRead,
         startChatWithUser,
         totalUnreadCount,
+        dailyPostCount,
+        dailyPostLimit: DAILY_POST_LIMIT,
+        remainingPostsToday,
+        resetDailyPostQuota,
       }}
     >
       {children}

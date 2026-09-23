@@ -24,7 +24,7 @@ import Header from "../components/Header";
 import GalleryViewer from "../components/GalleryViewer";
 import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
 import ProfileViewsModal from "../components/ProfileViewsModal";
-import PaywallModal from "../components/PaywallModal";
+import BubbleUpgradeModal from "../components/BubbleUpgradeModal";
 import { CAMPUS_FACULTIES } from "../lib/mindInsight";
 import { uploadImageToCloudinary } from "../lib/cloudinary";
 
@@ -82,7 +82,13 @@ export default function ProfileScreen({ navigation }) {
   } = useData();
 
   const {
+    isBubbleUser,
     isPremium,
+    isPaid,
+    isTrialActive,
+    daysRemaining,
+    devSim,
+    setSimulationState,
     isIncognito,
     viewCount,
     togglePremiumMock,
@@ -90,7 +96,7 @@ export default function ProfileScreen({ navigation }) {
     addMockProfileView,
   } = usePremium();
 
-  const { userStatus, setUserStatus } = useFeed();
+  const { userStatus, setUserStatus, resetDailyPostQuota } = useFeed();
 
   const [viewsModalVisible, setViewsModalVisible] = useState(false);
   const [paywallVisible, setPaywallVisible] = useState(false);
@@ -457,9 +463,9 @@ export default function ProfileScreen({ navigation }) {
               </View>
             </View>
             <Text style={styles.viewsEntrySubtitle} numberOfLines={1}>
-              {isPremium
-                ? "👑 สมาชิก Premium: แตะดูรายชื่อย้อนหลัง 30 วัน"
-                : "👀 มีคนแอบสนใจคุณ! แตะเพื่อดูตัวอย่างและปลดล็อก"}
+              {isBubbleUser
+                ? "ผู้ใช้ฟองสบู่: แตะดูรายชื่อย้อนหลัง 30 วัน"
+                : "มีคนแอบสนใจคุณ! แตะเพื่อดูตัวอย่างและปลดล็อก"}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.ink} />
@@ -685,22 +691,26 @@ export default function ProfileScreen({ navigation }) {
           <View style={styles.membershipHeader}>
             <View style={styles.membershipBadge}>
               <Ionicons
-                name={isPremium ? "ribbon" : "shield-outline"}
+                name={isBubbleUser ? "planet" : "shield-outline"}
                 size={16}
                 color={colors.ink}
                 style={{ marginRight: 6 }}
               />
               <Text style={styles.membershipBadgeText}>
-                {isPremium ? "MINDCLICK GOLD / PREMIUM" : "MINDCLICK FREE"}
+                {isPaid
+                  ? "ผู้ใช้ฟองสบู่ (สมาชิก)"
+                  : isTrialActive
+                  ? `ทดลองใช้ฟรี (เหลืออีก ${daysRemaining} วัน)`
+                  : "ผู้ใช้ทั่วไป (หมดอายุแล้ว)"}
               </Text>
             </View>
-            {!isPremium ? (
+            {!isPaid ? (
               <TouchableOpacity
                 style={styles.upgradeMiniBtn}
                 onPress={() => setPaywallVisible(true)}
                 activeOpacity={0.85}
               >
-                <Text style={styles.upgradeMiniBtnText}>อัปเกรด 👑</Text>
+                <Text style={styles.upgradeMiniBtnText}>อัปเกรด</Text>
               </TouchableOpacity>
             ) : (
               <View style={styles.activePill}>
@@ -709,7 +719,7 @@ export default function ProfileScreen({ navigation }) {
             )}
           </View>
 
-          {isPremium && (
+          {isBubbleUser && (
             <View style={styles.incognitoRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.incognitoTitle}>โหมดซ่อนตัว (Incognito Mode)</Text>
@@ -735,21 +745,74 @@ export default function ProfileScreen({ navigation }) {
 
           {/* Dev Mode Sandbox Actions */}
           <View style={styles.sandboxDevBox}>
-            <Text style={styles.sandboxTitle}>🛠️ SANDBOX ควบคุมการทดสอบ (DEV MODE)</Text>
-            <View style={styles.sandboxBtnRow}>
+            <Text style={styles.sandboxTitle}>SANDBOX ควบคุมการทดสอบ (DEV MODE)</Text>
+            <Text style={styles.sandboxSubText}>
+              จำลองสถานะเวลา 7 วัน และโควต้าโพสต์สำหรับการทดสอบ:
+            </Text>
+            <View style={styles.sandboxGrid}>
               <TouchableOpacity
-                style={styles.sandboxBtn}
-                onPress={() => togglePremiumMock()}
+                style={[styles.sandboxGridBtn, devSim === "day1" && styles.sandboxGridBtnActive]}
+                onPress={() => setSimulationState("day1")}
               >
-                <Text style={styles.sandboxBtnText}>
-                  {isPremium ? "สลับเป็น Free" : "สลับเป็น Premium"}
+                <Text style={[styles.sandboxGridBtnText, devSim === "day1" && styles.sandboxGridBtnTextActive]}>
+                  วันที่ 1 (เหลือ 7 วัน)
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.sandboxBtn}
+                style={[styles.sandboxGridBtn, devSim === "day5" && styles.sandboxGridBtnActive]}
+                onPress={() => setSimulationState("day5")}
+              >
+                <Text style={[styles.sandboxGridBtnText, devSim === "day5" && styles.sandboxGridBtnTextActive]}>
+                  วันที่ 5 (เหลือ 3 วัน: เตือน)
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sandboxGridBtn, devSim === "expired" && styles.sandboxGridBtnActive]}
+                onPress={() => setSimulationState("expired")}
+              >
+                <Text style={[styles.sandboxGridBtnText, devSim === "expired" && styles.sandboxGridBtnTextActive]}>
+                  หมดอายุ (0 วัน: ล็อก)
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sandboxGridBtn, isPaid && styles.sandboxGridBtnActive]}
+                onPress={() => setSimulationState("paid")}
+              >
+                <Text style={[styles.sandboxGridBtnText, isPaid && styles.sandboxGridBtnTextActive]}>
+                  เป็นสมาชิกแล้ว
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.sandboxBtnRow}>
+              <TouchableOpacity
+                style={styles.sandboxActionBtn}
+                onPress={() => {
+                  resetDailyPostQuota();
+                  Alert.alert("สำเร็จ", "รีเซ็ตโควต้าโพสต์ประจำวันกลับเป็น 0/2 ครั้ง");
+                }}
+              >
+                <Ionicons name="refresh-outline" size={13} color={colors.ink} style={{ marginRight: 4 }} />
+                <Text style={styles.sandboxActionBtnText}>รีเซ็ตโควต้าโพสต์ (0/2)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.sandboxActionBtn}
                 onPress={addMockProfileView}
               >
-                <Text style={styles.sandboxBtnText}>+ จำลองคนมาดู</Text>
+                <Ionicons name="person-add-outline" size={13} color={colors.ink} style={{ marginRight: 4 }} />
+                <Text style={styles.sandboxActionBtnText}>+ จำลองคนมาดู</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.sandboxActionBtn}
+                onPress={() => {
+                  setSimulationState("reset");
+                  Alert.alert("สำเร็จ", "รีเซ็ตสถานะเป็นผู้ใช้ใหม่เพิ่งเริ่ม 7 วัน");
+                }}
+              >
+                <Ionicons name="trash-outline" size={13} color={colors.destructive} style={{ marginRight: 4 }} />
+                <Text style={[styles.sandboxActionBtnText, { color: colors.destructive }]}>
+                  รีเซ็ตใหม่
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -802,9 +865,10 @@ export default function ProfileScreen({ navigation }) {
         }}
       />
 
-      <PaywallModal
+      <BubbleUpgradeModal
         visible={paywallVisible}
         onClose={() => setPaywallVisible(false)}
+        mode="paywall"
       />
     </SafeAreaView>
   );
@@ -1357,28 +1421,68 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   sandboxTitle: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "900",
     color: "#B45309",
-    marginBottom: 8,
+    marginBottom: 4,
     textAlign: "center",
     letterSpacing: 0.5,
   },
-  sandboxBtnRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  sandboxSubText: {
+    fontSize: 11,
+    color: colors.mutedForeground,
+    textAlign: "center",
+    marginBottom: 8,
   },
-  sandboxBtn: {
-    flex: 0.48,
+  sandboxGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 10,
+  },
+  sandboxGridBtn: {
+    flexBasis: "48%",
+    flexGrow: 1,
     backgroundColor: colors.white,
     borderWidth: 1.5,
     borderColor: colors.ink,
     borderRadius: 6,
-    paddingVertical: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 4,
     alignItems: "center",
   },
-  sandboxBtnText: {
-    fontSize: 11,
+  sandboxGridBtnActive: {
+    backgroundColor: "#bbf44a",
+    borderColor: colors.ink,
+  },
+  sandboxGridBtnText: {
+    fontSize: 10.5,
+    fontWeight: "800",
+    color: colors.ink,
+    textAlign: "center",
+  },
+  sandboxGridBtnTextActive: {
+    color: colors.ink,
+    fontWeight: "900",
+  },
+  sandboxBtnRow: {
+    flexDirection: "row",
+    gap: 6,
+    justifyContent: "space-between",
+  },
+  sandboxActionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 6,
+    paddingVertical: 6,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sandboxActionBtnText: {
+    fontSize: 10,
     fontWeight: "800",
     color: colors.ink,
   },

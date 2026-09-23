@@ -6,9 +6,9 @@ import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-c
 
 import { AuthProvider } from "./context/AuthContext";
 import { DataProvider } from "./context/DataContext";
-import { FeedProvider } from "./context/FeedContext";
 import { DilemmaProvider } from "./context/DilemmaContext";
 import { PremiumProvider } from "./context/PremiumContext";
+import { FeedProvider } from "./context/FeedContext";
 import { CrossBubbleProvider } from "./context/CrossBubbleContext";
 import AppNavigator from "./navigation/AppNavigator";
 
@@ -17,16 +17,16 @@ export default function App() {
     <SafeAreaProvider initialWindowMetrics={initialWindowMetrics}>
       <AuthProvider>
         <DataProvider>
-          <FeedProvider>
-            <DilemmaProvider>
-              <PremiumProvider>
+          <DilemmaProvider>
+            <PremiumProvider>
+              <FeedProvider>
                 <CrossBubbleProvider>
                   <StatusBar style="dark" />
                   <AppNavigator />
                 </CrossBubbleProvider>
-              </PremiumProvider>
-            </DilemmaProvider>
-          </FeedProvider>
+              </FeedProvider>
+            </PremiumProvider>
+          </DilemmaProvider>
         </DataProvider>
       </AuthProvider>
     </SafeAreaProvider>

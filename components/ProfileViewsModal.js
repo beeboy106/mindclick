@@ -15,7 +15,7 @@ import { colors, shadows } from "../lib/theme";
 import { usePremium } from "../context/PremiumContext";
 import { useFeed } from "../context/FeedContext";
 import { getRandomIcebreaker } from "../lib/mindInsight";
-import PaywallModal from "./PaywallModal";
+import BubbleUpgradeModal from "./BubbleUpgradeModal";
 import ChatModal from "./ChatModal";
 
 function formatTimeAgo(isoString) {
@@ -34,6 +34,7 @@ function formatTimeAgo(isoString) {
 
 export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
   const {
+    isBubbleUser,
     isPremium,
     isIncognito,
     profileViews,
@@ -44,10 +45,12 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
     togglePremiumMock,
     toggleIncognito,
     addMockProfileView,
+    checkAndTriggerWarning,
   } = usePremium();
   const { startChatWithUser } = useFeed();
 
   const [paywallVisible, setPaywallVisible] = useState(false);
+  const [warningVisible, setWarningVisible] = useState(false);
   const [icebreakerModalVisible, setIcebreakerModalVisible] = useState(false);
   const [activeVisitor, setActiveVisitor] = useState(null);
   const [icebreakerText, setIcebreakerText] = useState("");
@@ -55,8 +58,19 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
   const [chatVisible, setChatVisible] = useState(false);
   const [chatTargetUser, setChatTargetUser] = useState(null);
 
+  // ตรวจสอบการแจ้งเตือนสิทธิ์ 3 วันสุดท้ายในครั้งแรกของวันที่เข้าใช้ฟีเจอร์
+  React.useEffect(() => {
+    if (visible && isBubbleUser) {
+      checkAndTriggerWarning("profile_views").then((res) => {
+        if (res?.shouldWarn) {
+          setWarningVisible(true);
+        }
+      });
+    }
+  }, [visible, isBubbleUser, checkAndTriggerWarning]);
+
   const handleOpenVisitor = (visitor) => {
-    if (!isPremium) {
+    if (!isBubbleUser) {
       setPaywallVisible(true);
       return;
     }
@@ -67,7 +81,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
   };
 
   const handleQuickWave = (visitor) => {
-    if (!isPremium) {
+    if (!isBubbleUser) {
       setPaywallVisible(true);
       return;
     }
@@ -107,11 +121,11 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
             <View
               style={[
                 styles.statusPill,
-                isPremium ? styles.statusPillPremium : styles.statusPillFree,
+                isBubbleUser ? styles.statusPillPremium : styles.statusPillFree,
               ]}
             >
               <Text style={styles.statusPillText}>
-                {isPremium ? "👑 PREMIUM" : "FREE"}
+                {isBubbleUser ? "BUBBLE USER" : "FREE"}
               </Text>
             </View>
           </View>
@@ -122,7 +136,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
             showsVerticalScrollIndicator={false}
           >
             {/* Mutual Spark Teaser Banner for Free Users */}
-            {!isPremium && hasSparkVisitor && (
+            {!isBubbleUser && hasSparkVisitor && (
               <TouchableOpacity
                 style={styles.sparkTeaserBanner}
                 activeOpacity={0.88}
@@ -133,13 +147,13 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
                 </View>
                 <View style={styles.sparkTextBox}>
                   <View style={styles.sparkHeaderRow}>
-                    <Text style={styles.sparkEyebrow}>🔥 MUTUAL SPARK DETECTED!</Text>
+                    <Text style={styles.sparkEyebrow}>MUTUAL SPARK DETECTED</Text>
                   </View>
                   <Text style={styles.sparkTitle}>
                     มีคนเคมีตรงกับคุณถึง {topSparkVisitor?.matchPercentage}% แอบมาส่อง!
                   </Text>
                   <Text style={styles.sparkSubtitle}>
-                    ปลดล็อก Mindclick Premium เพื่อดูตัวจริงและทักทายกลับทันที
+                    ปลดล็อกสิทธิ์ผู้ใช้ฟองสบู่ เพื่อดูตัวจริงและทักทายกลับทันที
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.ink} />
@@ -147,11 +161,11 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
             )}
 
             {/* Mutual Spark Notice for Premium Users */}
-            {isPremium && hasSparkVisitor && (
+            {isBubbleUser && hasSparkVisitor && (
               <View style={styles.sparkActiveBanner}>
                 <Ionicons name="flame" size={22} color="#E11D48" style={{ marginRight: 8 }} />
                 <Text style={styles.sparkActiveText}>
-                  🔥 พบสัญญาณ <Text style={{ fontWeight: "900" }}>Mutual Spark ({sparkVisitorsCount} คน)</Text> ที่เคมีเข้ากันได้เกิน 80%!
+                  พบสัญญาณ <Text style={{ fontWeight: "900" }}>Mutual Spark ({sparkVisitorsCount} คน)</Text> ที่เคมีเข้ากันได้เกิน 80%!
                 </Text>
               </View>
             )}
@@ -250,7 +264,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
                               source={{ uri: visitor.visitorImage }}
                               style={styles.visitorAvatar}
                             />
-                          ) : isPremium ? (
+                          ) : isBubbleUser ? (
                             <View style={styles.visitorAvatarInitial}>
                               <Text style={styles.visitorAvatarInitialText}>
                                 {(visitor.visitorName || "U").charAt(0).toUpperCase()}
@@ -270,7 +284,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
 
                         {/* Info Box */}
                         <View style={styles.visitorInfo}>
-                          {isPremium ? (
+                          {isBubbleUser ? (
                             <>
                               <View style={styles.nameRow}>
                                 <Text style={styles.visitorName} numberOfLines={1}>
@@ -278,7 +292,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
                                 </Text>
                                 {isSpark && (
                                   <View style={styles.sparkBadgePill}>
-                                    <Text style={styles.sparkBadgePillText}>SPARK 🔥</Text>
+                                    <Text style={styles.sparkBadgePillText}>SPARK</Text>
                                   </View>
                                 )}
                               </View>
@@ -330,9 +344,9 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
 
                       {/* Middle Row: Why They Clicked (Mind-Insight) */}
                       <View style={styles.mindInsightRow}>
-                        {isPremium ? (
+                        {isBubbleUser ? (
                           <>
-                            <Text style={styles.mindInsightLabel}>💡 จุดร่วมที่ตอบตรงกัน:</Text>
+                            <Text style={styles.mindInsightLabel}>จุดร่วมที่ตอบตรงกัน:</Text>
                             <View style={styles.insightsList}>
                               {(visitor.sharedInsights || []).map((ins, i) => (
                                 <View
@@ -358,14 +372,14 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
                           <View style={styles.freeInsightTeaser}>
                             <Ionicons name="sparkles" size={13} color="#B45309" style={{ marginRight: 4 }} />
                             <Text style={styles.freeInsightTeaserText}>
-                              สนใจคุณเพราะ: ตอบคำถามควิซตรงกันในหมวดไลฟ์สไตล์ 🔒
+                              สนใจคุณเพราะ: ตอบคำถามควิซตรงกันในหมวดไลฟ์สไตล์ (ล็อก)
                             </Text>
                           </View>
                         )}
                       </View>
 
-                      {/* Bottom Action Row if Spark & Premium */}
-                      {isPremium && isSpark && (
+                      {/* Bottom Action Row if Spark & Bubble User */}
+                      {isBubbleUser && isSpark && (
                         <View style={styles.cardActionsRow}>
                           <TouchableOpacity
                             style={[
@@ -382,7 +396,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
                               style={{ marginRight: 6 }}
                             />
                             <Text style={styles.waveBtnText}>
-                              {isWaved ? "ส่งทักทายแล้ว (เปิดดูหัวข้อคุย)" : "👋 ส่งสัญญาณทักทาย (Quick Wave)"}
+                              {isWaved ? "ส่งทักทายแล้ว (เปิดดูหัวข้อคุย)" : "ส่งสัญญาณทักทาย (Quick Wave)"}
                             </Text>
                           </TouchableOpacity>
                         </View>
@@ -394,7 +408,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
             )}
 
             {/* If Free User, Show Big Paywall Teaser Button */}
-            {!isPremium && (
+            {!isBubbleUser && (
               <View style={styles.teaserLockBox}>
                 <View style={styles.teaserLockHeader}>
                   <Ionicons name="sparkles" size={24} color="#B45309" />
@@ -403,7 +417,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
                   </Text>
                 </View>
                 <Text style={styles.teaserLockSubtitle}>
-                  ปลดล็อก Mindclick Premium เพื่อดูรูปโปรไฟล์จริง ชื่อ คณะที่เรียน และจุดร่วมที่ตอบตรงกันทั้งหมด
+                  ปลดล็อกสิทธิ์ผู้ใช้ฟองสบู่ เพื่อดูรูปโปรไฟล์จริง ชื่อ คณะที่เรียน และจุดร่วมที่ตอบตรงกันทั้งหมด
                 </Text>
                 <TouchableOpacity
                   style={styles.unlockBtn}
@@ -412,7 +426,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
                 >
                   <Ionicons name="key" size={20} color={colors.ink} style={{ marginRight: 8 }} />
                   <Text style={styles.unlockBtnText}>
-                    ปลดล็อกดูรายชื่อทั้งหมด (เริ่มต้น 66฿/ด.)
+                    ปลดล็อกดูรายชื่อทั้งหมด (แพ็กเกจผู้ใช้ฟองสบู่)
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -420,14 +434,14 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
 
             {/* Developer Testing Bar */}
             <View style={styles.devBar}>
-              <Text style={styles.devBarTitle}>🛠️ DEVELOPER SANDBOX</Text>
+              <Text style={styles.devBarTitle}>DEVELOPER SANDBOX</Text>
               <View style={styles.devBtnRow}>
                 <TouchableOpacity
                   style={styles.devBtn}
                   onPress={() => togglePremiumMock()}
                 >
                   <Text style={styles.devBtnText}>
-                    {isPremium ? "สลับเป็น Free" : "สลับเป็น Premium"}
+                    {isBubbleUser ? "สลับเป็น Free" : "สลับเป็น Bubble User"}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -443,9 +457,18 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
       </Modal>
 
       {/* Embedded Paywall Modal */}
-      <PaywallModal
+      <BubbleUpgradeModal
         visible={paywallVisible}
         onClose={() => setPaywallVisible(false)}
+        mode="paywall"
+        featureReason="profile_views"
+      />
+
+      {/* Embedded Warning Modal */}
+      <BubbleUpgradeModal
+        visible={warningVisible}
+        onClose={() => setWarningVisible(false)}
+        mode="warning"
       />
 
       {/* Embedded Chat Modal */}
@@ -467,7 +490,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
           <View style={styles.icebreakerCard}>
             <View style={styles.icebreakerHeader}>
               <View style={styles.waveIconCircle}>
-                <Text style={{ fontSize: 24 }}>👋</Text>
+                <Ionicons name="hand-right-outline" size={24} color={colors.primary} />
               </View>
               <Text style={styles.icebreakerTitle}>ส่งสัญญาณทักทายแล้ว!</Text>
               <Text style={styles.icebreakerSub}>
@@ -500,7 +523,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
               }}
             >
               <Ionicons name="chatbubbles" size={17} color={colors.white} style={{ marginRight: 6 }} />
-              <Text style={styles.directChatBtnText}>💬 ทักแชทคนนี้ทันที (เปิดคุยเลย)</Text>
+              <Text style={styles.directChatBtnText}>ทักแชทคนนี้ทันที (เปิดคุยเลย)</Text>
             </TouchableOpacity>
 
             <TouchableOpacity

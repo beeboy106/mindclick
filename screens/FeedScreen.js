@@ -25,11 +25,14 @@ import { useCrossBubble } from "../context/CrossBubbleContext";
 import PostCard from "../components/PostCard";
 import ChatModal from "../components/ChatModal";
 import GalleryViewer from "../components/GalleryViewer";
+import BubbleUpgradeModal from "../components/BubbleUpgradeModal";
+import { usePremium } from "../context/PremiumContext";
 import { uploadImageToCloudinary } from "../lib/cloudinary";
 
 export default function FeedScreen({ navigation }) {
   const { user } = useAuth();
   const { profile } = useData();
+  const { isBubbleUser, checkAndTriggerWarning } = usePremium();
   const {
     posts,
     isLoading,
@@ -39,6 +42,9 @@ export default function FeedScreen({ navigation }) {
     addComment,
     friends,
     totalUnreadCount,
+    dailyPostCount,
+    dailyPostLimit,
+    remainingPostsToday,
   } = useFeed();
 
   const [selectedTopic, setSelectedTopic] = useState("all");
@@ -49,6 +55,10 @@ export default function FeedScreen({ navigation }) {
   const [selectedFriendId, setSelectedFriendId] = useState(null);
   const [avatarError, setAvatarError] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
+
+  const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
+  const [upgradeModalMode, setUpgradeModalMode] = useState("paywall");
+  const [upgradeReason, setUpgradeReason] = useState("");
 
   const { toggleCrossBubbleMode } = useCrossBubble();
   const scrollOffsetRef = useRef(0);
@@ -77,15 +87,48 @@ export default function FeedScreen({ navigation }) {
       onPanResponderRelease: (evt, gestureState) => {
         const distance = gestureState.dy * 0.65;
         if (distance >= PULL_THRESHOLD) {
-          // ดีดหน้าขึ้น (Snap/rebound back up) แล้วเปลี่ยนเข้าสู่โหมด Cross-Bubble
-          Animated.timing(pullAnim, {
-            toValue: 0,
-            duration: 220,
-            useNativeDriver: false,
-          }).start(() => {
-            setPullDistanceState(0);
-            setIsReadyToRelease(false);
-            toggleCrossBubbleMode(true);
+          // หากไม่ใช่ผู้ใช้ฟองสบู่ จะไม่สามารถเข้าสู่โหมด Cross-Bubble ได้
+          if (!isBubbleUser) {
+            Animated.timing(pullAnim, {
+              toValue: 0,
+              duration: 220,
+              useNativeDriver: false,
+            }).start(() => {
+              setPullDistanceState(0);
+              setIsReadyToRelease(false);
+              setUpgradeReason("crossbubble");
+              setUpgradeModalMode("paywall");
+              setUpgradeModalVisible(true);
+            });
+            return;
+          }
+
+          // ตรวจสอบการแจ้งเตือนสิทธิ์ช่วง 3 วันสุดท้าย
+          checkAndTriggerWarning("crossbubble").then((warnRes) => {
+            if (warnRes?.shouldWarn) {
+              Animated.timing(pullAnim, {
+                toValue: 0,
+                duration: 220,
+                useNativeDriver: false,
+              }).start(() => {
+                setPullDistanceState(0);
+                setIsReadyToRelease(false);
+                setUpgradeModalMode("warning");
+                setUpgradeModalVisible(true);
+              });
+              return;
+            }
+
+            // ดีดหน้าขึ้น แล้วเปลี่ยนเข้าสู่โหมด Cross-Bubble
+            Animated.timing(pullAnim, {
+              toValue: 0,
+              duration: 220,
+              useNativeDriver: false,
+            }).start(() => {
+              setPullDistanceState(0);
+              setIsReadyToRelease(false);
+              toggleCrossBubbleMode(true);
+            });
           });
         } else {
           // ดีดกลับขึ้นไป
@@ -198,10 +241,18 @@ export default function FeedScreen({ navigation }) {
     }
   };
 
-  // สร้างโพสต์ (รองรับการโพสต์ลงกระทู้ที่เลือก)
+  // สร้างโพสต์ (รองรับการโพสต์ลงกระทู้ที่เลือก และจำกัดโควต้าผู้ใช้ปกติ 2 ครั้ง/วัน)
   const handleCreatePost = async () => {
     if (!postText.trim() && !postImage) {
       Alert.alert("แจ้งเตือน", "กรุณาพิมพ์ข้อความหรือเลือกรูปภาพก่อนโพสต์");
+      return;
+    }
+
+    // ตรวจสอบโควต้าสำหรับผู้ใช้ทั่วไป
+    if (!isBubbleUser && dailyPostCount >= (dailyPostLimit || 2)) {
+      setUpgradeReason("post_limit");
+      setUpgradeModalMode("paywall");
+      setUpgradeModalVisible(true);
       return;
     }
 
@@ -229,7 +280,13 @@ export default function FeedScreen({ navigation }) {
       );
     } catch (e) {
       console.error("handleCreatePost error:", e);
-      Alert.alert("เกิดข้อผิดพลาด", e.message || "ไม่สามารถสร้างโพสต์ได้ กรุณาลองใหม่");
+      if (e.code === "DAILY_LIMIT_REACHED" || e.message === "DAILY_LIMIT_REACHED") {
+        setUpgradeReason("post_limit");
+        setUpgradeModalMode("paywall");
+        setUpgradeModalVisible(true);
+      } else {
+        Alert.alert("เกิดข้อผิดพลาด", e.message || "ไม่สามารถสร้างโพสต์ได้ กรุณาลองใหม่");
+      }
     } finally {
       setIsPosting(false);
     }
@@ -471,6 +528,46 @@ export default function FeedScreen({ navigation }) {
             </View>
           )}
 
+          {/* Post Quota Info Bar */}
+          <View style={styles.postQuotaRow}>
+            {isBubbleUser ? (
+              <View style={styles.quotaPillUnlimited}>
+                <Ionicons name="sparkles" size={12} color="#047857" style={{ marginRight: 4 }} />
+                <Text style={styles.quotaPillUnlimitedText}>
+                  ผู้ใช้ฟองสบู่ (โพสต์ได้ไม่จำกัด)
+                </Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.quotaPillNormal,
+                  dailyPostCount >= (dailyPostLimit || 2) && styles.quotaPillFull,
+                ]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  setUpgradeReason("post_limit");
+                  setUpgradeModalMode("paywall");
+                  setUpgradeModalVisible(true);
+                }}
+              >
+                <Ionicons
+                  name={dailyPostCount >= (dailyPostLimit || 2) ? "lock-closed" : "create-outline"}
+                  size={12}
+                  color={dailyPostCount >= (dailyPostLimit || 2) ? "#b91c1c" : colors.ink}
+                  style={{ marginRight: 4 }}
+                />
+                <Text
+                  style={[
+                    styles.quotaPillNormalText,
+                    dailyPostCount >= (dailyPostLimit || 2) && styles.quotaPillFullText,
+                  ]}
+                >
+                  สิทธิ์โพสต์วันนี้: {dailyPostCount}/{dailyPostLimit || 2} ครั้ง (แตะเพื่ออัปเกรด)
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
           {/* Bottom Controls */}
           <View style={styles.createActionsRow}>
             <TouchableOpacity
@@ -643,6 +740,14 @@ export default function FeedScreen({ navigation }) {
         visible={chatModalVisible}
         onClose={() => setChatModalVisible(false)}
         initialFriendId={selectedFriendId}
+      />
+
+      {/* Bubble User Upgrade Modal */}
+      <BubbleUpgradeModal
+        visible={upgradeModalVisible}
+        onClose={() => setUpgradeModalVisible(false)}
+        mode={upgradeModalMode}
+        featureReason={upgradeReason}
       />
     </SafeAreaView>
   );
@@ -1235,5 +1340,47 @@ const styles = StyleSheet.create({
   emptyFeedSubtext: {
     fontSize: 13,
     color: colors.mutedForeground,
+  },
+  postQuotaRow: {
+    marginBottom: 8,
+  },
+  quotaPillUnlimited: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ecfdf5",
+    borderWidth: 1,
+    borderColor: "#a7f3d0",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  quotaPillUnlimitedText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#047857",
+  },
+  quotaPillNormal: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  quotaPillNormalText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.mutedForeground,
+  },
+  quotaPillFull: {
+    backgroundColor: "#fef2f2",
+    borderColor: "#fecaca",
+  },
+  quotaPillFullText: {
+    color: "#b91c1c",
   },
 });
