@@ -11,14 +11,20 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Animated,
+  Dimensions,
+  Easing,
+  PanResponder,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, shadows } from "../lib/theme";
 import { useFeed } from "../context/FeedContext";
 import { useAuth } from "../context/AuthContext";
 import ReportBlockModal from "./ReportBlockModal";
 import { getIcebreakerList } from "../lib/mindInsight";
+
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export default function ChatModal({
   visible,
@@ -29,6 +35,7 @@ export default function ChatModal({
 }) {
   const { friends, chats, sendMessage, markAsRead, startChatWithUser } = useFeed();
   const { blockedUserIds = [], blockUser, submitReport } = useAuth();
+  const insets = useSafeAreaInsets();
 
   // State: activeFriend (null = ดูหน้ารวมรายชื่อเพื่อน, object = อยู่ในห้องแชทเดี่ยว)
   const [activeFriend, setActiveFriend] = useState(null);
@@ -36,9 +43,95 @@ export default function ChatModal({
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const flatListRef = useRef(null);
 
-  // เมื่อเปิด Modal ถ้ามี initialFriendId ให้เปิดห้องแชทของคนนั้นทันที
+  // Animated values สำหรับเปิด-ปิด Modal แบบ Bottom Sheet นุ่มนวลระดับพรีเมียม
+  const [modalVisible, setModalVisible] = useState(visible);
+  const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const backdropOpacity = useRef(new Animated.Value(0)).current;
+  const isClosingRef = useRef(false);
+
+  const handleClose = () => {
+    if (isClosingRef.current) return;
+    isClosingRef.current = true;
+
+    Animated.parallel([
+      Animated.timing(backdropOpacity, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.in(Easing.ease),
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: SCREEN_HEIGHT,
+        duration: 250,
+        easing: Easing.bezier(0.32, 0, 0.67, 0),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setModalVisible(false);
+      setActiveFriend(null);
+      setInputText("");
+      isClosingRef.current = false;
+      if (onClose) onClose();
+    });
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => gestureState.dy > 5,
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          translateY.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dy > 100 || gestureState.vy > 0.4) {
+          handleClose();
+        } else {
+          Animated.spring(translateY, {
+            toValue: 0,
+            damping: 24,
+            mass: 0.8,
+            stiffness: 260,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(translateY, {
+          toValue: 0,
+          damping: 24,
+          mass: 0.8,
+          stiffness: 260,
+          useNativeDriver: true,
+        }).start();
+      },
+    })
+  ).current;
+
+  // ควบคุม Animation ตอนเปิด Modal
   useEffect(() => {
     if (visible) {
+      isClosingRef.current = false;
+      setModalVisible(true);
+      translateY.setValue(SCREEN_HEIGHT);
+      backdropOpacity.setValue(0);
+
+      Animated.parallel([
+        Animated.timing(backdropOpacity, {
+          toValue: 1,
+          duration: 260,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: 320,
+          easing: Easing.bezier(0.16, 1, 0.3, 1),
+          useNativeDriver: true,
+        }),
+      ]).start();
+
       if (initialFriendId) {
         const found = friends.find((f) => f.id === initialFriendId);
         if (found) {
@@ -54,8 +147,9 @@ export default function ChatModal({
         }
       }
     } else {
-      setActiveFriend(null);
-      setInputText("");
+      if (modalVisible && !isClosingRef.current) {
+        handleClose();
+      }
     }
   }, [visible, initialFriendId, initialFriendData, friends, markAsRead, startChatWithUser]);
 
@@ -86,16 +180,44 @@ export default function ChatModal({
 
   return (
     <Modal
-      visible={visible}
-      animationType="slide"
+      visible={modalVisible}
+      animationType="none"
       transparent={true}
-      onRequestClose={onClose}
+      onRequestClose={handleClose}
+      statusBarTranslucent={true}
     >
-      <View style={styles.backdrop}>
-        <SafeAreaView style={styles.safeContainer} edges={["top", "bottom", "left", "right"]}>
+      <View style={styles.overlayContainer}>
+        {/* Animated Backdrop (ค่อยๆ จางเข้ามาอย่างนุ่มนวล โดยไม่เลื่อนขึ้นจากขอบล่าง) */}
+        <Animated.View
+          style={[
+            styles.backdropOverlay,
+            { opacity: backdropOpacity },
+          ]}
+        >
+          <TouchableOpacity
+            style={StyleSheet.absoluteFillObject}
+            activeOpacity={1}
+            onPress={handleClose}
+          />
+        </Animated.View>
+
+        {/* Animated Sheet Card (เลื่อนขึ้นจากด้านล่างด้วย Cubic Bezier Easing) */}
+        <Animated.View
+          style={[
+            styles.modalCard,
+            {
+              transform: [{ translateY }],
+            },
+          ]}
+        >
+          {/* Top Drag Handle Area */}
+          <View style={styles.dragHandleArea} {...panResponder.panHandlers}>
+            <View style={styles.dragHandleBar} />
+          </View>
+
           <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : undefined}
-            style={styles.modalCard}
+            style={styles.keyboardContainer}
           >
             {/* VIEW 1: ห้องแชท 1-on-1 */}
             {activeFriend ? (
@@ -140,8 +262,8 @@ export default function ChatModal({
                       </Text>
                       <Text style={styles.roomStatusText}>
                         {activeFriend.status === "online"
-                          ? "กำลังใช้งาน (Online)"
-                          : "ออฟไลน์ (Offline)"}
+                          ? "กำลังใช้งาน"
+                          : "ออฟไลน์"}
                       </Text>
                     </View>
                   </View>
@@ -157,7 +279,7 @@ export default function ChatModal({
 
                     <TouchableOpacity
                       style={styles.closeBtn}
-                      onPress={onClose}
+                      onPress={handleClose}
                       activeOpacity={0.8}
                     >
                       <Ionicons name="close" size={22} color={colors.ink} />
@@ -253,7 +375,7 @@ export default function ChatModal({
                 )}
 
                 {/* Input Bar */}
-                <View style={styles.inputBar}>
+                <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
                   <TextInput
                     style={styles.chatInput}
                     placeholder="พิมพ์ข้อความ..."
@@ -283,11 +405,11 @@ export default function ChatModal({
                 <View style={styles.listHeader}>
                   <View style={styles.listHeaderTitleBox}>
                     <Ionicons name="chatbubbles" size={22} color={colors.primary} />
-                    <Text style={styles.listHeaderTitle}>ข้อความแชท (Friends)</Text>
+                    <Text style={styles.listHeaderTitle}>ข้อความแชท</Text>
                   </View>
                   <TouchableOpacity
                     style={styles.closeBtn}
-                    onPress={onClose}
+                    onPress={handleClose}
                     activeOpacity={0.8}
                   >
                     <Ionicons name="close" size={22} color={colors.ink} />
@@ -298,7 +420,10 @@ export default function ChatModal({
                 <FlatList
                   data={visibleFriends}
                   keyExtractor={(item) => item.id}
-                  contentContainerStyle={styles.friendsListContent}
+                  contentContainerStyle={[
+                    styles.friendsListContent,
+                    { paddingBottom: Math.max(insets.bottom, 20) },
+                  ]}
                   renderItem={({ item }) => (
                     <TouchableOpacity
                       style={styles.friendItem}
@@ -353,7 +478,7 @@ export default function ChatModal({
               </View>
             )}
           </KeyboardAvoidingView>
-        </SafeAreaView>
+        </Animated.View>
       </View>
 
       <ReportBlockModal
@@ -382,24 +507,42 @@ export default function ChatModal({
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
+  overlayContainer: {
     flex: 1,
-    backgroundColor: "rgba(23, 23, 28, 0.65)",
     justifyContent: "flex-end",
   },
-  safeContainer: {
-    flex: 1,
-    justifyContent: "flex-end",
+  backdropOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(18, 18, 24, 0.65)",
   },
   modalCard: {
     backgroundColor: colors.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     borderWidth: 2,
+    borderBottomWidth: 0,
     borderColor: colors.darkBorder,
-    height: "85%",
+    height: "86%",
     overflow: "hidden",
     ...shadows.neo,
+  },
+  dragHandleArea: {
+    width: "100%",
+    height: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: colors.card,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  dragHandleBar: {
+    width: 42,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: "#d1d5db",
+  },
+  keyboardContainer: {
+    flex: 1,
   },
   listContainer: {
     flex: 1,
