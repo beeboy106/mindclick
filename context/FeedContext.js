@@ -245,9 +245,9 @@ export function FeedProvider({ children }) {
   const syncCooldownUntilRef = useRef(0);
 
   // ดึงโพสต์ล่าสุดจาก Cloud Firestore และผสานกับข้อมูลในเครื่อง
-  const syncPostsFromFirestore = useCallback(async () => {
+  const syncPostsFromFirestore = useCallback(async (force = false) => {
     if (isDemoMode || isSyncingPostsRef.current) return;
-    if (Date.now() < syncCooldownUntilRef.current) return;
+    if (!force && Date.now() < syncCooldownUntilRef.current) return;
 
     isSyncingPostsRef.current = true;
     try {
@@ -257,6 +257,9 @@ export function FeedProvider({ children }) {
         syncCooldownUntilRef.current = Date.now() + 45000;
         return;
       }
+
+      // ป้องกันการเรียกซ้ำซ้อนภายใน 30 วินาทีเพื่อประหยัดโควตา
+      syncCooldownUntilRef.current = Date.now() + 30000;
 
       // กรองโพสต์ตัวอย่างออกสำหรับโหมดผู้ใช้จริง
       const realCloudPosts = cloudPosts.filter(
@@ -300,15 +303,18 @@ export function FeedProvider({ children }) {
     }
   }, [isDemoMode, postsKey, userId]);
 
-  // ซิงค์โพสต์ใหม่จาก Cloud Firestore อัตโนมัติทุกๆ 8 วินาทีเมื่อเปิดแอปใช้งาน
+  // ซิงค์โพสต์เมื่อผู้ใช้เปิดแอป หรือสลับกลับมาที่แอป (มี Cooldown 60 วินาทีเพื่อประหยัดโควตา Firestore)
   useEffect(() => {
     if (isDemoMode) return;
-    const interval = setInterval(() => {
-      if (AppState.currentState === "active") {
+    const handleAppStateChange = (nextAppState) => {
+      if (nextAppState === "active") {
         syncPostsFromFirestore();
       }
-    }, 8000);
-    return () => clearInterval(interval);
+    };
+    const sub = AppState.addEventListener("change", handleAppStateChange);
+    return () => {
+      sub.remove();
+    };
   }, [isDemoMode, syncPostsFromFirestore]);
 
   // โหลดโพสต์ สถานะ และประวัติแชทจาก AsyncStorage ตามโหมด (Real / Demo)

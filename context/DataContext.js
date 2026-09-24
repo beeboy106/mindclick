@@ -96,15 +96,17 @@ export function DataProvider({ children }) {
     }
     try {
       const allCloudUsers = await getAllFirestoreUsers();
-      const realUsers = allCloudUsers.filter(
-        (u) =>
-          u.id !== user?.id &&
-          u.categoryAnswers &&
-          u.categoryAnswers.length > 0
-      );
+      if (allCloudUsers && allCloudUsers.length > 0) {
+        const realUsers = allCloudUsers.filter(
+          (u) =>
+            u.id !== user?.id &&
+            u.categoryAnswers &&
+            u.categoryAnswers.length > 0
+        );
 
-      setUsersPool(realUsers);
-      AsyncStorage.setItem(USERS_POOL_KEY, JSON.stringify(realUsers));
+        setUsersPool(realUsers);
+        AsyncStorage.setItem(USERS_POOL_KEY, JSON.stringify(realUsers));
+      }
     } catch (err) {
       console.warn("Error fetching cloud users pool:", err);
     }
@@ -133,14 +135,25 @@ export function DataProvider({ children }) {
 
       try {
         // ก. โหลดข้อมูลแคชเฉพาะของ User นี้ในเครื่องก่อน
-        const [localProfile, localQuiz, localFavs, localPolicy] = await Promise.all([
+        const [localProfile, localQuiz, localFavs, localPolicy, localPool] = await Promise.all([
           AsyncStorage.getItem(pKey),
           AsyncStorage.getItem(qKey),
           AsyncStorage.getItem(fKey),
           AsyncStorage.getItem(polKey),
+          AsyncStorage.getItem(USERS_POOL_KEY),
         ]);
 
         if (isMounted) {
+          if (localPool && !isDemoMode) {
+            try {
+              const parsedPool = JSON.parse(localPool);
+              if (Array.isArray(parsedPool) && parsedPool.length > 0) {
+                setUsersPool(parsedPool);
+              }
+            } catch (poolErr) {
+              // ignore parse error
+            }
+          }
           if (localProfile) {
             const parsed = JSON.parse(localProfile);
             setProfile(parsed);

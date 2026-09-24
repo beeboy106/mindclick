@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -36,6 +37,7 @@ export default function HomeScreen({ navigation }) {
     hasAcceptedPolicy,
     isProfileComplete,
     profileCompletion,
+    refreshPool,
   } = useData();
   const {
     isBubbleUser,
@@ -48,6 +50,20 @@ export default function HomeScreen({ navigation }) {
 
   const [bubbleModalVisible, setBubbleModalVisible] = useState(false);
   const [bubbleModalMode, setBubbleModalMode] = useState("paywall");
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      if (refreshPool) {
+        await refreshPool();
+      }
+    } catch (e) {
+      // ignore
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshPool]);
 
   const completed = quizResponse.completedCategories || [];
   const matches = getMatchList();
@@ -80,6 +96,9 @@ export default function HomeScreen({ navigation }) {
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
+        }
       >
         {/* Welcome Section */}
         <View style={styles.heroSection}>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,10 +17,24 @@ import Header from "../components/Header";
 import MatchCard from "../components/MatchCard";
 
 export default function ResultsScreen({ navigation }) {
-  const { quizResponse, getMatchList, isProfileComplete } = useData();
+  const { quizResponse, getMatchList, isProfileComplete, refreshPool } = useData();
+  const [refreshing, setRefreshing] = useState(false);
 
   const completed = quizResponse.completedCategories || [];
   const matches = getMatchList();
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      if (refreshPool) {
+        await refreshPool();
+      }
+    } catch (e) {
+      // ignore
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshPool]);
 
   const handleOpenQuiz = () => {
     if (!isProfileComplete) {
@@ -38,6 +53,9 @@ export default function ResultsScreen({ navigation }) {
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.primary]} />
+        }
       >
         {/* Page Header */}
         <View style={styles.headerSection}>
