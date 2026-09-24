@@ -84,7 +84,11 @@ export default function MatchCard({ match, index, onPress }) {
                   { backgroundColor: catTone.bg, borderColor: colors.darkBorder },
                 ]}
               >
-                <Text style={styles.catIcon}>{cat.icon}</Text>
+                <Ionicons
+                  name={cat.icon}
+                  size={12}
+                  color={catTone.text}
+                />
                 <Text
                   style={[styles.catTagText, { color: catTone.text }]}
                   numberOfLines={1}

@@ -380,7 +380,11 @@ export default function MatchDetailScreen({ route, navigation }) {
                 <View key={category.id} style={styles.breakdownCard}>
                   <View style={styles.breakdownCardHeader}>
                     <View style={styles.catLeft}>
-                      <Text style={styles.breakdownIcon}>{category.icon}</Text>
+                      <Ionicons
+                        name={category.icon}
+                        size={18}
+                        color={colors.ink}
+                      />
                       <Text style={styles.breakdownName}>{category.name}</Text>
                     </View>
 

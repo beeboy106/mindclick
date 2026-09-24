@@ -156,8 +156,8 @@ export default function QuizScreen({ route, navigation }) {
                     onPress={() => startCategoryQuiz(cat.id)}
                   >
                     <View style={styles.choiceHeader}>
-                      <View style={styles.choiceIconBadge}>
-                        <Text style={styles.choiceIcon}>{cat.icon}</Text>
+                      <View style={[styles.choiceIconBadge, { backgroundColor: tone.bg }]}>
+                        <Ionicons name={cat.icon} size={20} color={tone.text} />
                       </View>
                       {isCompleted ? (
                         <View style={styles.completedTag}>
@@ -194,13 +194,19 @@ export default function QuizScreen({ route, navigation }) {
                   { backgroundColor: currentCatTone.bg },
                 ]}
               >
+                <Ionicons
+                  name={selectedCategory?.icon}
+                  size={12}
+                  color={currentCatTone.text}
+                  style={{ marginRight: 4 }}
+                />
                 <Text
                   style={[
                     styles.catMiniBadgeText,
                     { color: currentCatTone.text },
                   ]}
                 >
-                  {selectedCategory?.nameEN}
+                  {selectedCategory?.name?.replace("ด้าน", "") || selectedCategory?.name}
                 </Text>
               </View>
             </View>
@@ -226,7 +232,13 @@ export default function QuizScreen({ route, navigation }) {
                     activeOpacity={0.8}
                     onPress={() => handleSelectAnswer(opt.value)}
                   >
-                    <Text style={styles.answerIcon}>{opt.icon}</Text>
+                    <View style={styles.answerIconBox}>
+                      <Ionicons
+                        name={opt.icon}
+                        size={22}
+                        color={isSelected ? colors.primary : colors.ink}
+                      />
+                    </View>
                     <Text
                       style={[
                         styles.answerLabel,
@@ -391,14 +403,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   choiceIconBadge: {
-    width: 36,
-    height: 36,
-    backgroundColor: colors.muted,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
     justifyContent: "center",
     alignItems: "center",
-  },
-  choiceIcon: {
-    fontSize: 20,
   },
   completedTag: {
     flexDirection: "row",
@@ -453,13 +464,16 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
   },
   catMiniBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1.5,
     borderColor: colors.darkBorder,
   },
   catMiniBadgeText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "800",
   },
   questionCard: {
@@ -498,8 +512,10 @@ const styles = StyleSheet.create({
     borderWidth: 2.5,
     backgroundColor: "#f0f3ff",
   },
-  answerIcon: {
-    fontSize: 22,
+  answerIconBox: {
+    width: 32,
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 14,
   },
   answerLabel: {
