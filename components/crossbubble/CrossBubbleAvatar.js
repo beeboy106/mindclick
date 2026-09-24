@@ -15,6 +15,8 @@ export const AVATAR_IMAGE_MAP = {
   shop_curious_cat: require("../../assets/avatars/shop_avatar_curious_cat.jpg"),
   shop_shrimp_chicken: require("../../assets/avatars/shop_avatar_shrimp_chicken.jpg"),
   shop_pink_shrimp_chicken: require("../../assets/avatars/shop_avatar_pink_shrimp_chicken.jpg"),
+  shop_cyber_flame: require("../../assets/avatars/shop_avatar_cyber_flame.jpg"),
+  shop_soul_flame: require("../../assets/avatars/shop_avatar_soul_flame.jpg"),
 };
 
 // รายการอวาตารเริ่มต้น 4 แบบ
