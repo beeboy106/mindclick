@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,6 +26,7 @@ export default function QuizScreen({ route, navigation }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState(Array(10).fill(null));
   const [isSaving, setIsSaving] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // หากข้อมูลโปรไฟล์ยังไม่ครบถ้วน จะเด้งไปหน้าโปรไฟล์ให้ทันที
   useEffect(() => {
@@ -54,23 +56,28 @@ export default function QuizScreen({ route, navigation }) {
   };
 
   const handleSelectAnswer = async (value) => {
-    if (isSaving) return;
+    if (isSaving || isTransitioning) return;
 
     const newAnswers = [...answers];
     newAnswers[currentIndex] = value;
     setAnswers(newAnswers);
+    setIsTransitioning(true);
 
-    // เลื่อนไปข้อถัดไป หรือ บันทึกเมื่อถึงข้อสุดท้าย
-    if (currentIndex < 9) {
-      setCurrentIndex(currentIndex + 1);
-    } else {
-      // ครบ 10 ข้อแล้ว บันทึกข้อมูล
-      setIsSaving(true);
-      const questionOrder = questions.map((q) => q.id);
-      await saveCategoryAnswers(selectedCategory.id, newAnswers, questionOrder);
-      setIsSaving(false);
-      setStep("complete");
-    }
+    setTimeout(async () => {
+      // เลื่อนไปข้อถัดไป หรือ บันทึกเมื่อถึงข้อสุดท้าย
+      if (currentIndex < 9) {
+        setCurrentIndex((prev) => prev + 1);
+        setIsTransitioning(false);
+      } else {
+        // ครบ 10 ข้อแล้ว บันทึกข้อมูล
+        setIsSaving(true);
+        const questionOrder = questions.map((q) => q.id);
+        await saveCategoryAnswers(selectedCategory.id, newAnswers, questionOrder);
+        setIsSaving(false);
+        setIsTransitioning(false);
+        setStep("complete");
+      }
+    }, 180);
   };
 
   const handleBack = () => {
@@ -186,6 +193,28 @@ export default function QuizScreen({ route, navigation }) {
                 );
               })}
             </View>
+
+            {completedCategories.length > 0 && (
+              <View style={styles.viewResultsFooter}>
+                <Text style={styles.viewResultsCountText}>
+                  ตอบแล้ว{" "}
+                  <Text style={styles.viewResultsCountBold}>
+                    {completedCategories.length}
+                  </Text>{" "}
+                  จาก 4 ด้าน
+                </Text>
+                <TouchableOpacity
+                  style={styles.viewResultsBtn}
+                  activeOpacity={0.85}
+                  onPress={() =>
+                    navigation.navigate("Main", { screen: "ResultsTab" })
+                  }
+                >
+                  <Text style={styles.viewResultsBtnText}>ดูผลการจับคู่</Text>
+                  <Ionicons name="arrow-forward" size={16} color={colors.white} />
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         )}
 
@@ -228,11 +257,13 @@ export default function QuizScreen({ route, navigation }) {
 
             {/* Answer Options */}
             <View style={styles.answersContainer}>
-              {answerOptions.map((opt) => {
+              {[...answerOptions].reverse().map((opt, optIndex) => {
                 const isSelected = answers[currentIndex] === opt.value;
+                const letter = String.fromCharCode(65 + optIndex);
                 return (
                   <TouchableOpacity
                     key={opt.value}
+                    disabled={isSaving || isTransitioning}
                     style={[
                       styles.answerBtn,
                       isSelected ? styles.answerBtnSelected : null,
@@ -240,13 +271,22 @@ export default function QuizScreen({ route, navigation }) {
                     activeOpacity={0.8}
                     onPress={() => handleSelectAnswer(opt.value)}
                   >
-                    <View style={styles.answerIconBox}>
-                      <Ionicons
-                        name={opt.icon}
-                        size={22}
-                        color={isSelected ? colors.primary : colors.ink}
-                      />
+                    <View
+                      style={[
+                        styles.letterBox,
+                        isSelected && styles.letterBoxSelected,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.letterText,
+                          isSelected && styles.letterTextSelected,
+                        ]}
+                      >
+                        {letter}
+                      </Text>
                     </View>
+
                     <Text
                       style={[
                         styles.answerLabel,
@@ -255,14 +295,15 @@ export default function QuizScreen({ route, navigation }) {
                     >
                       {opt.label}
                     </Text>
-                    {isSelected && (
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={20}
-                        color={colors.primary}
-                        style={styles.selectedCheck}
-                      />
-                    )}
+
+                    <View
+                      style={[
+                        styles.radioCircle,
+                        isSelected && styles.radioCircleSelected,
+                      ]}
+                    >
+                      {isSelected && <View style={styles.radioInnerDot} />}
+                    </View>
                   </TouchableOpacity>
                 );
               })}
@@ -273,6 +314,7 @@ export default function QuizScreen({ route, navigation }) {
               {currentIndex > 0 ? (
                 <TouchableOpacity
                   style={styles.navBtn}
+                  disabled={isSaving || isTransitioning}
                   onPress={() => setCurrentIndex(currentIndex - 1)}
                 >
                   <Ionicons name="arrow-back" size={16} color={colors.ink} />
@@ -286,43 +328,83 @@ export default function QuizScreen({ route, navigation }) {
         )}
 
         {/* STEP 3: Category Complete */}
-        {step === "complete" && (
-          <View style={styles.completeWrapper}>
-            <View style={styles.completeBadge}>
-              <Ionicons name="checkmark-sharp" size={44} color={colors.white} />
-            </View>
-            <Text style={styles.completeTitle}>บันทึกคำตอบเรียบร้อย!</Text>
-            <Text style={styles.completeSubtitle}>
-              คุณได้ตอบคำถาม{selectedCategory?.name}ครบ 10 ข้อแล้ว{"\n"}
-              นำคำตอบไปประมวลผลความเข้ากันได้ทันที
-            </Text>
+        {step === "complete" && (() => {
+          const remaining = categories.filter(
+            (c) => !completedCategories.includes(c.id)
+          );
+          return (
+            <View style={styles.completeWrapper}>
+              <View style={styles.completeBadge}>
+                <Ionicons name="checkmark-sharp" size={44} color={colors.white} />
+              </View>
+              <Text style={styles.completeTitle}>
+                ตอบ{selectedCategory?.name}ครบแล้ว
+              </Text>
+              <Text style={styles.completeSubtitle}>
+                ตอนนี้คุณตอบแล้ว {completedCategories.length} ด้าน
+                {remaining.length > 0
+                  ? ` และเหลืออีก ${remaining.length} ด้าน`
+                  : " และครบทุกด้านแล้ว"}
+              </Text>
 
-            <View style={styles.completeActions}>
-              <TouchableOpacity
-                style={styles.completePrimaryBtn}
-                activeOpacity={0.85}
-                onPress={() => {
-                  navigation.navigate("Main", { screen: "ResultsTab" });
-                }}
-              >
-                <Text style={styles.completePrimaryBtnText}>
-                  ดูผลการแมตช์ของคุณ
-                </Text>
-                <Ionicons name="arrow-forward" size={18} color={colors.white} />
-              </TouchableOpacity>
+              <View style={styles.completedPillsContainer}>
+                {completedCategories.map((catId) => {
+                  const catItem = categories.find((c) => c.id === catId);
+                  const tone = categoryColors[catId];
+                  return (
+                    <View key={catId} style={styles.completedPill}>
+                      <View
+                        style={[
+                          styles.completedPillDot,
+                          { backgroundColor: tone ? tone.bg : colors.primary },
+                        ]}
+                      />
+                      <Text style={styles.completedPillText}>
+                        {catItem?.name || catId}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
 
-              <TouchableOpacity
-                style={styles.completeSecondaryBtn}
-                activeOpacity={0.85}
-                onPress={() => setStep("select-category")}
-              >
-                <Text style={styles.completeSecondaryBtnText}>
-                  ตอบคำถามด้านอื่นต่อ
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.completeActions}>
+                {remaining.length > 0 && (
+                  <TouchableOpacity
+                    style={styles.completeSecondaryBtn}
+                    activeOpacity={0.85}
+                    onPress={() => {
+                      setSelectedCategory(null);
+                      setStep("select-category");
+                    }}
+                  >
+                    <Ionicons
+                      name="refresh-outline"
+                      size={18}
+                      color={colors.ink}
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text style={styles.completeSecondaryBtnText}>
+                      เลือกด้านอื่น
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity
+                  style={styles.completePrimaryBtn}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    navigation.navigate("Main", { screen: "ResultsTab" });
+                  }}
+                >
+                  <Text style={styles.completePrimaryBtnText}>
+                    ดูผลการจับคู่
+                  </Text>
+                  <Ionicons name="arrow-forward" size={18} color={colors.white} />
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        )}
+          );
+        })()}
       </ScrollView>
     </SafeAreaView>
   );
@@ -457,6 +539,39 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     lineHeight: 18,
   },
+  viewResultsFooter: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1.5,
+    borderTopColor: colors.darkBorder,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  viewResultsCountText: {
+    fontSize: 14,
+    color: colors.mutedForeground,
+  },
+  viewResultsCountBold: {
+    fontWeight: "900",
+    color: colors.ink,
+  },
+  viewResultsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    ...shadows.neo,
+  },
+  viewResultsBtnText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.white,
+  },
   quizWrapper: {
     paddingTop: 10,
   },
@@ -512,7 +627,7 @@ const styles = StyleSheet.create({
     height: 60,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     ...shadows.neo,
   },
   answerBtnSelected: {
@@ -520,11 +635,28 @@ const styles = StyleSheet.create({
     borderWidth: 2.5,
     backgroundColor: "#f0f3ff",
   },
-  answerIconBox: {
-    width: 32,
-    alignItems: "center",
+  letterBox: {
+    width: 28,
+    height: 28,
     justifyContent: "center",
+    alignItems: "center",
     marginRight: 14,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    backgroundColor: colors.card,
+  },
+  letterBoxSelected: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  letterText: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: colors.mutedForeground,
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+  },
+  letterTextSelected: {
+    color: colors.white,
   },
   answerLabel: {
     fontSize: 16,
@@ -535,8 +667,25 @@ const styles = StyleSheet.create({
   answerLabelSelected: {
     color: colors.primary,
   },
-  selectedCheck: {
-    marginLeft: 8,
+  radioCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: colors.mutedForeground,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 10,
+  },
+  radioCircleSelected: {
+    borderColor: colors.primary,
+    backgroundColor: colors.card,
+  },
+  radioInnerDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.primary,
   },
   navRow: {
     flexDirection: "row",
@@ -583,7 +732,34 @@ const styles = StyleSheet.create({
     color: colors.mutedForeground,
     textAlign: "center",
     lineHeight: 24,
-    marginBottom: 30,
+    marginBottom: 20,
+  },
+  completedPillsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    justifyContent: "center",
+    marginBottom: 28,
+  },
+  completedPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    backgroundColor: colors.card,
+  },
+  completedPillDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  completedPillText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: colors.ink,
   },
   completeActions: {
     width: "100%",
@@ -607,6 +783,7 @@ const styles = StyleSheet.create({
   },
   completeSecondaryBtn: {
     backgroundColor: colors.card,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     height: 50,

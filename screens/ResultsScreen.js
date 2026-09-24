@@ -41,6 +41,7 @@ export default function ResultsScreen({ navigation }) {
       >
         {/* Page Header */}
         <View style={styles.headerSection}>
+          <Text style={styles.eyebrow}>COMPATIBILITY RESULTS</Text>
           <View style={styles.titleRow}>
             <Text style={styles.title}>แมตช์ของคุณ</Text>
             <TouchableOpacity

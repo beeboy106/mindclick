@@ -24,6 +24,7 @@ import FeedScreen from "../screens/FeedScreen";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import QuizScreen from "../screens/QuizScreen";
 import MatchDetailScreen from "../screens/MatchDetailScreen";
+import PublicProfileScreen from "../screens/PublicProfileScreen";
 import CrossBubbleTabNavigator from "./CrossBubbleTabNavigator";
 
 const Stack = createNativeStackNavigator();
@@ -183,6 +184,13 @@ export default function AppNavigator() {
             <Stack.Screen
               name="MatchDetail"
               component={MatchDetailScreen}
+              options={{
+                animation: "slide_from_right",
+              }}
+            />
+            <Stack.Screen
+              name="PublicProfile"
+              component={PublicProfileScreen}
               options={{
                 animation: "slide_from_right",
               }}

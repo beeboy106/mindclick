@@ -60,11 +60,17 @@ export default function MatchCard({ match, index, onPress }) {
 
         <View style={styles.scoreCol}>
           <Text style={styles.percentageText}>{match.matchPercentage}%</Text>
-          <Text style={styles.percentageLabel}>เข้ากันได้</Text>
+          <Text style={styles.percentageLabel}>MATCH</Text>
         </View>
 
         <View style={styles.actionCol}>
           <FavoriteButton userId={match.id} size="sm" />
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={colors.mutedForeground}
+            style={{ marginLeft: 6 }}
+          />
         </View>
       </View>
 
@@ -93,7 +99,7 @@ export default function MatchCard({ match, index, onPress }) {
                   style={[styles.catTagText, { color: catTone.text }]}
                   numberOfLines={1}
                 >
-                  {cat.name}
+                  {cat.nameEN ? cat.nameEN.toUpperCase() : cat.name}
                 </Text>
               </View>
             );
@@ -181,7 +187,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   actionCol: {
-    justifyContent: "center",
+    flexDirection: "row",
+    alignItems: "center",
   },
   tagsRow: {
     flexDirection: "row",

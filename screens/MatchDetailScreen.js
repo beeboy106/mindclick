@@ -138,6 +138,14 @@ export default function MatchDetailScreen({ route, navigation }) {
   const overallPercent =
     commonCount > 0 ? Math.round(totalMatchScore / commonCount) : 0;
 
+  // บทวิเคราะห์เคมีความเข้ากัน 3 ระดับตามแบบ FriendQ
+  const chemistrySummary =
+    overallPercent >= 70
+      ? "คำตอบของคุณสองคนใกล้กันมาก มีโอกาสคุยกันได้ลื่นและเข้าใจมุมมองของกันและกัน"
+      : overallPercent >= 40
+      ? "มีทั้งจุดที่คิดคล้ายกันและต่างกันพอดี น่าจะมีเรื่องให้แลกเปลี่ยนกันเยอะ"
+      : "มุมมองค่อนข้างต่างกัน ซึ่งอาจเปิดบทสนทนาและประสบการณ์ใหม่ๆ ให้กันได้";
+
   // วิเคราะห์จุดร่วมและประโยคเปิดบทสนทนา (Mind-Insight & Icebreakers)
   const sharedTopics = (!isPreview && targetUser)
     ? getSharedInsights(quizResponse.categoryAnswers, targetUser.categoryAnswers)
@@ -368,28 +376,35 @@ export default function MatchDetailScreen({ route, navigation }) {
           </View>
         )}
 
-        {/* Category Breakdown */}
+        {/* Category Breakdown (สิ่งที่เราคล้ายกัน) */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              {isPreview ? "ความคืบหน้าคำถามแต่ละด้านของคุณ" : "ความเข้ากันได้แต่ละด้าน"}
+              {isPreview ? "ความคืบหน้าคำถามแต่ละด้านของคุณ" : "สิ่งที่เราคล้ายกัน"}
             </Text>
           </View>
 
           <View style={styles.breakdownList}>
             {categoryBreakdown.map(({ category, isCommon, percent }) => {
-              const tone = categoryColors[category.id];
+              const tone = categoryColors[category.id] || { bg: colors.primary, text: colors.white };
 
               return (
-                <View key={category.id} style={styles.breakdownCard}>
+                <View
+                  key={category.id}
+                  style={[
+                    styles.breakdownCard,
+                    !isCommon && !isPreview && styles.breakdownCardDimmed,
+                  ]}
+                >
                   <View style={styles.breakdownCardHeader}>
                     <View style={styles.catLeft}>
-                      <Ionicons
-                        name={category.icon}
-                        size={18}
-                        color={colors.ink}
-                      />
-                      <Text style={styles.breakdownName}>{category.name}</Text>
+                      <View style={[styles.catColorBar, { backgroundColor: tone.bg }]} />
+                      <View>
+                        <Text style={styles.breakdownName}>{category.name}</Text>
+                        <Text style={styles.breakdownSub}>
+                          {isCommon ? category.nameEN : "ยังไม่มีคำตอบร่วมกัน"}
+                        </Text>
+                      </View>
                     </View>
 
                     <Text
@@ -404,7 +419,7 @@ export default function MatchDetailScreen({ route, navigation }) {
                           : "ยังไม่ตอบ"
                         : isCommon
                         ? `${percent}%`
-                        : "ยังไม่ตอบ"}
+                        : "—"}
                     </Text>
                   </View>
 
@@ -423,6 +438,28 @@ export default function MatchDetailScreen({ route, navigation }) {
               );
             })}
           </View>
+
+          {/* Chemistry Summary Box & View Public Profile Button */}
+          {!isPreview && (
+            <View style={styles.chemistrySummaryBox}>
+              <Text style={styles.chemistrySummaryText}>{chemistrySummary}</Text>
+              <TouchableOpacity
+                style={styles.viewPublicProfileBtn}
+                activeOpacity={0.88}
+                onPress={() =>
+                  navigation.navigate("PublicProfile", {
+                    userId: targetUser.id,
+                    user: targetUser,
+                  })
+                }
+              >
+                <Text style={styles.viewPublicProfileBtnText}>
+                  ดูโปรไฟล์ของ {targetUser.name}
+                </Text>
+                <Ionicons name="arrow-forward" size={18} color={colors.ink} />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Gallery Images */}
@@ -651,6 +688,9 @@ const styles = StyleSheet.create({
     borderColor: colors.darkBorder,
     padding: 14,
   },
+  breakdownCardDimmed: {
+    opacity: 0.45,
+  },
   breakdownCardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -660,19 +700,61 @@ const styles = StyleSheet.create({
   catLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    flex: 1,
   },
-  breakdownIcon: {
-    fontSize: 16,
+  catColorBar: {
+    width: 8,
+    height: 36,
+    marginRight: 10,
+    borderRadius: 2,
   },
   breakdownName: {
     fontSize: 15,
-    fontWeight: "800",
+    fontWeight: "900",
     color: colors.ink,
   },
+  breakdownSub: {
+    fontSize: 11,
+    color: colors.mutedForeground,
+    fontWeight: "700",
+    marginTop: 1,
+  },
   breakdownPercent: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "900",
+    marginLeft: 8,
+  },
+  chemistrySummaryBox: {
+    backgroundColor: colors.card,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    padding: 16,
+    marginTop: 16,
+    ...shadows.neo,
+  },
+  chemistrySummaryText: {
+    fontSize: 13.5,
+    lineHeight: 21,
+    color: colors.mutedForeground,
+    fontWeight: "600",
+    marginBottom: 14,
+  },
+  viewPublicProfileBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#bbf44a",
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    paddingVertical: 13,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    ...shadows.neo,
+  },
+  viewPublicProfileBtnText: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: colors.ink,
   },
   breakdownTrack: {
     height: 8,
