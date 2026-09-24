@@ -47,6 +47,12 @@ export function AuthProvider({ children }) {
         const storedUser = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
         if (storedUser) {
           const parsed = JSON.parse(storedUser);
+          if (parsed?.email && !parsed.email.endsWith("@psu.ac.th")) {
+            parsed.email = "6510110001@psu.ac.th";
+            parsed.studentEmail = "6510110001@psu.ac.th";
+            parsed.isStudentVerified = true;
+            await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(parsed));
+          }
           setUser(parsed);
           if (parsed?.id) {
             const blockedRaw = await AsyncStorage.getItem(`${BLOCKED_USERS_STORAGE_PREFIX}${parsed.id}`);
@@ -178,7 +184,35 @@ export function AuthProvider({ children }) {
     return updatedUser;
   };
 
-  // เข้าสู่ระบบแบบจำลอง (Demo Google Account สำหรับพรีเซนต์อาจารย์)
+  // เข้าสู่ระบบด้วยอีเมลมหาวิทยาลัยสงขลานครินทร์ (@psu.ac.th) เท่านั้น
+  const signInWithPsuEmail = async (email, customName) => {
+    setAuthError(null);
+    const cleanEmail = (email || "").trim().toLowerCase();
+    if (!cleanEmail) {
+      setAuthError("กรุณากรอกอีเมลมหาวิทยาลัย");
+      return false;
+    }
+    if (!cleanEmail.endsWith("@psu.ac.th")) {
+      setAuthError("กรุณาใช้อีเมลมหาวิทยาลัยสงขลานครินทร์ (@psu.ac.th) เท่านั้น");
+      return false;
+    }
+
+    const studentPrefix = cleanEmail.split("@")[0];
+    const derivedName = customName || studentPrefix;
+    const psuUser = {
+      id: "psu_" + cleanEmail.replace(/[^a-zA-Z0-9]/g, "_"),
+      name: derivedName,
+      email: cleanEmail,
+      studentEmail: cleanEmail,
+      isStudentVerified: true,
+      provider: "psu_email",
+    };
+
+    await saveUserSession(psuUser);
+    return true;
+  };
+
+  // เข้าสู่ระบบแบบจำลอง (Demo PSU Account สำหรับพรีเซนต์อาจารย์)
   const signInWithDemo = async (customUser) => {
     let demoId = "118198207968490232896";
     try {
@@ -194,16 +228,17 @@ export function AuthProvider({ children }) {
     const demoGoogleUser = customUser || {
       id: demoId,
       name: "ณัฐวุฒิ พงศาวสีกุล",
-      email: "beemnum2548@gmail.com",
+      email: "6510110001@psu.ac.th",
       image: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
-      provider: "google",
+      provider: "psu_email",
       isDemoMode: true, // กำหนดเป็นโหมดสาธิตสำหรับนำเสนออาจารย์
       isStudentVerified: true,
+      studentEmail: "6510110001@psu.ac.th",
     };
     await saveUserSession(demoGoogleUser);
   };
 
-  // ฟังก์ชันเข้าสู่ระบบด้วย Google จริง
+  // ฟังก์ชันเข้าสู่ระบบด้วย Google จริง (บังคับโดเมน @psu.ac.th)
   const signInWithGoogle = async () => {
     setAuthError(null);
 
@@ -219,10 +254,23 @@ export function AuthProvider({ children }) {
           const response = await GoogleSignin.signIn();
           const gUser = response.data?.user || response.user || response;
           if (gUser && (gUser.email || gUser.name)) {
+            const gEmail = (gUser.email || "").trim().toLowerCase();
+            if (!gEmail.endsWith("@psu.ac.th")) {
+              setAuthError(`อีเมล ${gEmail || "ที่คุณเลือก"} ไม่ใช่อีเมลมหาวิทยาลัย กรุณาใช้อีเมล @psu.ac.th`);
+              try {
+                await GoogleSignin.signOut();
+              } catch (e) {
+                // ignore
+              }
+              return;
+            }
+
             const loggedInUser = {
               id: gUser.id || "google_" + Date.now(),
-              name: gUser.name || "Google User",
-              email: gUser.email || "",
+              name: gUser.name || gEmail.split("@")[0],
+              email: gEmail,
+              studentEmail: gEmail,
+              isStudentVerified: true,
               image: gUser.photo || gUser.photoUrl || gUser.picture || null,
               provider: "google",
             };
@@ -321,11 +369,19 @@ export function AuthProvider({ children }) {
             { headers: { Authorization: `Bearer ${accessToken}` } }
           );
           const googleUser = await userInfoRes.json();
+          const googleEmail = (googleUser.email || "").trim().toLowerCase();
+
+          if (!googleEmail.endsWith("@psu.ac.th")) {
+            setAuthError(`อีเมล ${googleEmail || "ที่คุณเลือก"} ไม่ใช่อีเมลมหาวิทยาลัย กรุณาใช้อีเมล @psu.ac.th`);
+            return;
+          }
 
           const loggedInUser = {
             id: googleUser.id || "google_" + Date.now(),
-            name: googleUser.name || "Google User",
-            email: googleUser.email || "",
+            name: googleUser.name || googleEmail.split("@")[0],
+            email: googleEmail,
+            studentEmail: googleEmail,
+            isStudentVerified: true,
             image: googleUser.picture || googleUser.photo || googleUser.avatar_url || null,
             provider: "google",
           };
@@ -338,7 +394,7 @@ export function AuthProvider({ children }) {
     }
 
     // หากยังไม่สามารถเข้าสู่ระบบได้
-    setAuthError("ไม่สามารถเข้าสู่ระบบด้วย Google ได้ กรุณาลองใหม่อีกครั้ง");
+    setAuthError("ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่อีกครั้ง");
   };
 
   // ออกจากระบบ
@@ -371,6 +427,7 @@ export function AuthProvider({ children }) {
         unblockUser,
         submitReport,
         verifyStudentEmail,
+        signInWithPsuEmail,
         signInWithGoogle,
         signInWithDemo,
         signOut,

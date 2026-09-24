@@ -29,10 +29,10 @@ import { CAMPUS_FACULTIES } from "../lib/mindInsight";
 import { uploadImageToCloudinary } from "../lib/cloudinary";
 
 const genderOptions = [
-  { value: "male", label: "ชาย", icon: "male" },
-  { value: "female", label: "หญิง", icon: "female" },
-  { value: "other", label: "อื่นๆ", icon: "transgender" },
-  { value: "prefer_not_to_say", label: "ไม่ระบุ", icon: "help-circle-outline" },
+  { value: "male", label: "ชาย", icon: "male", color: "#3b82f6", bgActive: "#eff6ff" },
+  { value: "female", label: "หญิง", icon: "female", color: "#ec4899", bgActive: "#fdf2f8" },
+  { value: "other", label: "อื่นๆ", icon: null, color: "#a855f7", bgActive: "#faf5ff" },
+  { value: "prefer_not_to_say", label: "ไม่ระบุ", icon: "ban-outline", color: "#64748b", bgActive: "#f1f5f9" },
 ];
 
 function GalleryThumbItem({ img, onSelect, onRemove }) {
@@ -72,7 +72,7 @@ function GalleryThumbItem({ img, onSelect, onRemove }) {
 }
 
 export default function ProfileScreen({ navigation }) {
-  const { user, signOut, isDemoMode, toggleDemoMode, verifyStudentEmail } = useAuth();
+  const { user, signOut, isDemoMode, toggleDemoMode } = useAuth();
   const {
     profile,
     updateProfile,
@@ -108,31 +108,6 @@ export default function ProfileScreen({ navigation }) {
   const [avatarUri, setAvatarUri] = useState(profile.image || user?.image || null);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isUploadingGallery, setIsUploadingGallery] = useState(false);
-  const [studentEmailInput, setStudentEmailInput] = useState(user?.studentEmail || "");
-  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
-
-  const handleVerifyStudentEmail = async () => {
-    if (!studentEmailInput.trim() || !studentEmailInput.includes("@")) {
-      Alert.alert("กรุณากรอกอีเมล", "โปรดระบุอีเมลนักศึกษาที่ถูกต้อง");
-      return;
-    }
-    setIsVerifyingEmail(true);
-    try {
-      const updated = await verifyStudentEmail(studentEmailInput.trim());
-      if (updated) {
-        Alert.alert(
-          "ยืนยันตัวตนสำเร็จ",
-          `ยืนยันอีเมลนักศึกษา ${studentEmailInput.trim()} เรียบร้อยแล้ว สัญลักษณ์นักศึกษาจะแสดงบนโปรไฟล์ของคุณ`
-        );
-      } else {
-        Alert.alert("เกิดข้อผิดพลาด", "ไม่สามารถยืนยันอีเมลได้ในขณะนี้");
-      }
-    } catch (e) {
-      Alert.alert("เกิดข้อผิดพลาด", "ไม่สามารถยืนยันอีเมลได้ในขณะนี้");
-    } finally {
-      setIsVerifyingEmail(false);
-    }
-  };
   const [socialLinks, setSocialLinks] = useState({
     instagram: profile.socialLinks?.instagram || "",
     facebook: profile.socialLinks?.facebook || "",
@@ -392,7 +367,7 @@ export default function ProfileScreen({ navigation }) {
             />
             <Ionicons name="pencil" size={14} color={colors.mutedForeground} />
           </View>
-          <Text style={styles.userEmail}>{user?.email || profile?.email || "อีเมล Google"}</Text>
+          <Text style={styles.userEmail}>{user?.email || profile?.email || "อีเมล PSU"}</Text>
 
           {/* Status Switcher (ออนไลน์ / ห้ามรบกวน) */}
           <View style={styles.statusSection}>
@@ -495,89 +470,43 @@ export default function ProfileScreen({ navigation }) {
           <Ionicons name="chevron-forward" size={20} color={colors.ink} />
         </TouchableOpacity>
 
-        {/* Form: Student Verification (.ac.th email) */}
+        {/* Form: Gender (2x2 Grid Matching Image) */}
         <View style={styles.formCard}>
           <View style={styles.sectionHeaderRow}>
-            <Ionicons name="school-outline" size={16} color={colors.primary} />
-            <Text style={styles.sectionTitle}>ยืนยันสถานะนิสิต / นักศึกษา</Text>
-          </View>
-
-          {user?.isStudentVerified ? (
-            <View style={styles.verifiedStudentBanner}>
-              <Ionicons name="checkmark-circle" size={24} color="#16a34a" />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.verifiedStudentTitle}>
-                  ยืนยันสถานะนักศึกษาเรียบร้อยแล้ว
-                </Text>
-                <Text style={styles.verifiedStudentEmail}>
-                  {user.studentEmail || user.email}
-                </Text>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.verifyStudentForm}>
-              <Text style={styles.verifyStudentHint}>
-                ใช้อีเมลสถาบันการศึกษา (.ac.th หรือ .edu) เพื่อรับตราสัญลักษณ์นักศึกษาจริง
-              </Text>
-              <View style={styles.verifyStudentInputRow}>
-                <TextInput
-                  style={styles.verifyStudentInput}
-                  placeholder="เช่น student@chula.ac.th"
-                  placeholderTextColor={colors.mutedForeground}
-                  value={studentEmailInput}
-                  onChangeText={setStudentEmailInput}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.verifyStudentBtn,
-                    !studentEmailInput.trim() && styles.verifyStudentBtnDisabled,
-                  ]}
-                  disabled={!studentEmailInput.trim() || isVerifyingEmail}
-                  onPress={handleVerifyStudentEmail}
-                  activeOpacity={0.85}
-                >
-                  {isVerifyingEmail ? (
-                    <ActivityIndicator size="small" color={colors.white} />
-                  ) : (
-                    <Text style={styles.verifyStudentBtnText}>ยืนยัน</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-        </View>
-
-        {/* Form: Gender (Matching Image 3) */}
-        <View style={styles.formCard}>
-          <View style={styles.sectionHeaderRow}>
-            <Ionicons name="person-outline" size={16} color={colors.primary} />
+            <Ionicons name="person-outline" size={18} color="#2563eb" />
             <Text style={styles.sectionTitle}>เพศ</Text>
           </View>
 
-          <View style={styles.genderRow}>
+          <View style={styles.genderGrid}>
             {genderOptions.map((opt) => {
               const isSelected = gender === opt.value;
               return (
                 <TouchableOpacity
                   key={opt.value}
                   style={[
-                    styles.genderPill,
-                    isSelected ? styles.genderPillActive : null,
+                    styles.genderCard,
+                    isSelected && {
+                      borderColor: opt.color,
+                      backgroundColor: opt.bgActive,
+                      borderWidth: 2,
+                    },
                   ]}
                   activeOpacity={0.8}
                   onPress={() => setGender(opt.value)}
                 >
-                  <Ionicons
-                    name={opt.icon}
-                    size={14}
-                    color={isSelected ? colors.primary : colors.mutedForeground}
-                  />
+                  {opt.icon && (
+                    <Ionicons
+                      name={opt.icon}
+                      size={18}
+                      color={opt.color}
+                      style={styles.genderCardIcon}
+                    />
+                  )}
                   <Text
                     style={[
-                      styles.genderPillText,
-                      isSelected ? styles.genderPillTextActive : null,
+                      styles.genderCardText,
+                      { color: opt.color },
+                      isSelected && styles.genderCardTextActive,
                     ]}
                   >
                     {opt.label}
@@ -1165,34 +1094,34 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: colors.ink,
   },
-  genderRow: {
+  genderGrid: {
     flexDirection: "row",
-    gap: 8,
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 10,
+    marginTop: 4,
   },
-  genderPill: {
-    flex: 1,
+  genderCard: {
+    width: "48.5%",
+    height: 52,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    height: 40,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
     backgroundColor: "#f8fafc",
-    gap: 4,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    borderRadius: 6,
+    paddingHorizontal: 8,
   },
-  genderPillActive: {
-    borderColor: colors.primary,
-    backgroundColor: "#eff6ff",
+  genderCardIcon: {
+    marginRight: 8,
   },
-  genderPillText: {
-    fontSize: 12,
+  genderCardText: {
+    fontSize: 16,
     fontWeight: "700",
-    color: colors.mutedForeground,
   },
-  genderPillTextActive: {
-    color: colors.primary,
-    fontWeight: "800",
+  genderCardTextActive: {
+    fontWeight: "900",
   },
   bioInput: {
     backgroundColor: "#f8fafc",
@@ -1691,68 +1620,6 @@ const styles = StyleSheet.create({
   },
   statusTextActive: {
     color: colors.ink,
-  },
-  verifiedStudentBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 14,
-    backgroundColor: "#f0fdf4",
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: "#86efac",
-    marginTop: 8,
-  },
-  verifiedStudentTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#166534",
-  },
-  verifiedStudentEmail: {
-    fontSize: 12,
-    color: "#15803d",
-    marginTop: 2,
-  },
-  verifyStudentForm: {
-    marginTop: 8,
-  },
-  verifyStudentHint: {
-    fontSize: 12,
-    color: colors.mutedForeground,
-    marginBottom: 10,
-    lineHeight: 18,
-  },
-  verifyStudentInputRow: {
-    flexDirection: "row",
-    gap: 8,
-    alignItems: "center",
-  },
-  verifyStudentInput: {
-    flex: 1,
-    height: 44,
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    fontSize: 13,
-    color: colors.ink,
-  },
-  verifyStudentBtn: {
-    height: 44,
-    paddingHorizontal: 16,
-    backgroundColor: colors.primary,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  verifyStudentBtnDisabled: {
-    backgroundColor: "#94a3b8",
-  },
-  verifyStudentBtnText: {
-    color: colors.white,
-    fontWeight: "800",
-    fontSize: 13,
   },
   modeSwitchBox: {
     flexDirection: "row",

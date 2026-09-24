@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
   View,
   Text,
+  TextInput,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
@@ -15,11 +16,39 @@ import { useAuth } from "../context/AuthContext";
 import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
 
 export default function SignInScreen() {
-  const { signInWithGoogle, signInWithDemo, authError } = useAuth();
+  const { signInWithGoogle, signInWithDemo, signInWithPsuEmail, authError } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [psuEmail, setPsuEmail] = useState("");
+  const [localError, setLocalError] = useState("");
   const [showPolicyModal, setShowPolicyModal] = useState(false);
 
-  const handleSignIn = async () => {
+  const handlePsuEmailSignIn = async () => {
+    setLocalError("");
+    const clean = psuEmail.trim().toLowerCase();
+    if (!clean) {
+      setLocalError("กรุณากรอกอีเมลมหาวิทยาลัย");
+      return;
+    }
+    if (!clean.endsWith("@psu.ac.th")) {
+      setLocalError("ต้องเป็นอีเมลมหาวิทยาลัยที่ลงท้ายด้วย @psu.ac.th เท่านั้น");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const ok = await signInWithPsuEmail(clean);
+      if (!ok) {
+        setLocalError("ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่อีกครั้ง");
+      }
+    } catch (e) {
+      setLocalError("เกิดข้อผิดพลาดในการเข้าสู่ระบบ");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLocalError("");
     try {
       setLoading(true);
       await signInWithGoogle();
@@ -63,53 +92,105 @@ export default function SignInScreen() {
 
           {/* Subtitle */}
           <Text style={styles.subtitle}>
-            ตอบคำถามสั้นๆ แล้วค้นหาคนที่มีไลฟ์สไตล์และมุมมองใกล้กับคุณ
+            พื้นที่จับคู่เคมีความคิดสำหรับนักศึกษามหาวิทยาลัยสงขลานครินทร์ (PSU)
           </Text>
 
-          <View style={styles.divider} />
-
           {/* Error notice if any */}
-          {authError && (
+          {(authError || localError) ? (
             <View style={styles.errorBox}>
               <Ionicons name="alert-circle" size={18} color={colors.destructive} />
-              <Text style={styles.errorText}>{authError}</Text>
+              <Text style={styles.errorText}>{localError || authError}</Text>
             </View>
-          )}
+          ) : null}
 
-          {/* Google Sign-In Button */}
+          {/* PSU University Email Card */}
+          <View style={styles.psuEmailCard}>
+            <View style={styles.psuCardHeader}>
+              <View style={styles.psuIconCircle}>
+                <Ionicons name="school" size={18} color="#0284c7" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.psuCardTitle}>เข้าสู่ระบบด้วยอีเมล ม.อ.</Text>
+                <Text style={styles.psuCardSub}>เฉพาะโดเมน @psu.ac.th เท่านั้น</Text>
+              </View>
+            </View>
+
+            <View style={styles.inputWrapper}>
+              <Ionicons name="mail-outline" size={18} color="#64748b" style={styles.inputIcon} />
+              <TextInput
+                style={styles.textInput}
+                placeholder="เช่น 6510xxxxxx@psu.ac.th"
+                placeholderTextColor="#94a3b8"
+                value={psuEmail}
+                onChangeText={(t) => {
+                  setPsuEmail(t);
+                  if (localError) setLocalError("");
+                }}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoCorrect={false}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.psuSubmitBtn,
+                !psuEmail.trim() && styles.psuSubmitBtnDisabled,
+              ]}
+              activeOpacity={0.85}
+              onPress={handlePsuEmailSignIn}
+              disabled={loading || !psuEmail.trim()}
+            >
+              {loading ? (
+                <ActivityIndicator color="#ffffff" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.psuSubmitBtnText}>เข้าสู่ระบบด้วยอีเมล PSU</Text>
+                  <Ionicons name="arrow-forward" size={16} color="#ffffff" />
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Divider */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>หรือ</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Google Sign-In Button (Workspace @psu.ac.th) */}
           <TouchableOpacity
             style={styles.googleButton}
             activeOpacity={0.85}
-            onPress={handleSignIn}
+            onPress={handleGoogleSignIn}
             disabled={loading}
           >
-            {loading ? (
-              <ActivityIndicator color={colors.primary} />
-            ) : (
-              <>
-                <View style={styles.googleLeft}>
-                  {/* Google G logo simulation */}
-                  <View style={styles.googleIconCircle}>
-                    <Text style={styles.googleG}>G</Text>
-                  </View>
-                  <Text style={styles.googleButtonText}>
-                    เข้าสู่ระบบด้วย Google
-                  </Text>
-                </View>
-                <Ionicons name="arrow-forward" size={18} color={colors.ink} />
-              </>
-            )}
+            <View style={styles.googleLeft}>
+              <View style={styles.googleIconCircle}>
+                <Text style={styles.googleG}>G</Text>
+              </View>
+              <View>
+                <Text style={styles.googleButtonText}>
+                  Google Workspace
+                </Text>
+                <Text style={styles.googleButtonSub}>
+                  บัญชี Google นักศึกษา (@psu.ac.th)
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#64748b" />
           </TouchableOpacity>
 
-          {/* Demo Button for Expo Go testing */}
+          {/* Demo Button for testing */}
           <TouchableOpacity
             style={styles.demoButton}
             activeOpacity={0.8}
             onPress={() => signInWithDemo()}
           >
-            <Ionicons name="sparkles-outline" size={15} color={colors.mutedForeground} />
+            <Ionicons name="sparkles-outline" size={14} color="#64748b" />
             <Text style={styles.demoButtonText}>
-              เข้าใช้งานแบบทดสอบ (สำหรับ Expo Go / ไม่ใช้ Google)
+              เข้าใช้งานแบบทดสอบ (บัญชีนักศึกษา PSU จำลอง)
             </Text>
           </TouchableOpacity>
 
@@ -246,17 +327,103 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     flex: 1,
   },
+  psuEmailCard: {
+    backgroundColor: "#f8fafc",
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 12,
+  },
+  psuCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 14,
+  },
+  psuIconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#e0f2fe",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  psuCardTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: colors.ink,
+  },
+  psuCardSub: {
+    fontSize: 12,
+    color: colors.mutedForeground,
+    marginTop: 1,
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.white,
+    borderWidth: 1.5,
+    borderColor: "#cbd5e1",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 48,
+    marginBottom: 12,
+  },
+  inputIcon: {
+    marginRight: 8,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.ink,
+    height: "100%",
+  },
+  psuSubmitBtn: {
+    backgroundColor: colors.primary,
+    height: 46,
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  psuSubmitBtnDisabled: {
+    backgroundColor: "#94a3b8",
+    opacity: 0.7,
+  },
+  psuSubmitBtnText: {
+    color: colors.white,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 12,
+    gap: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#e2e8f0",
+  },
+  dividerText: {
+    fontSize: 12,
+    color: colors.mutedForeground,
+    fontWeight: "600",
+  },
   googleButton: {
     backgroundColor: colors.white,
     borderWidth: 1.5,
-    borderColor: colors.ink,
-    borderRadius: 8,
-    height: 52,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+    height: 54,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   googleLeft: {
     flexDirection: "row",
@@ -264,9 +431,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   googleIconCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: "#ea4335",
     justifyContent: "center",
     alignItems: "center",
@@ -274,12 +441,17 @@ const styles = StyleSheet.create({
   googleG: {
     color: colors.white,
     fontWeight: "900",
-    fontSize: 13,
+    fontSize: 14,
   },
   googleButtonText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "800",
     color: colors.ink,
+  },
+  googleButtonSub: {
+    fontSize: 11,
+    color: colors.mutedForeground,
+    marginTop: 1,
   },
   demoButton: {
     flexDirection: "row",
