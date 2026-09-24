@@ -88,10 +88,10 @@ export function DataProvider({ children }) {
   const [hasAcceptedPolicy, setHasAcceptedPolicy] = useState(true); // เริ่มต้น true ระหว่างโหลด
   const [isLoadingData, setIsLoadingData] = useState(true);
 
-  // ดึงรายชื่อผู้ใช้จาก Cloud Firestore สำหรับคำนวณ Match
+  // ดึงรายชื่อผู้ใช้จาก Cloud Firestore สำหรับคำนวณ Match (ข้ามเมื่ออยู่ในโหมดสาธิต)
   const fetchCloudPool = useCallback(async () => {
-    if (!isFirebaseConfigured()) {
-      setUsersPool(isDemoMode ? mockUsers : []);
+    if (isDemoMode || !isFirebaseConfigured()) {
+      setUsersPool(mockUsers);
       return;
     }
     try {
@@ -103,16 +103,8 @@ export function DataProvider({ children }) {
           u.categoryAnswers.length > 0
       );
 
-      // เมื่อเป็นผู้ใช้จริง จะแสดงเฉพาะผู้ใช้จริงจาก Cloud Firestore เท่านั้น
-      const combined = isDemoMode
-        ? [
-            ...realUsers,
-            ...mockUsers.filter((m) => !realUsers.some((r) => r.id === m.id)),
-          ]
-        : realUsers;
-
-      setUsersPool(combined);
-      AsyncStorage.setItem(USERS_POOL_KEY, JSON.stringify(combined));
+      setUsersPool(realUsers);
+      AsyncStorage.setItem(USERS_POOL_KEY, JSON.stringify(realUsers));
     } catch (err) {
       console.warn("Error fetching cloud users pool:", err);
     }
@@ -181,8 +173,8 @@ export function DataProvider({ children }) {
           }
         }
 
-        // ข. โหลดข้อมูลจริงล่าสุดจาก Cloud Firestore ของ User นี้
-        if (isFirebaseConfigured()) {
+        // ข. โหลดข้อมูลจริงล่าสุดจาก Cloud Firestore ของ User นี้ (เฉพาะโหมดผู้ใช้จริง)
+        if (isFirebaseConfigured() && !isDemoMode) {
           const cloudUser = await getFirestoreUser(user.id);
 
           if (cloudUser && isMounted) {
@@ -299,8 +291,8 @@ export function DataProvider({ children }) {
       await AsyncStorage.setItem(getQuizKey(user.id), JSON.stringify(newQuizData));
       setQuizResponse(newQuizData);
 
-      // บันทึกขึ้น Cloud Firestore
-      if (isFirebaseConfigured()) {
+      // บันทึกขึ้น Cloud Firestore (เฉพาะโหมดผู้ใช้จริง)
+      if (isFirebaseConfigured() && !isDemoMode) {
         await saveFirestoreUser(user.id, {
           completedCategories: currentCompleted,
           categoryAnswers: updatedCategoryAnswers,
@@ -342,8 +334,8 @@ export function DataProvider({ children }) {
         });
       }
 
-      // บันทึกขึ้น Cloud Firestore
-      if (isFirebaseConfigured()) {
+      // บันทึกขึ้น Cloud Firestore (เฉพาะโหมดผู้ใช้จริง)
+      if (isFirebaseConfigured() && !isDemoMode) {
         await saveFirestoreUser(user.id, {
           name: updated.name,
           email: updated.email,
@@ -415,7 +407,7 @@ export function DataProvider({ children }) {
       await AsyncStorage.setItem(getFavoritesKey(user.id), JSON.stringify(updatedFavorites));
       setFavorites(updatedFavorites);
 
-      if (isFirebaseConfigured()) {
+      if (isFirebaseConfigured() && !isDemoMode) {
         await saveFirestoreUser(user.id, {
           favorites: updatedFavorites,
           updatedAt: new Date().toISOString(),
@@ -441,7 +433,7 @@ export function DataProvider({ children }) {
       await AsyncStorage.setItem(getQuizKey(user.id), JSON.stringify(defaultQuizResponse));
       setQuizResponse(defaultQuizResponse);
 
-      if (isFirebaseConfigured()) {
+      if (isFirebaseConfigured() && !isDemoMode) {
         await saveFirestoreUser(user.id, {
           completedCategories: [],
           categoryAnswers: [],
@@ -462,7 +454,7 @@ export function DataProvider({ children }) {
       const polKey = getPolicyKey(user.id);
       await AsyncStorage.setItem(polKey, "true");
 
-      if (isFirebaseConfigured()) {
+      if (isFirebaseConfigured() && !isDemoMode) {
         await saveFirestoreUser(user.id, {
           hasAcceptedPolicy: true,
           policyAcceptedAt: new Date().toISOString(),

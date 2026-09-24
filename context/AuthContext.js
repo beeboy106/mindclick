@@ -206,30 +206,34 @@ export function AuthProvider({ children }) {
     return true;
   };
 
-  // เข้าสู่ระบบแบบจำลอง (Demo PSU Account สำหรับพรีเซนต์อาจารย์)
+  // เข้าสู่ระบบแบบจำลอง (Demo Mode - แยกขาดจากผู้ใช้จริง ไม่เก็บข้อมูล)
   const signInWithDemo = async (customUser) => {
-    let demoId = "118198207968490232896";
     try {
-      const stored = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed?.id) demoId = parsed.id;
+      const allKeys = await AsyncStorage.getAllKeys();
+      const demoKeys = allKeys.filter(
+        (key) =>
+          key.includes("user_demo_session") ||
+          key.includes("_demo") ||
+          key.includes("demo_")
+      );
+      if (demoKeys.length > 0) {
+        await AsyncStorage.multiRemove(demoKeys);
       }
-    } catch (e) {
-      // ignore
+    } catch (cleanErr) {
+      console.warn("Error cleaning previous demo storage:", cleanErr);
     }
 
-    const demoGoogleUser = customUser || {
-      id: demoId,
-      name: "ณัฐวุฒิ พงศาวสีกุล",
-      email: "6510110001@psu.ac.th",
+    const demoUser = customUser || {
+      id: "user_demo_session",
+      name: "ผู้ใช้สาธิต (Demo)",
+      email: "demo@psu.ac.th",
       image: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80",
       provider: "psu_email",
-      isDemoMode: true, // กำหนดเป็นโหมดสาธิตสำหรับนำเสนออาจารย์
+      isDemoMode: true,
       isStudentVerified: true,
-      studentEmail: "6510110001@psu.ac.th",
+      studentEmail: "demo@psu.ac.th",
     };
-    await saveUserSession(demoGoogleUser);
+    await saveUserSession(demoUser);
   };
 
   // ฟังก์ชันเข้าสู่ระบบด้วย Google จริง (บังคับโดเมน @psu.ac.th)
@@ -389,6 +393,22 @@ export function AuthProvider({ children }) {
           await GoogleSignin.signOut();
         } catch (e) {
           // ignore
+        }
+      }
+      if (user?.isDemoMode) {
+        try {
+          const allKeys = await AsyncStorage.getAllKeys();
+          const demoKeys = allKeys.filter(
+            (key) =>
+              key.includes("user_demo_session") ||
+              key.includes("_demo") ||
+              key.includes("demo_")
+          );
+          if (demoKeys.length > 0) {
+            await AsyncStorage.multiRemove(demoKeys);
+          }
+        } catch (cleanErr) {
+          console.warn("Error cleaning demo storage on signOut:", cleanErr);
         }
       }
       await AsyncStorage.removeItem(AUTH_STORAGE_KEY);

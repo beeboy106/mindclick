@@ -146,6 +146,16 @@ export default function SignInScreen() {
               นโยบายความเป็นส่วนตัว
             </Text>
           </Text>
+
+          {/* Demo Mode Subtle Entry Link */}
+          <TouchableOpacity
+            style={styles.demoButton}
+            activeOpacity={0.7}
+            onPress={() => signInWithDemo()}
+            disabled={loading}
+          >
+            <Text style={styles.demoButtonText}>เข้าใช้งานโหมดสาธิต (สำหรับทดสอบ)</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Bottom-right decorative brand mark */}
@@ -413,8 +423,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 10,
-    marginBottom: 6,
+    paddingVertical: 8,
+    marginTop: 14,
   },
   demoButtonText: {
     fontSize: 12,

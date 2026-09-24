@@ -726,12 +726,12 @@ export function FeedProvider({ children }) {
         console.error("Error saving chats:", err);
       }
 
-      // ส่งข้อความขึ้น Cloud Firestore ทันทีเมื่อคุยกับผู้ใช้จริง
-      if (friendId && !friendId.startsWith("user_mock_")) {
+      // ส่งข้อความขึ้น Cloud Firestore ทันทีเมื่อคุยกับผู้ใช้จริง (ไม่อยู่ในโหมดสาธิต)
+      if (friendId && !friendId.startsWith("user_mock_") && !isDemoMode) {
         sendFirestoreChatMessage(userId, friendId, text.trim()).catch((err) => {
           console.warn("Failed to sync message to Cloud Firestore:", err);
         });
-      } else if (friendId && isDemoMode && friendId.startsWith("user_mock_")) {
+      } else if (friendId && (isDemoMode || friendId.startsWith("user_mock_"))) {
         // จำลองการตอบกลับของเพื่อน (เฉพาะโหมดสาธิตพรีเซนต์อาจารย์หรือเพื่อน mock เท่านั้น)
         setTimeout(async () => {
           const replyText = "ได้รับข้อความแล้วครับ เดี๋ยวสักครู่ตอบกลับนะครับ";
@@ -786,7 +786,7 @@ export function FeedProvider({ children }) {
   // ดึงข้อความแชทล่าสุดจาก Cloud Firestore เพื่อให้ได้รับข้อความจากอีกเครื่อง
   const syncChatWithFriend = useCallback(
     async (friendId) => {
-      if (!friendId || friendId.startsWith("user_mock_") || !userId) return;
+      if (!friendId || friendId.startsWith("user_mock_") || !userId || isDemoMode) return;
       try {
         const cloudMessages = await getFirestoreChatMessages(userId, friendId);
         if (cloudMessages && cloudMessages.length > 0) {
