@@ -10,6 +10,11 @@ export const AVATAR_IMAGE_MAP = {
   avatar_4: require("../../assets/avatars/default_avatar_4.jpg"),
   shop_blueberry: require("../../assets/avatars/shop_avatar_blueberry.jpg"),
   shop_red_apple: require("../../assets/avatars/shop_avatar_red_apple.jpg"),
+  shop_green_apple: require("../../assets/avatars/shop_avatar_green_apple.jpg"),
+  shop_funny_cat: require("../../assets/avatars/shop_avatar_funny_cat.jpg"),
+  shop_curious_cat: require("../../assets/avatars/shop_avatar_curious_cat.jpg"),
+  shop_shrimp_chicken: require("../../assets/avatars/shop_avatar_shrimp_chicken.jpg"),
+  shop_pink_shrimp_chicken: require("../../assets/avatars/shop_avatar_pink_shrimp_chicken.jpg"),
 };
 
 // รายการอวาตารเริ่มต้น 4 แบบ
