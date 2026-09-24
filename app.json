@@ -5,9 +5,9 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "icon": "./assets/icon.png",
+    "icon": "https://raw.githubusercontent.com/beeboy106/mindclick/assets/assets/icon.png",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "https://raw.githubusercontent.com/beeboy106/mindclick/assets/assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -15,12 +15,12 @@
     "android": {
       "package": "com.mindclick.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "https://raw.githubusercontent.com/beeboy106/mindclick/assets/assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "https://raw.githubusercontent.com/beeboy106/mindclick/assets/assets/favicon.png"
     },
     "ios": {
       "supportsTablet": true,
