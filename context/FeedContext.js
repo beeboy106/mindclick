@@ -9,6 +9,9 @@ import { sendChatNotification } from "../lib/notificationService";
 import {
   sendFirestoreChatMessage,
   getFirestoreChatMessages,
+  saveFirestorePost,
+  getFirestorePosts,
+  deleteFirestorePost,
 } from "../lib/firebase";
 
 const POSTS_STORAGE_KEY = "@mindclick_feed_posts";
@@ -238,6 +241,76 @@ export function FeedProvider({ children }) {
   const [chats, setChats] = useState({}); // { [friendId]: [ { id, senderId, text, createdAt } ] }
   const [isLoading, setIsLoading] = useState(true);
 
+  const isSyncingPostsRef = useRef(false);
+  const syncCooldownUntilRef = useRef(0);
+
+  // ดึงโพสต์ล่าสุดจาก Cloud Firestore และผสานกับข้อมูลในเครื่อง
+  const syncPostsFromFirestore = useCallback(async () => {
+    if (isDemoMode || isSyncingPostsRef.current) return;
+    if (Date.now() < syncCooldownUntilRef.current) return;
+
+    isSyncingPostsRef.current = true;
+    try {
+      const cloudPosts = await getFirestorePosts();
+      if (cloudPosts === null) {
+        // กรณีโควตาจำกัด (429) หรือปัญหาเครือข่าย ให้หน่วงเวลาก่อนลองใหม่ 45 วินาที
+        syncCooldownUntilRef.current = Date.now() + 45000;
+        return;
+      }
+
+      // กรองโพสต์ตัวอย่างออกสำหรับโหมดผู้ใช้จริง
+      const realCloudPosts = cloudPosts.filter(
+        (p) => !p.id.startsWith("post_init_") && !p.authorId?.startsWith("user_mock_")
+      );
+
+      setPosts((prevPosts) => {
+        const now = Date.now();
+        // เก็บโพสต์ล่าสุดที่ตนเองเพิ่งโพสต์ไปไม่เกิน 20 วินาที เพื่อป้องกันโพสต์หายชั่วคราวก่อน Firestore อัปเดตเสร็จ
+        const pendingLocalPosts = (prevPosts || []).filter((p) => {
+          const isMine = p.authorId === userId;
+          const postTime = p.timestamp || (p.id?.startsWith("post_") ? parseInt(p.id.replace("post_", ""), 10) : 0);
+          const isRecent = now - postTime < 20000;
+          const existsInCloud = realCloudPosts.some((cp) => cp.id === p.id);
+          return isMine && isRecent && !existsInCloud;
+        });
+
+        const merged = [...pendingLocalPosts, ...realCloudPosts];
+        merged.sort((a, b) => {
+          const timeA = a.timestamp || (a.id?.startsWith("post_") ? parseInt(a.id.replace("post_", ""), 10) : 0);
+          const timeB = b.timestamp || (b.id?.startsWith("post_") ? parseInt(b.id.replace("post_", ""), 10) : 0);
+          return timeB - timeA;
+        });
+
+        const prevClean = (prevPosts || []).filter(
+          (p) => !p.id.startsWith("post_init_") && !p.authorId?.startsWith("user_mock_")
+        );
+        if (JSON.stringify(prevClean) === JSON.stringify(merged)) {
+          return prevPosts;
+        }
+
+        AsyncStorage.setItem(postsKey, JSON.stringify(merged)).catch((err) => {
+          console.error("Error caching synced posts:", err);
+        });
+        return merged;
+      });
+    } catch (err) {
+      console.warn("syncPostsFromFirestore error:", err);
+    } finally {
+      isSyncingPostsRef.current = false;
+    }
+  }, [isDemoMode, postsKey, userId]);
+
+  // ซิงค์โพสต์ใหม่จาก Cloud Firestore อัตโนมัติทุกๆ 8 วินาทีเมื่อเปิดแอปใช้งาน
+  useEffect(() => {
+    if (isDemoMode) return;
+    const interval = setInterval(() => {
+      if (AppState.currentState === "active") {
+        syncPostsFromFirestore();
+      }
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [isDemoMode, syncPostsFromFirestore]);
+
   // โหลดโพสต์ สถานะ และประวัติแชทจาก AsyncStorage ตามโหมด (Real / Demo)
   useEffect(() => {
     async function loadData() {
@@ -258,6 +331,11 @@ export function FeedProvider({ children }) {
           const initialPostsData = isDemoMode ? INITIAL_POSTS : [];
           setPosts(initialPostsData);
           await AsyncStorage.setItem(postsKey, JSON.stringify(initialPostsData));
+        }
+
+        // หากเป็นโหมดผู้ใช้จริง ซิงค์โพสต์จาก Cloud Firestore
+        if (!isDemoMode) {
+          syncPostsFromFirestore();
         }
 
         // 2. โหลดสถานะของผู้ใช้
@@ -397,13 +475,14 @@ export function FeedProvider({ children }) {
       }
 
       const now = new Date();
+      const timestamp = now.getTime();
       const dateStr = `${now.getDate()} ${now.toLocaleString("th-TH", { month: "short" })} ${now.getFullYear() + 543} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
       const resolvedName = authorName || profile?.name || user?.name || "ผู้ใช้งาน";
       const resolvedAvatar = authorAvatar !== undefined && authorAvatar !== null ? authorAvatar : (profile?.image || user?.image || null);
 
       const newPost = {
-        id: `post_${Date.now()}`,
+        id: `post_${timestamp}`,
         authorId: userId,
         authorName: resolvedName,
         authorAvatar: resolvedAvatar,
@@ -412,6 +491,7 @@ export function FeedProvider({ children }) {
         content: content.trim(),
         image: image || null,
         createdAt: dateStr,
+        timestamp,
         likes: [],
         comments: [],
         authorIsBubbleUser: Boolean(isBubbleUser),
@@ -419,6 +499,13 @@ export function FeedProvider({ children }) {
 
       const updated = [newPost, ...posts];
       await savePosts(updated);
+
+      // บันทึกขึ้น Cloud Firestore เมื่ออยู่ในโหมดผู้ใช้จริง
+      if (!isDemoMode) {
+        saveFirestorePost(newPost).catch((err) => {
+          console.warn("Failed to save post to Cloud Firestore:", err);
+        });
+      }
 
       // บันทึกและปรับปรุงสถิติจำนวนโพสต์วันนี้
       const nextCount = dailyPostCount + 1;
@@ -432,7 +519,7 @@ export function FeedProvider({ children }) {
 
       return newPost;
     },
-    [posts, user, userId, profile, isBubbleUser, dailyPostCount]
+    [posts, user, userId, profile, isBubbleUser, dailyPostCount, isDemoMode]
   );
 
   // 2. ลบโพสต์ (เฉพาะโพสต์ของตนเอง)
@@ -440,24 +527,37 @@ export function FeedProvider({ children }) {
     async (postId) => {
       const updated = posts.filter((p) => p.id !== postId);
       await savePosts(updated);
+      if (!isDemoMode && postId) {
+        deleteFirestorePost(postId).catch((err) => {
+          console.warn("Failed to delete post from Cloud Firestore:", err);
+        });
+      }
     },
-    [posts]
+    [posts, isDemoMode]
   );
 
   // 3. กดถูกใจ / ยกเลิกถูกใจ (Toggle Like)
   const toggleLike = useCallback(
     async (postId) => {
+      let targetPost = null;
       const updated = posts.map((p) => {
         if (p.id !== postId) return p;
         const hasLiked = (p.likes || []).includes(userId);
         const newLikes = hasLiked
           ? p.likes.filter((id) => id !== userId)
           : [...(p.likes || []), userId];
-        return { ...p, likes: newLikes };
+        const nextP = { ...p, likes: newLikes };
+        targetPost = nextP;
+        return nextP;
       });
       await savePosts(updated);
+      if (!isDemoMode && targetPost) {
+        saveFirestorePost(targetPost).catch((err) => {
+          console.warn("Failed to sync like to Cloud Firestore:", err);
+        });
+      }
     },
-    [posts, userId]
+    [posts, userId, isDemoMode]
   );
 
   // 4. เพิ่มความคิดเห็น (Comment) และตอบกลับความคิดเห็น (Reply แบบซ้อน)
@@ -492,17 +592,25 @@ export function FeedProvider({ children }) {
           : null,
       };
 
+      let targetPost = null;
       const updated = posts.map((p) => {
         if (p.id !== postId) return p;
-        return {
+        const nextP = {
           ...p,
           comments: [...(p.comments || []), newComment],
         };
+        targetPost = nextP;
+        return nextP;
       });
 
       await savePosts(updated);
+      if (!isDemoMode && targetPost) {
+        saveFirestorePost(targetPost).catch((err) => {
+          console.warn("Failed to sync comment to Cloud Firestore:", err);
+        });
+      }
     },
-    [posts, user, userId, profile, isBubbleUser]
+    [posts, user, userId, profile, isBubbleUser, isDemoMode]
   );
 
   // ซิงค์โพสต์และคอมเมนต์ของผู้ใช้ปัจจุบันเมื่อมีการแก้ไขชื่อหรือรูปโปรไฟล์
@@ -864,6 +972,8 @@ export function FeedProvider({ children }) {
         remainingPostsToday,
         resetDailyPostQuota,
         isDemoMode,
+        refreshPosts: syncPostsFromFirestore,
+        syncPostsFromFirestore,
       }}
     >
       {children}
