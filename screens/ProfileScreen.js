@@ -488,7 +488,7 @@ export default function ProfileScreen({ navigation }) {
             </View>
             <Text style={styles.viewsEntrySubtitle} numberOfLines={1}>
               {isBubbleUser
-                ? "ผู้ใช้ฟองสบู่: แตะดูรายชื่อย้อนหลัง 30 วัน"
+                ? "แตะดูรายชื่อย้อนหลัง 30 วัน"
                 : "มีคนแอบสนใจคุณ! แตะเพื่อดูตัวอย่างและปลดล็อก"}
             </Text>
           </View>

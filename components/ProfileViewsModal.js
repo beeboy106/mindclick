@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { colors, shadows } from "../lib/theme";
+import { colors } from "../lib/theme";
 import { usePremium } from "../context/PremiumContext";
 import { useFeed } from "../context/FeedContext";
 import { getRandomIcebreaker } from "../lib/mindInsight";
@@ -27,9 +27,19 @@ function formatTimeAgo(isoString) {
 
   if (diffMin < 1) return "เมื่อสักครู่";
   if (diffMin < 60) return `${diffMin} นาทีที่แล้ว`;
-  if (diffHour < 24) return `${diffHour} ชั่วโมงที่แล้ว`;
+  if (diffHour < 24) return `${diffHour} ชม. ที่แล้ว`;
   if (diffDay === 1) return "เมื่อวานนี้";
   return `${diffDay} วันที่แล้ว`;
+}
+
+function getShortInsightName(tag) {
+  if (!tag) return "เคมีตรงกัน";
+  if (tag.includes("ดนตรี") || tag.includes("คอนเสิร์ต")) return "ดนตรี";
+  if (tag.includes("เที่ยว") || tag.includes("วันหยุด")) return "ท่องเที่ยว";
+  if (tag.includes("ท้าทาย") || tag.includes("ใหม่")) return "ชอบลองสิ่งใหม่";
+  if (tag.includes("เปิดบทสนทนา") || tag.includes("พูดคุย")) return "คุยถูกคอ";
+  if (tag.includes("เข้าสังคม") || tag.includes("สังคม")) return "ไลฟ์สไตล์";
+  return tag.length > 10 ? tag.slice(0, 8) + "..." : tag;
 }
 
 export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
@@ -209,15 +219,16 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
           {/* Top Header */}
           <View style={styles.header}>
             <TouchableOpacity
-              style={styles.closeBtn}
+              style={styles.backBtn}
               onPress={onClose}
-              activeOpacity={0.8}
+              activeOpacity={0.7}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <Ionicons name="close" size={22} color={colors.ink} />
+              <Ionicons name="chevron-back" size={24} color="#0f172a" />
             </TouchableOpacity>
 
             <View style={styles.headerTitleBox}>
-              <Text style={styles.mainTitleText}>ประวัติการส่องโปรไฟล์</Text>
+              <Text style={styles.mainTitleText}>ประวัติการดูโปรไฟล์</Text>
             </View>
 
             <View
@@ -230,21 +241,21 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
                 <>
                   <MaterialCommunityIcons
                     name="chart-bubble"
-                    size={14}
+                    size={13}
                     color="#0284c7"
-                    style={{ marginRight: 4 }}
+                    style={{ marginRight: 3 }}
                   />
-                  <Text style={styles.statusPillBubbleText}>ผู้ใช้ฟองสบู่</Text>
+                  <Text style={styles.statusPillBubbleText}>ฟองสบู่</Text>
                 </>
               ) : (
                 <>
                   <Ionicons
                     name="lock-closed"
-                    size={12}
-                    color={colors.mutedForeground}
-                    style={{ marginRight: 4 }}
+                    size={11}
+                    color="#64748b"
+                    style={{ marginRight: 3 }}
                   />
-                  <Text style={styles.statusPillFreeText}>ผู้ใช้ทั่วไป</Text>
+                  <Text style={styles.statusPillFreeText}>ทั่วไป</Text>
                 </>
               )}
             </View>
@@ -255,64 +266,49 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            {/* 2-Column Summary Metric Cards */}
-            <View style={styles.metricGrid}>
-              <View style={styles.metricCard}>
-                <View style={styles.metricIconCircleBlue}>
-                  <Ionicons name="eye-outline" size={22} color="#0284c7" />
-                </View>
-                <View style={styles.metricContent}>
-                  <Text style={styles.metricNumber}>{viewCount} คน</Text>
-                  <Text style={styles.metricLabel}>คนส่องโปรไฟล์ 30 วัน</Text>
-                </View>
+            {/* Clean Summary Stats Bar */}
+            <View style={styles.statsSummaryBar}>
+              <View style={styles.statSummaryItem}>
+                <Text style={styles.statSummaryNumber}>{viewCount}</Text>
+                <Text style={styles.statSummaryLabel}>คนส่อง 30 วัน</Text>
               </View>
-
-              <View style={styles.metricCard}>
-                <View style={styles.metricIconCircleCoral}>
-                  <Ionicons name="flame" size={22} color="#ea580c" />
+              <View style={styles.statSummaryDivider} />
+              <View style={styles.statSummaryItem}>
+                <View style={styles.sparkStatNumRow}>
+                  <Ionicons name="flame" size={14} color="#ea580c" style={{ marginRight: 2 }} />
+                  <Text style={[styles.statSummaryNumber, { color: "#ea580c" }]}>{sparkVisitorsCount}</Text>
                 </View>
-                <View style={styles.metricContent}>
-                  <Text style={styles.metricNumber}>{sparkVisitorsCount} คน</Text>
-                  <Text style={styles.metricLabel}>เคมีตรงกัน Spark (>80%)</Text>
-                </View>
+                <Text style={styles.statSummaryLabel}>Spark (&gt;80%)</Text>
               </View>
+              {!isBubbleUser && (
+                <>
+                  <View style={styles.statSummaryDivider} />
+                  <View style={styles.statSummaryItem}>
+                    <Text style={[styles.statSummaryNumber, { color: "#0284c7" }]}>{peekPasses || 0}</Text>
+                    <Text style={styles.statSummaryLabel}>ตั๋วคงเหลือ</Text>
+                  </View>
+                </>
+              )}
             </View>
 
-            {/* Peek Pass Banner */}
-            {!isBubbleUser && (
-              <View style={styles.peekPassBanner}>
-                <View style={styles.peekPassIcon}>
-                  <Ionicons name="sparkles" size={18} color="#17171c" />
-                </View>
-                <View style={styles.peekPassTextCol}>
-                  <Text style={styles.peekPassTitle}>
-                    ตั๋วส่องโปรไฟล์ของคุณ: {peekPasses || 0} ใบ
-                  </Text>
-                  <Text style={styles.peekPassSubtitle}>
-                    สะสม Bubble Points จากภารกิจรายวันเพื่อแลกตั๋วส่องโปรไฟล์ได้ในโหมด Cross-Bubble
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            {/* Incognito Mode Banner */}
-            <View style={styles.incognitoBanner}>
+            {/* Incognito Mode Row */}
+            <View style={styles.incognitoRow}>
               <View style={styles.incognitoLeft}>
-                <View style={styles.incognitoIconBox}>
+                <View style={styles.incognitoIconCircle}>
                   <Ionicons
                     name={isIncognito && isBubbleUser ? "glasses" : "eye-outline"}
-                    size={20}
-                    color={colors.ink}
+                    size={16}
+                    color="#475569"
                   />
                 </View>
-                <View style={styles.incognitoTextBox}>
-                  <Text style={styles.incognitoTitle}>โหมดซ่อนตัว (Incognito Mode)</Text>
-                  <Text style={styles.incognitoDesc}>
+                <View style={styles.incognitoTextGroup}>
+                  <Text style={styles.incognitoTitle}>โหมดซ่อนตัว (Incognito)</Text>
+                  <Text style={styles.incognitoSubtitle}>
                     {isBubbleUser
                       ? isIncognito
-                        ? "เปิดอยู่: ส่องโปรไฟล์ผู้อื่นได้แบบไร้ร่องรอย ไม่บันทึกในประวัติ"
-                        : "ปิดอยู่: เมื่อคุณส่องโปรไฟล์ใคร ชื่อของคุณจะแสดงในประวัติของเขา"
-                      : "ส่องแบบไร้ร่องรอย (สิทธิพิเศษเฉพาะผู้ใช้ฟองสบู่)"}
+                        ? "เปิดอยู่: ส่องโปรไฟล์ได้โดยไม่บันทึกประวัติ"
+                        : "ปิดอยู่: ชื่อคุณจะแสดงในประวัติของคนที่คุณส่อง"
+                      : "ส่องแบบไม่ระบุตัวตน (สิทธิ์ผู้ใช้ฟองสบู่)"}
                   </Text>
                 </View>
               </View>
@@ -320,86 +316,82 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
               {isBubbleUser ? (
                 <TouchableOpacity
                   style={[
-                    styles.incognitoToggleBtn,
-                    isIncognito && styles.incognitoToggleBtnActive,
+                    styles.incognitoSwitchPill,
+                    isIncognito && styles.incognitoSwitchPillActive,
                   ]}
                   onPress={toggleIncognito}
-                  activeOpacity={0.82}
+                  activeOpacity={0.8}
                 >
-                  <Ionicons
-                    name={isIncognito ? "checkmark-circle" : "ellipse-outline"}
-                    size={14}
-                    color={colors.ink}
-                    style={{ marginRight: 4 }}
-                  />
-                  <Text style={styles.incognitoToggleBtnText}>
+                  <Text
+                    style={[
+                      styles.incognitoSwitchText,
+                      isIncognito && styles.incognitoSwitchTextActive,
+                    ]}
+                  >
                     {isIncognito ? "เปิด" : "ปิด"}
                   </Text>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity
-                  style={styles.incognitoLockBtn}
+                  style={styles.incognitoLockPill}
                   onPress={() => setPaywallVisible(true)}
-                  activeOpacity={0.82}
+                  activeOpacity={0.8}
                 >
-                  <Ionicons name="lock-closed" size={13} color={colors.ink} style={{ marginRight: 4 }} />
-                  <Text style={styles.incognitoLockBtnText}>ปลดล็อก</Text>
+                  <Ionicons name="lock-closed" size={11} color="#64748b" style={{ marginRight: 3 }} />
+                  <Text style={styles.incognitoLockText}>ปลดล็อก</Text>
                 </TouchableOpacity>
               )}
             </View>
 
-            {/* Mutual Spark Teaser / Notice Banner */}
+            {/* Mutual Spark Notice Banner */}
             {hasSparkVisitor && (
               <>
                 {isBubbleUser ? (
-                  <View style={styles.sparkActiveBanner}>
-                    <View style={styles.sparkFlameBadge}>
-                      <Ionicons name="flame" size={18} color="#ffffff" />
+                  <View style={styles.sparkBannerSoft}>
+                    <View style={styles.sparkBannerIconBox}>
+                      <Ionicons name="flame" size={16} color="#ea580c" />
                     </View>
-                    <Text style={styles.sparkActiveText}>
-                      พบสัญญาณ <Text style={{ fontWeight: "900" }}>Mutual Spark ({sparkVisitorsCount} คน)</Text> เคมีเข้ากันได้เกิน 80%! สามารถส่งสัญญาณทักทายด้วย Mind-Insight ได้ทันที
+                    <Text style={styles.sparkBannerText}>
+                      พบผู้เข้าชมเคมีตรงกันเกิน 80% ({sparkVisitorsCount} คน) ส่งคำทักทายได้ทันที
                     </Text>
                   </View>
                 ) : (
                   <TouchableOpacity
-                    style={styles.sparkTeaserBanner}
-                    activeOpacity={0.88}
+                    style={styles.sparkTeaserBannerSoft}
+                    activeOpacity={0.85}
                     onPress={() => setPaywallVisible(true)}
                   >
-                    <View style={styles.sparkFlameCircle}>
-                      <Ionicons name="flame" size={24} color="#ffffff" />
+                    <View style={styles.sparkBannerIconBox}>
+                      <Ionicons name="flame" size={16} color="#ea580c" />
                     </View>
-                    <View style={styles.sparkTextBox}>
-                      <View style={styles.sparkHeaderRow}>
-                        <Text style={styles.sparkEyebrow}>พบคนเคมีตรงกันสูง</Text>
-                      </View>
-                      <Text style={styles.sparkTitle}>
-                        มีคนเคมีตรงกับคุณถึง {topSparkVisitor?.matchPercentage || 85}% แอบมาส่อง!
+                    <View style={styles.sparkTeaserTextGroup}>
+                      <Text style={styles.sparkTeaserTitle}>
+                        มีคนเคมีตรงกับคุณถึง {topSparkVisitor?.matchPercentage || 85}% แอบมาส่อง
                       </Text>
-                      <Text style={styles.sparkSubtitle}>
-                        ปลดล็อกสิทธิ์ผู้ใช้ฟองสบู่ เพื่อดูตัวจริงและทักทายกลับทันที
+                      <Text style={styles.sparkTeaserSub}>
+                        ปลดล็อกสิทธิ์ผู้ใช้ฟองสบู่เพื่อดูตัวจริง
                       </Text>
                     </View>
-                    <Ionicons name="arrow-forward" size={18} color={colors.ink} />
+                    <Ionicons name="chevron-forward" size={16} color="#94a3b8" />
                   </TouchableOpacity>
                 )}
               </>
             )}
 
             {/* Filter Tabs */}
-            <View style={styles.filterRow}>
+            <View style={styles.filterTabsRow}>
               <TouchableOpacity
                 style={[
-                  styles.filterChip,
-                  activeFilter === "all" && styles.filterChipActive,
+                  styles.filterTabPill,
+                  activeFilter === "all" && styles.filterTabPillActive,
                 ]}
-                activeOpacity={0.82}
+                activeOpacity={0.8}
                 onPress={() => setActiveFilter("all")}
               >
                 <Text
                   style={[
-                    styles.filterChipText,
-                    activeFilter === "all" && styles.filterChipTextActive,
+                    styles.filterTabText,
+                    activeFilter === "all" && styles.filterTabTextActive,
                   ]}
                 >
                   ทั้งหมด ({profileViews.length})
@@ -408,25 +400,25 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
 
               <TouchableOpacity
                 style={[
-                  styles.filterChip,
-                  activeFilter === "spark" && styles.filterChipActive,
+                  styles.filterTabPill,
+                  activeFilter === "spark" && styles.filterTabPillActive,
                 ]}
-                activeOpacity={0.82}
+                activeOpacity={0.8}
                 onPress={() => setActiveFilter("spark")}
               >
                 <Ionicons
                   name="flame"
-                  size={14}
-                  color={activeFilter === "spark" ? colors.white : "#ea580c"}
-                  style={{ marginRight: 4 }}
+                  size={12}
+                  color={activeFilter === "spark" ? "#ffffff" : "#ea580c"}
+                  style={{ marginRight: 3 }}
                 />
                 <Text
                   style={[
-                    styles.filterChipText,
-                    activeFilter === "spark" && styles.filterChipTextActive,
+                    styles.filterTabText,
+                    activeFilter === "spark" && styles.filterTabTextActive,
                   ]}
                 >
-                  เคมีตรงกัน Spark ({sparkVisitorsCount})
+                  เคมีตรงกัน ({sparkVisitorsCount})
                 </Text>
               </TouchableOpacity>
             </View>
@@ -435,7 +427,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
             {filteredVisitors.length === 0 ? (
               <View style={styles.emptyCard}>
                 <View style={styles.emptyIconBox}>
-                  <Ionicons name="telescope-outline" size={36} color={colors.ink} />
+                  <Ionicons name="telescope-outline" size={32} color="#64748b" />
                 </View>
                 <Text style={styles.emptyTitle}>
                   {activeFilter === "spark"
@@ -457,190 +449,126 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
                     <TouchableOpacity
                       key={visitor.visitorId || index}
                       style={[
-                        styles.visitorCard,
-                        isSpark && canView && styles.visitorCardSpark,
-                        !canView && styles.visitorCardBlurred,
+                        styles.visitorRowCard,
+                        isSpark && canView && styles.visitorRowCardSpark,
+                        !canView && styles.visitorRowCardLocked,
                       ]}
-                      activeOpacity={0.88}
+                      activeOpacity={0.82}
                       onPress={() => handleOpenVisitor(visitor)}
                     >
-                      {/* Top Row: Avatar + Info + Match Badge */}
-                      <View style={styles.cardTopRow}>
-                        {/* Avatar Box */}
-                        <View style={styles.avatarBox}>
-                          {canView && visitor.visitorImage ? (
-                            <Image
-                              source={{ uri: visitor.visitorImage }}
-                              style={styles.visitorAvatar}
-                            />
-                          ) : canView ? (
-                            <View style={styles.visitorAvatarInitial}>
-                              <Text style={styles.visitorAvatarInitialText}>
-                                {(visitor.visitorName || "U").charAt(0).toUpperCase()}
-                              </Text>
-                            </View>
-                          ) : (
-                            <View style={styles.teaserAvatar}>
-                              <Ionicons name="lock-closed" size={18} color={colors.ink} />
-                            </View>
-                          )}
-                          {isSpark && (
-                            <View style={styles.flameAvatarBadge}>
-                              <Ionicons name="flame" size={11} color="#ffffff" />
-                            </View>
-                          )}
-                        </View>
-
-                        {/* Info Box */}
-                        <View style={styles.visitorInfo}>
-                          {canView ? (
-                            <>
-                              <View style={styles.nameRow}>
-                                <Text style={styles.visitorName} numberOfLines={1}>
-                                  {visitor.visitorName}
-                                </Text>
-                                {isSpark && (
-                                  <View style={styles.sparkBadgePill}>
-                                    <Text style={styles.sparkBadgePillText}>เคมีตรงกัน</Text>
-                                  </View>
-                                )}
-                              </View>
-                              <View style={styles.facultyPill}>
-                                <Ionicons
-                                  name="school-outline"
-                                  size={12}
-                                  color={colors.ink}
-                                  style={{ marginRight: 4 }}
-                                />
-                                <Text style={styles.facultyPillText}>
-                                  {visitor.visitorFaculty || "คณะวิทยาศาสตร์"}
-                                </Text>
-                              </View>
-                            </>
-                          ) : (
-                            <>
-                              <View style={styles.teaserNameRow}>
-                                <Ionicons name="lock-closed" size={12} color={colors.mutedForeground} style={{ marginRight: 4 }} />
-                                <Text style={styles.teaserNameText} numberOfLines={1}>
-                                  เพื่อนจาก{visitor.visitorFaculty || "ต่างคณะ"}
-                                </Text>
-                              </View>
-                              <View style={styles.facultyPill}>
-                                <Text style={styles.facultyPillText}>
-                                  แอบส่องเมื่อ {formatTimeAgo(visitor.visitedAt)}
-                                </Text>
-                              </View>
-                            </>
-                          )}
-                        </View>
-
-                        {/* Match & Time Column */}
-                        <View style={styles.matchColumn}>
-                          <View
-                            style={[
-                              styles.matchPill,
-                              isSpark ? styles.matchPillSpark : styles.matchPillNormal,
-                            ]}
-                          >
-                            <Ionicons
-                              name={isSpark ? "flame" : "heart"}
-                              size={12}
-                              color={isSpark ? "#ea580c" : "#e11d48"}
-                              style={{ marginRight: 3 }}
-                            />
-                            <Text
-                              style={[
-                                styles.matchPillText,
-                                isSpark && styles.matchPillTextSpark,
-                              ]}
-                            >
-                              {visitor.matchPercentage}%
+                      {/* Left: Avatar */}
+                      <View style={styles.avatarWrapper}>
+                        {canView && visitor.visitorImage ? (
+                          <Image
+                            source={{ uri: visitor.visitorImage }}
+                            style={styles.avatarImg}
+                          />
+                        ) : canView ? (
+                          <View style={styles.avatarFallback}>
+                            <Text style={styles.avatarFallbackText}>
+                              {(visitor.visitorName || "U").charAt(0).toUpperCase()}
                             </Text>
                           </View>
-                          {canView && (
-                            <Text style={styles.visitorTime}>
-                              {formatTimeAgo(visitor.visitedAt)}
-                            </Text>
-                          )}
-                        </View>
-                      </View>
-
-                      {/* Middle Row: Shared Mind-Insights */}
-                      <View style={styles.mindInsightRow}>
-                        {canView ? (
-                          <>
-                            <Text style={styles.mindInsightLabel}>จุดร่วมที่ตอบตรงกัน:</Text>
-                            <View style={styles.insightsList}>
-                              {(visitor.sharedInsights || []).map((ins, i) => (
-                                <View
-                                  key={i}
-                                  style={[
-                                    styles.insightChip,
-                                    { backgroundColor: ins.color || "#fef08a" },
-                                  ]}
-                                >
-                                  <Ionicons
-                                    name={ins.icon || "sparkles"}
-                                    size={12}
-                                    color={colors.ink}
-                                    style={{ marginRight: 4 }}
-                                  />
-                                  <Text style={styles.insightChipText}>{ins.tag}</Text>
-                                </View>
-                              ))}
-                            </View>
-                          </>
                         ) : (
-                          <View style={styles.freeInsightTeaser}>
-                            <Ionicons name="sparkles" size={13} color="#b45309" style={{ marginRight: 6 }} />
-                            <Text style={styles.freeInsightTeaserText}>
-                              ตอบคำถามควิซตรงกันในหมวดไลฟ์สไตล์ (ล็อก)
-                            </Text>
+                          <View style={styles.avatarLocked}>
+                            <Ionicons name="lock-closed" size={16} color="#94a3b8" />
+                          </View>
+                        )}
+                        {isSpark && (
+                          <View style={styles.flameMiniBadge}>
+                            <Ionicons name="flame" size={10} color="#ffffff" />
                           </View>
                         )}
                       </View>
 
-                      {/* Bottom Action Row */}
-                      {canView ? (
-                        <View style={styles.cardActionsRow}>
-                          <TouchableOpacity
-                            style={[
-                              styles.waveBtn,
-                              isWaved && styles.waveBtnActive,
-                            ]}
-                            activeOpacity={0.82}
-                            onPress={() => handleQuickWave(visitor)}
-                          >
-                            <Ionicons
-                              name={isWaved ? "checkmark-circle" : "hand-right-outline"}
-                              size={14}
-                              color={colors.ink}
-                              style={{ marginRight: 6 }}
-                            />
-                            <Text style={styles.waveBtnText}>
-                              {isWaved ? "ทักแล้ว (ดูหัวข้อชวนคุย)" : "ทักทายด้วย Mind-Insight"}
-                            </Text>
-                          </TouchableOpacity>
-
-                          <TouchableOpacity
-                            style={styles.chatMiniBtn}
-                            activeOpacity={0.82}
-                            onPress={() => handleOpenChat(visitor)}
-                          >
-                            <Ionicons name="chatbubble-ellipses-outline" size={14} color={colors.ink} style={{ marginRight: 4 }} />
-                            <Text style={styles.chatMiniBtnText}>เปิดแชท</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ) : (
-                        <View style={styles.teaserCardFooter}>
-                          <Ionicons name="key-outline" size={13} color="#0284c7" style={{ marginRight: 6 }} />
-                          <Text style={styles.teaserCardFooterText}>
-                            {(peekPasses || 0) > 0
-                              ? `แตะเพื่อใช้ตั๋วส่องโปรไฟล์ (เหลือ ${peekPasses} ใบ)`
-                              : "แตะเพื่อปลดล็อกดูตัวจริงและจุดเชื่อมโยง"}
+                      {/* Center: Info + Mini Insight Icons */}
+                      <View style={styles.visitorCenterCol}>
+                        <View style={styles.nameLine}>
+                          <Text style={styles.visitorNameText} numberOfLines={1}>
+                            {canView ? visitor.visitorName : `เพื่อนจาก${visitor.visitorFaculty || "ต่างคณะ"}`}
                           </Text>
+                          <View style={[styles.matchTag, isSpark ? styles.matchTagSpark : styles.matchTagNormal]}>
+                            {isSpark && <Ionicons name="flame" size={9} color="#ea580c" style={{ marginRight: 2 }} />}
+                            <Text style={[styles.matchTagText, isSpark && styles.matchTagTextSpark]}>
+                              {visitor.matchPercentage}%
+                            </Text>
+                          </View>
                         </View>
-                      )}
+
+                        <Text style={styles.visitorMetaText} numberOfLines={1}>
+                          {canView
+                            ? `${visitor.visitorFaculty || "คณะวิทยาศาสตร์"} • ${formatTimeAgo(visitor.visitedAt)}`
+                            : `แอบส่องเมื่อ ${formatTimeAgo(visitor.visitedAt)}`}
+                        </Text>
+
+                        {/* TikTok style small icons */}
+                        <View style={styles.miniInsightsRow}>
+                          {canView ? (
+                            (visitor.sharedInsights || []).slice(0, 2).map((ins, i) => (
+                              <View key={i} style={styles.miniInsightBadge}>
+                                <Ionicons
+                                  name={ins.icon || "sparkles-outline"}
+                                  size={11}
+                                  color="#475569"
+                                  style={{ marginRight: 3 }}
+                                />
+                                <Text style={styles.miniInsightText}>{getShortInsightName(ins.tag)}</Text>
+                              </View>
+                            ))
+                          ) : (
+                            <View style={styles.miniInsightBadgeLocked}>
+                              <Ionicons name="lock-closed" size={10} color="#94a3b8" style={{ marginRight: 3 }} />
+                              <Text style={styles.miniInsightTextLocked}>ควิซตรงกัน</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+
+                      {/* Right: Actions */}
+                      <View style={styles.actionColRight}>
+                        {canView ? (
+                          <View style={styles.actionButtonsCluster}>
+                            <TouchableOpacity
+                              style={[
+                                styles.waveSmallBtn,
+                                isWaved && styles.waveSmallBtnActive,
+                              ]}
+                              activeOpacity={0.8}
+                              onPress={() => handleQuickWave(visitor)}
+                            >
+                              <Ionicons
+                                name={isWaved ? "checkmark" : "hand-right-outline"}
+                                size={12}
+                                color={isWaved ? "#059669" : "#0f172a"}
+                                style={{ marginRight: 3 }}
+                              />
+                              <Text
+                                style={[
+                                  styles.waveSmallBtnText,
+                                  isWaved && styles.waveSmallBtnTextActive,
+                                ]}
+                              >
+                                {isWaved ? "ทักแล้ว" : "ทักทาย"}
+                              </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              style={styles.chatIconSmallBtn}
+                              activeOpacity={0.8}
+                              onPress={() => handleOpenChat(visitor)}
+                            >
+                              <Ionicons name="chatbubble-ellipses-outline" size={14} color="#0f172a" />
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <View style={styles.unlockPillBtn}>
+                            <Ionicons name="key-outline" size={12} color="#0284c7" style={{ marginRight: 3 }} />
+                            <Text style={styles.unlockPillBtnText}>
+                              {(peekPasses || 0) > 0 ? "ใช้ตั๋ว" : "ดู"}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                     </TouchableOpacity>
                   );
                 })}
@@ -652,23 +580,23 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
               <View style={styles.teaserLockBox}>
                 <View style={styles.teaserLockHeader}>
                   <View style={styles.teaserLockIconCircle}>
-                    <Ionicons name="sparkles" size={20} color="#0284c7" />
+                    <MaterialCommunityIcons name="chart-bubble" size={18} color="#0284c7" />
                   </View>
                   <Text style={styles.teaserLockTitle}>
-                    อยากรู้ว่าใครที่เคมีตรงกับคุณกำลังแอบส่องอยู่?
+                    อยากรู้ว่าใครที่เคมีตรงกันแอบส่องอยู่?
                   </Text>
                 </View>
                 <Text style={styles.teaserLockSubtitle}>
-                  ปลดล็อกสิทธิ์ผู้ใช้ฟองสบู่ เพื่อดูรูปจริง ชื่อ คณะ และจุดร่วมที่ตอบตรงกันทั้งหมด พร้อมส่งข้อความทักทายได้ทันที
+                  ปลดล็อกสิทธิ์ผู้ใช้ฟองสบู่เพื่อดูรูปจริง ชื่อ คณะ และจุดร่วมควิซที่ตอบตรงกันทั้งหมด พร้อมส่งข้อความทักทายได้ทันที
                 </Text>
                 <TouchableOpacity
                   style={styles.unlockBtn}
-                  activeOpacity={0.88}
+                  activeOpacity={0.85}
                   onPress={() => setPaywallVisible(true)}
                 >
-                  <MaterialCommunityIcons name="chart-bubble" size={18} color={colors.ink} style={{ marginRight: 6 }} />
+                  <Ionicons name="sparkles" size={15} color="#ffffff" style={{ marginRight: 6 }} />
                   <Text style={styles.unlockBtnText}>
-                    ปลดล็อกสิทธิ์ผู้ใช้ฟองสบู่ (ทดลองฟรี 7 วัน)
+                    ทดลองสิทธิ์ผู้ใช้ฟองสบู่ฟรี 7 วัน
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -819,179 +747,113 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: "#f8fafc",
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: colors.darkBorder,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
     backgroundColor: "#ffffff",
   },
-  closeBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    backgroundColor: "#f1f5f9",
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    ...shadows.neo,
   },
   headerTitleBox: {
+    flex: 1,
     alignItems: "center",
-  },
-  eyebrowText: {
-    fontSize: 10,
-    fontWeight: "900",
-    color: colors.primary,
-    letterSpacing: 1,
   },
   mainTitleText: {
     fontSize: 16,
-    fontWeight: "900",
-    color: colors.ink,
+    fontWeight: "700",
+    color: "#0f172a",
   },
   statusPill: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    borderWidth: 1,
   },
   statusPillBubble: {
     backgroundColor: "#e0f2fe",
-    borderColor: "#0284c7",
+    borderColor: "#bae6fd",
   },
   statusPillBubbleText: {
-    fontSize: 11,
-    fontWeight: "900",
+    fontSize: 10.5,
+    fontWeight: "700",
     color: "#0284c7",
   },
   statusPillFree: {
     backgroundColor: "#f1f5f9",
-    borderColor: "#cbd5e1",
+    borderColor: "#e2e8f0",
   },
   statusPillFreeText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: colors.mutedForeground,
+    fontSize: 10.5,
+    fontWeight: "600",
+    color: "#64748b",
   },
   container: {
     flex: 1,
     backgroundColor: "#f8fafc",
   },
   scrollContent: {
-    padding: 16,
+    padding: 14,
     paddingBottom: 40,
   },
-  metricGrid: {
+  statsSummaryBar: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: 16,
-  },
-  metricCard: {
-    flex: 1,
+    alignItems: "center",
     backgroundColor: "#ffffff",
-    borderWidth: 2,
-    borderColor: colors.darkBorder,
-    borderRadius: 14,
-    padding: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    ...shadows.neo,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    marginBottom: 12,
   },
-  metricIconCircleBlue: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
-    backgroundColor: "#e0f2fe",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
-  },
-  metricIconCircleCoral: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
-    backgroundColor: "#ffedd5",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
-  },
-  metricContent: {
+  statSummaryItem: {
     flex: 1,
+    alignItems: "center",
   },
-  metricNumber: {
-    fontSize: 17,
-    fontWeight: "900",
-    color: colors.ink,
-    marginBottom: 2,
+  statSummaryNumber: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: "#0f172a",
+    marginBottom: 1,
   },
-  metricLabel: {
+  statSummaryLabel: {
     fontSize: 10.5,
-    fontWeight: "700",
-    color: colors.mutedForeground,
-    lineHeight: 14,
+    fontWeight: "600",
+    color: "#64748b",
   },
-  peekPassBanner: {
+  sparkStatNumRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#eff6ff",
-    borderWidth: 2,
-    borderColor: "#93c5fd",
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 16,
-    ...shadows.neo,
   },
-  peekPassIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: "#dbeafe",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
+  statSummaryDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: "#f1f5f9",
+    marginHorizontal: 8,
   },
-  peekPassTextCol: {
-    flex: 1,
-  },
-  peekPassTitle: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: colors.ink,
-    marginBottom: 2,
-  },
-  peekPassSubtitle: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: colors.mutedForeground,
-    lineHeight: 15,
-  },
-  incognitoBanner: {
+  incognitoRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: "#ffffff",
-    borderWidth: 2,
-    borderColor: colors.darkBorder,
-    borderRadius: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
     padding: 12,
-    marginBottom: 16,
-    ...shadows.neo,
+    marginBottom: 12,
   },
   incognitoLeft: {
     flexDirection: "row",
@@ -999,527 +861,443 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 10,
   },
-  incognitoIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: "#e0f2fe",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
+  incognitoIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#f1f5f9",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 10,
   },
-  incognitoTextBox: {
+  incognitoTextGroup: {
     flex: 1,
   },
   incognitoTitle: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: colors.ink,
-    marginBottom: 2,
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: "#0f172a",
+    marginBottom: 1,
   },
-  incognitoDesc: {
+  incognitoSubtitle: {
     fontSize: 10.5,
-    color: colors.mutedForeground,
+    color: "#64748b",
     lineHeight: 14,
   },
-  incognitoToggleBtn: {
-    flexDirection: "row",
-    alignItems: "center",
+  incognitoSwitchPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
     backgroundColor: "#f1f5f9",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
   },
-  incognitoToggleBtnActive: {
-    backgroundColor: "#bbf44a",
+  incognitoSwitchPillActive: {
+    backgroundColor: "#e0f2fe",
+    borderColor: "#7dd3fc",
   },
-  incognitoToggleBtnText: {
+  incognitoSwitchText: {
     fontSize: 11,
-    fontWeight: "900",
-    color: colors.ink,
+    fontWeight: "700",
+    color: "#64748b",
   },
-  incognitoLockBtn: {
+  incognitoSwitchTextActive: {
+    color: "#0284c7",
+  },
+  incognitoLockPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fef08a",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: "#f1f5f9",
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
   },
-  incognitoLockBtnText: {
+  incognitoLockText: {
     fontSize: 11,
-    fontWeight: "900",
-    color: colors.ink,
+    fontWeight: "700",
+    color: "#64748b",
   },
-  sparkActiveBanner: {
+  sparkBannerSoft: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff1f2",
-    borderWidth: 2,
-    borderColor: "#e11d48",
-    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#fecdd3",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginBottom: 12,
+  },
+  sparkBannerIconBox: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#ffe4e6",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  sparkBannerText: {
+    fontSize: 11.5,
+    color: "#9f1239",
+    flex: 1,
+    lineHeight: 16,
+    fontWeight: "500",
+  },
+  sparkTeaserBannerSoft: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff1f2",
+    borderWidth: 1,
+    borderColor: "#fecdd3",
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    marginBottom: 16,
-    ...shadows.neo,
+    marginBottom: 12,
   },
-  sparkFlameBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    backgroundColor: "#e11d48",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
-  },
-  sparkActiveText: {
-    fontSize: 12,
-    color: colors.ink,
+  sparkTeaserTextGroup: {
     flex: 1,
-    lineHeight: 17,
+    marginRight: 8,
   },
-  sparkTeaserBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff1f2",
-    borderWidth: 2,
-    borderColor: "#e11d48",
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 16,
-    ...shadows.neo,
+  sparkTeaserTitle: {
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: "#9f1239",
+    marginBottom: 1,
   },
-  sparkFlameCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: "#e11d48",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
+  sparkTeaserSub: {
+    fontSize: 10.5,
+    color: "#be123c",
   },
-  sparkTextBox: {
-    flex: 1,
-  },
-  sparkHeaderRow: {
-    marginBottom: 2,
-  },
-  sparkEyebrow: {
-    fontSize: 10,
-    fontWeight: "900",
-    color: "#e11d48",
-    letterSpacing: 0.5,
-  },
-  sparkTitle: {
-    fontSize: 13.5,
-    fontWeight: "900",
-    color: colors.ink,
-    marginBottom: 2,
-  },
-  sparkSubtitle: {
-    fontSize: 11,
-    color: colors.mutedForeground,
-  },
-  filterRow: {
+  filterTabsRow: {
     flexDirection: "row",
     gap: 8,
-    marginBottom: 14,
+    marginBottom: 12,
   },
-  filterChip: {
+  filterTabPill: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#ffffff",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 16,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 5,
   },
-  filterChipActive: {
-    backgroundColor: colors.ink,
+  filterTabPillActive: {
+    backgroundColor: "#0f172a",
+    borderColor: "#0f172a",
   },
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: colors.ink,
+  filterTabText: {
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "#64748b",
   },
-  filterChipTextActive: {
-    color: colors.white,
+  filterTabTextActive: {
+    color: "#ffffff",
+    fontWeight: "700",
   },
   emptyCard: {
     backgroundColor: "#ffffff",
-    borderWidth: 2,
-    borderColor: colors.darkBorder,
     borderRadius: 14,
-    padding: 30,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    padding: 24,
     alignItems: "center",
     justifyContent: "center",
-    marginVertical: 10,
-    ...shadows.neo,
+    marginVertical: 12,
   },
   emptyIconBox: {
-    width: 60,
-    height: 60,
-    borderRadius: 14,
-    backgroundColor: "#f1f5f9",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#f8fafc",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   emptyTitle: {
-    fontSize: 15,
-    fontWeight: "900",
-    color: colors.ink,
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#0f172a",
     marginBottom: 4,
     textAlign: "center",
   },
   emptyDesc: {
-    fontSize: 12,
-    color: colors.mutedForeground,
+    fontSize: 11.5,
+    color: "#64748b",
     textAlign: "center",
-    lineHeight: 18,
-    paddingHorizontal: 16,
+    lineHeight: 16,
+    paddingHorizontal: 12,
   },
   visitorsList: {
-    gap: 12,
+    gap: 8,
   },
-  visitorCard: {
-    backgroundColor: "#ffffff",
-    borderWidth: 2,
-    borderColor: colors.darkBorder,
-    borderRadius: 14,
-    padding: 14,
-    ...shadows.neo,
-  },
-  visitorCardSpark: {
-    backgroundColor: "#fffdf9",
-    borderColor: "#e11d48",
-  },
-  visitorCardBlurred: {
-    backgroundColor: "#fafafc",
-  },
-  cardTopRow: {
+  visitorRowCard: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
-  avatarBox: {
+  visitorRowCardSpark: {
+    backgroundColor: "#ffffff",
+    borderColor: "#fecdd3",
+  },
+  visitorRowCardLocked: {
+    backgroundColor: "#fafafa",
+    borderColor: "#f1f5f9",
+  },
+  avatarWrapper: {
     position: "relative",
     marginRight: 10,
   },
-  visitorAvatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
+  avatarImg: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
-  visitorAvatarInitial: {
-    width: 46,
-    height: 46,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    backgroundColor: "#fef08a",
+  avatarFallback: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#f1f5f9",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
-  visitorAvatarInitialText: {
-    fontSize: 17,
-    fontWeight: "900",
-    color: colors.ink,
+  avatarFallbackText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#0f172a",
   },
-  teaserAvatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    backgroundColor: "#e2e8f0",
+  avatarLocked: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#f1f5f9",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
   },
-  flameAvatarBadge: {
+  flameMiniBadge: {
     position: "absolute",
-    bottom: -4,
-    right: -4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    bottom: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: "#ea580c",
     borderWidth: 1.5,
-    borderColor: colors.white,
+    borderColor: "#ffffff",
     alignItems: "center",
     justifyContent: "center",
   },
-  visitorInfo: {
+  visitorCenterCol: {
     flex: 1,
+    marginRight: 8,
+    justifyContent: "center",
   },
-  nameRow: {
+  nameLine: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 2,
   },
-  visitorName: {
-    fontSize: 14,
-    fontWeight: "900",
-    color: colors.ink,
-    marginRight: 6,
+  visitorNameText: {
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: "#0f172a",
+    maxWidth: 140,
   },
-  sparkBadgePill: {
-    backgroundColor: "#fff1f2",
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "#e11d48",
-  },
-  sparkBadgePillText: {
-    fontSize: 9,
-    fontWeight: "900",
-    color: "#e11d48",
-  },
-  facultyPill: {
+  matchTag: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 6,
+    marginLeft: 6,
+  },
+  matchTagNormal: {
     backgroundColor: "#f1f5f9",
+  },
+  matchTagSpark: {
+    backgroundColor: "#ffedd5",
+  },
+  matchTagText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#64748b",
+  },
+  matchTagTextSpark: {
+    color: "#ea580c",
+  },
+  visitorMetaText: {
+    fontSize: 11,
+    color: "#64748b",
+    marginBottom: 4,
+  },
+  miniInsightsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+  },
+  miniInsightBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
     borderWidth: 1,
     borderColor: "#e2e8f0",
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    marginTop: 2,
   },
-  facultyPillText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: colors.mutedForeground,
-  },
-  teaserNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 2,
-  },
-  teaserNameText: {
-    fontSize: 13,
-    fontWeight: "800",
-    color: colors.ink,
-  },
-  matchColumn: {
-    alignItems: "flex-end",
-  },
-  matchPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    marginBottom: 4,
-  },
-  matchPillNormal: {
-    backgroundColor: "#fce7f3",
-  },
-  matchPillSpark: {
-    backgroundColor: "#ffedd5",
-    borderColor: "#ea580c",
-  },
-  matchPillText: {
-    fontSize: 11,
-    fontWeight: "900",
-    color: colors.ink,
-  },
-  matchPillTextSpark: {
-    color: "#ea580c",
-  },
-  visitorTime: {
+  miniInsightText: {
     fontSize: 10,
     fontWeight: "600",
-    color: colors.mutedForeground,
+    color: "#475569",
   },
-  mindInsightRow: {
-    backgroundColor: "#f8fafc",
-    borderWidth: 1.5,
-    borderColor: "#e2e8f0",
-    borderRadius: 10,
-    padding: 8,
-    marginTop: 2,
-  },
-  mindInsightLabel: {
-    fontSize: 10,
-    fontWeight: "800",
-    color: colors.mutedForeground,
-    marginBottom: 6,
-  },
-  insightsList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  insightChip: {
+  miniInsightBadgeLocked: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "#f8fafc",
     borderWidth: 1,
-    borderColor: colors.darkBorder,
+    borderColor: "#e2e8f0",
     borderRadius: 6,
     paddingHorizontal: 6,
-    paddingVertical: 2.5,
+    paddingVertical: 2,
   },
-  insightChipText: {
+  miniInsightTextLocked: {
     fontSize: 10,
-    fontWeight: "800",
-    color: colors.ink,
-  },
-  freeInsightTeaser: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  freeInsightTeaserText: {
-    fontSize: 11,
     fontWeight: "600",
-    color: "#b45309",
+    color: "#94a3b8",
   },
-  cardActionsRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 10,
+  actionColRight: {
+    alignItems: "flex-end",
+    justifyContent: "center",
   },
-  waveBtn: {
-    flex: 1,
+  actionButtonsCluster: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#bbf44a",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-    ...shadows.neo,
+    gap: 6,
   },
-  waveBtnActive: {
-    backgroundColor: "#86efac",
-  },
-  waveBtnText: {
-    fontSize: 11.5,
-    fontWeight: "900",
-    color: colors.ink,
-  },
-  chatMiniBtn: {
+  waveSmallBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#ffffff",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    ...shadows.neo,
+    backgroundColor: "#0f172a",
+    borderRadius: 14,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
   },
-  chatMiniBtnText: {
-    fontSize: 11.5,
-    fontWeight: "900",
-    color: colors.ink,
+  waveSmallBtnActive: {
+    backgroundColor: "#ecfdf5",
+    borderWidth: 1,
+    borderColor: "#a7f3d0",
   },
-  teaserCardFooter: {
-    flexDirection: "row",
+  waveSmallBtnText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#ffffff",
+  },
+  waveSmallBtnTextActive: {
+    color: "#059669",
+  },
+  chatIconSmallBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f0f9ff",
+  },
+  unlockPillBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#e0f2fe",
     borderWidth: 1,
     borderColor: "#bae6fd",
-    borderRadius: 6,
-    paddingVertical: 6,
-    marginTop: 8,
+    borderRadius: 12,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
   },
-  teaserCardFooterText: {
+  unlockPillBtnText: {
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "700",
     color: "#0284c7",
   },
   teaserLockBox: {
     backgroundColor: "#ffffff",
-    borderWidth: 2,
-    borderColor: colors.darkBorder,
-    borderRadius: 16,
-    padding: 18,
-    marginTop: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    padding: 16,
+    marginTop: 14,
     marginBottom: 10,
-    ...shadows.neo,
   },
   teaserLockHeader: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   teaserLockIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: "#e0f2fe",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 10,
+    marginRight: 8,
   },
   teaserLockTitle: {
-    fontSize: 14.5,
-    fontWeight: "900",
-    color: colors.ink,
+    fontSize: 13.5,
+    fontWeight: "700",
+    color: "#0f172a",
     flex: 1,
   },
   teaserLockSubtitle: {
-    fontSize: 12,
-    color: colors.mutedForeground,
-    lineHeight: 18,
-    marginBottom: 14,
+    fontSize: 11.5,
+    color: "#64748b",
+    lineHeight: 16,
+    marginBottom: 12,
   },
   unlockBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#bbf44a",
-    borderWidth: 2,
-    borderColor: colors.darkBorder,
+    backgroundColor: "#0284c7",
     borderRadius: 10,
-    paddingVertical: 12,
-    ...shadows.neo,
+    paddingVertical: 10,
   },
   unlockBtnText: {
-    fontSize: 13.5,
-    fontWeight: "900",
-    color: colors.ink,
+    fontSize: 12.5,
+    fontWeight: "700",
+    color: "#ffffff",
   },
   devBar: {
-    backgroundColor: "#f1f5f9",
-    borderWidth: 1.5,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: colors.darkBorder,
+    borderColor: "#cbd5e1",
     borderRadius: 10,
     padding: 10,
-    marginTop: 10,
+    marginTop: 8,
   },
   devBarTitle: {
     fontSize: 10,
-    fontWeight: "900",
-    color: colors.mutedForeground,
+    fontWeight: "700",
+    color: "#94a3b8",
     marginBottom: 6,
     textAlign: "center",
-    letterSpacing: 0.5,
   },
   devBtnRow: {
     flexDirection: "row",
@@ -1528,20 +1306,20 @@ const styles = StyleSheet.create({
   devBtn: {
     flex: 1,
     backgroundColor: "#ffffff",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
     borderRadius: 6,
     paddingVertical: 6,
     alignItems: "center",
   },
   devBtnText: {
     fontSize: 10.5,
-    fontWeight: "800",
-    color: colors.ink,
+    fontWeight: "600",
+    color: "#475569",
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    backgroundColor: "rgba(0,0,0,0.45)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
@@ -1550,53 +1328,56 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: "#ffffff",
     borderRadius: 16,
-    borderWidth: 2.5,
-    borderColor: colors.darkBorder,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
     padding: 20,
-    ...shadows.neo,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
   },
   icebreakerHeader: {
     alignItems: "center",
     marginBottom: 14,
   },
   waveIconCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 14,
-    backgroundColor: "#bbf44a",
-    borderWidth: 2,
-    borderColor: colors.darkBorder,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#f0fdf4",
+    borderWidth: 1,
+    borderColor: "#bbf7d0",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 10,
-    ...shadows.neo,
   },
   icebreakerTitle: {
-    fontSize: 17,
-    fontWeight: "900",
-    color: colors.ink,
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#0f172a",
     marginBottom: 4,
   },
   icebreakerSub: {
     fontSize: 12,
-    fontWeight: "600",
-    color: colors.mutedForeground,
+    fontWeight: "500",
+    color: "#64748b",
     textAlign: "center",
-    lineHeight: 17,
+    lineHeight: 16,
   },
   quoteBubble: {
-    backgroundColor: "#f0fdf4",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
     borderRadius: 12,
     padding: 14,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   quoteText: {
-    fontSize: 13.5,
-    fontWeight: "700",
-    color: colors.ink,
-    lineHeight: 20,
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#334155",
+    lineHeight: 19,
     fontStyle: "italic",
   },
   directChatBtn: {
@@ -1604,50 +1385,46 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: colors.primary,
-    borderWidth: 2,
-    borderColor: colors.darkBorder,
     borderRadius: 10,
-    paddingVertical: 12,
+    paddingVertical: 11,
     marginBottom: 8,
-    ...shadows.neo,
   },
   directChatBtnText: {
-    fontSize: 13.5,
-    fontWeight: "900",
-    color: colors.white,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#ffffff",
   },
   copyStarterBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#bbf44a",
-    borderWidth: 2,
-    borderColor: colors.darkBorder,
+    backgroundColor: "#f1f5f9",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
     borderRadius: 10,
-    paddingVertical: 10,
+    paddingVertical: 9,
     marginBottom: 8,
-    ...shadows.neo,
   },
   copyStarterBtnText: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: colors.ink,
+    fontSize: 12.5,
+    fontWeight: "600",
+    color: "#0f172a",
   },
   viewProfileBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#f1f5f9",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
     borderRadius: 10,
-    paddingVertical: 10,
+    paddingVertical: 9,
     marginBottom: 8,
   },
   viewProfileBtnText: {
-    fontSize: 12.5,
-    fontWeight: "800",
-    color: colors.ink,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#475569",
   },
   closeIcebreakerBtn: {
     alignItems: "center",
@@ -1655,7 +1432,7 @@ const styles = StyleSheet.create({
   },
   closeIcebreakerBtnText: {
     fontSize: 12,
-    fontWeight: "700",
-    color: colors.mutedForeground,
+    fontWeight: "600",
+    color: "#94a3b8",
   },
 });
