@@ -1,5 +1,5 @@
 import "../lib/snackPolyfill";
-import React from "react";
+import React, { useState } from "react";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -12,6 +12,7 @@ import { useData } from "../context/DataContext";
 import { useFeed } from "../context/FeedContext";
 import { useCrossBubble } from "../context/CrossBubbleContext";
 import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
+import SplashScreen from "../components/SplashScreen";
 
 // Screens
 import SignInScreen from "../screens/SignInScreen";
@@ -130,11 +131,15 @@ export default function AppNavigator() {
   const { hasAcceptedPolicy, acceptPolicy, isLoadingData } = useData();
   const { isCrossBubbleMode } = useCrossBubble();
 
-  if (isLoading) {
+  const [splashFinished, setSplashFinished] = useState(false);
+
+  // แสดงหน้าจอโลโก้ (Splash Screen) ก่อนเข้าสู่แอปพลิเคชัน
+  if (!splashFinished) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <SplashScreen
+        isReady={!isLoading}
+        onFinish={() => setSplashFinished(true)}
+      />
     );
   }
 

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   StatusBar,
   ScrollView,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -66,12 +67,14 @@ export default function SignInScreen() {
       {/* Top Header */}
       <View style={styles.topHeader}>
         <View style={styles.logoRow}>
+          <Image
+            source={require("../assets/logo.png")}
+            style={styles.headerLogo}
+            resizeMode="contain"
+          />
           <Text style={styles.brandTitle}>
             Mind<Text style={styles.brandTitleAccent}>click</Text>
           </Text>
-          <View style={styles.brandBadge}>
-            <MaterialCommunityIcons name="cursor-default-click" size={15} color={colors.ink} />
-          </View>
         </View>
       </View>
 
@@ -82,6 +85,17 @@ export default function SignInScreen() {
         bounces={false}
       >
         <View style={styles.contentBox}>
+          {/* Brand Logo Hero */}
+          <View style={styles.heroLogoWrapper}>
+            <View style={styles.heroLogoBadge}>
+              <Image
+                source={require("../assets/logo.png")}
+                style={styles.heroLogoImage}
+                resizeMode="contain"
+              />
+            </View>
+          </View>
+
           {/* Headline */}
           <Text style={styles.headline}>
             เจอเพื่อนที่คลิก{"\n"}จากคำตอบที่ใช่
@@ -244,7 +258,11 @@ const styles = StyleSheet.create({
   logoRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 8,
+  },
+  headerLogo: {
+    width: 28,
+    height: 28,
   },
   brandTitle: {
     fontSize: 22,
@@ -255,13 +273,29 @@ const styles = StyleSheet.create({
   brandTitleAccent: {
     color: colors.primary,
   },
-  brandBadge: {
-    width: 24,
-    height: 24,
-    backgroundColor: "#bbf44a",
-    borderRadius: 6,
-    justifyContent: "center",
+  heroLogoWrapper: {
+    alignItems: "flex-start",
+    marginBottom: 16,
+  },
+  heroLogoBadge: {
+    width: 68,
+    height: 68,
+    borderRadius: 20,
+    backgroundColor: "#ffffff",
     alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    shadowColor: "#0f172a",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
+    padding: 8,
+  },
+  heroLogoImage: {
+    width: "100%",
+    height: "100%",
   },
   container: {
     flex: 1,
