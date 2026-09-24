@@ -17,7 +17,10 @@
       "adaptiveIcon": {
         "foregroundImage": "https://raw.githubusercontent.com/beeboy106/mindclick/assets/assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "https://raw.githubusercontent.com/beeboy106/mindclick/assets/assets/favicon.png"
@@ -36,6 +39,12 @@
         }
       ],
       "expo-notifications"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ddcc5c40-bcee-42d5-bedf-341e99623dc7"
+      }
+    },
+    "owner": "ibuff"
   }
 }
