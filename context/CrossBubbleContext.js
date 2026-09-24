@@ -4,6 +4,7 @@ import { useAuth } from "./AuthContext";
 import { useData } from "./DataContext";
 import { useFeed } from "./FeedContext";
 import { usePremium } from "./PremiumContext";
+import { evaluateAllQuizAnswers, AI_GAME_MASTER_EVENTS } from "../lib/geminiService";
 
 const CROSS_BUBBLE_STORAGE_KEY = "@mindclick_cross_bubble_active";
 const CROSS_BUBBLE_ALIAS_KEY = "@mindclick_cross_bubble_alias";
@@ -372,10 +373,12 @@ export function CrossBubbleProvider({ children }) {
   const [userVotedSkip, setUserVotedSkip] = useState(false);
   const [skipVotesCount, setSkipVotesCount] = useState(0);
 
-  // การตอบควิซ
+  // การตอบควิซและการประเมินผลด้วย AI (Google Gemini)
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [quizScore, setQuizScore] = useState(0);
   const [quizDetails, setQuizDetails] = useState([]);
+  const [isEvaluatingQuiz, setIsEvaluatingQuiz] = useState(false);
+  const [quizEvaluatedWithAi, setQuizEvaluatedWithAi] = useState(false);
 
   // การโหวตปิดห้อง
   const [userVotedClose, setUserVotedClose] = useState(false);
@@ -633,6 +636,9 @@ export function CrossBubbleProvider({ children }) {
     setCloseVotesCount(0);
     setQuizSubmitted(false);
     setQuizScore(0);
+    setQuizDetails([]);
+    setIsEvaluatingQuiz(false);
+    setQuizEvaluatedWithAi(false);
     setMatchedMemberIds([]);
     setLoungeMessages([]);
     updateMissionProgress("m_lounge", 1);
@@ -702,6 +708,22 @@ export function CrossBubbleProvider({ children }) {
       ]);
     }, 6000);
 
+    // AI Game Master Announcement ในสเตจ 1
+    setTimeout(() => {
+      const gmEvent = AI_GAME_MASTER_EVENTS.stage1[0];
+      setLoungeMessages((prev) => [
+        ...prev,
+        {
+          id: `ai_gm_s1_${Date.now()}`,
+          isAiGameMaster: true,
+          senderAlias: gmEvent.speaker,
+          senderIcon: "hardware-chip-outline",
+          text: `${gmEvent.title}: ${gmEvent.text}`,
+          createdAt: "19:04",
+        },
+      ]);
+    }, 8000);
+
     updateMissionProgress("m_lounge", 1);
   }, [updateMissionProgress]);
 
@@ -748,6 +770,22 @@ export function CrossBubbleProvider({ children }) {
         },
       ]);
     }, 5000);
+
+    // AI Game Master Announcement ในสเตจ 2
+    setTimeout(() => {
+      const gmEvent = AI_GAME_MASTER_EVENTS.stage2[0];
+      setLoungeMessages((prev) => [
+        ...prev,
+        {
+          id: `ai_gm_s2_${Date.now()}`,
+          isAiGameMaster: true,
+          senderAlias: gmEvent.speaker,
+          senderIcon: "hardware-chip-outline",
+          text: `${gmEvent.title}: ${gmEvent.text}`,
+          createdAt: "19:08",
+        },
+      ]);
+    }, 7000);
   }, [todayTopic.title]);
 
   const sendLoungeMessage = useCallback((text) => {
@@ -829,48 +867,29 @@ export function CrossBubbleProvider({ children }) {
     }, 2200);
   }, [loungeStage, startStage2, userVotedSkip]);
 
-  const submitQuizAnswers = useCallback((answers) => {
-    let score = 0;
-    const details = [];
+  const submitQuizAnswers = useCallback(async (answers) => {
+    setIsEvaluatingQuiz(true);
+    try {
+      const evaluationResult = await evaluateAllQuizAnswers(
+        answers,
+        SIMULATED_CLASSMATES
+      );
 
-    SIMULATED_CLASSMATES.forEach((member) => {
-      const userAns = answers[member.id] || {};
-      const actualRole = member.roleplay;
-      const actualItem = member.preAnswers.q1;
+      setQuizScore(evaluationResult.totalScore);
+      setQuizDetails(evaluationResult.details);
+      setQuizEvaluatedWithAi(evaluationResult.evaluatedWithAi);
+      setQuizSubmitted(true);
+      setLoungeStage("vote_close");
 
-      const guessedRoleMatch = actualRole.includes(userAns.roleplayGuess || "xxx");
-      const itemMatch = userAns.itemAnswer && userAns.itemAnswer.trim().length > 0;
-
-      let memberPoints = 0;
-      if (guessedRoleMatch) {
-        memberPoints += 25;
-        score += 25;
+      if (evaluationResult.totalScore >= 25) {
+        updateMissionProgress("m_quiz_guess", 1);
       }
-      if (itemMatch) {
-        memberPoints += 25;
-        score += 25;
-      }
-
-      details.push({
-        memberId: member.id,
-        memberAlias: member.alias,
-        actualRole,
-        actualItem,
-        userRoleGuess: userAns.roleplayGuess || "ไม่ได้ระบุ",
-        userItemAnswer: userAns.itemAnswer || "ไม่ได้ระบุ",
-        isRoleCorrect: guessedRoleMatch,
-        isItemCorrect: !!itemMatch,
-        points: memberPoints,
-      });
-    });
-
-    setQuizScore(score);
-    setQuizDetails(details);
-    setQuizSubmitted(true);
-    setLoungeStage("vote_close");
-
-    if (score >= 25) {
-      updateMissionProgress("m_quiz_guess", 1);
+    } catch (err) {
+      console.warn("Failed to evaluate quiz answers with AI:", err);
+      setQuizSubmitted(true);
+      setLoungeStage("vote_close");
+    } finally {
+      setIsEvaluatingQuiz(false);
     }
   }, [updateMissionProgress]);
 
@@ -951,6 +970,9 @@ export function CrossBubbleProvider({ children }) {
     setCloseVotesCount(0);
     setQuizSubmitted(false);
     setQuizScore(0);
+    setQuizDetails([]);
+    setIsEvaluatingQuiz(false);
+    setQuizEvaluatedWithAi(false);
     setMatchedMemberIds([]);
     setLoungeMessages([]);
     setTodayTopicIndex((prev) => (prev + 1) % DAILY_TOPICS.length);
@@ -1160,6 +1182,8 @@ export function CrossBubbleProvider({ children }) {
         quizSubmitted,
         quizScore,
         quizDetails,
+        isEvaluatingQuiz,
+        quizEvaluatedWithAi,
         userVotedClose,
         closeVotesCount,
         matchedMemberIds,

@@ -10,6 +10,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -31,6 +32,8 @@ export default function BlindLoungeScreen() {
     quizSubmitted,
     quizScore,
     quizDetails,
+    isEvaluatingQuiz,
+    quizEvaluatedWithAi,
     userVotedClose,
     closeVotesCount,
     matchedMemberIds,
@@ -101,6 +104,45 @@ export default function BlindLoungeScreen() {
     "ซีอีโอผู้เฉียบคม",
     "ประธานรุ่นไฟแรง",
   ];
+
+  const getAccuracyBadgeLabel = (level) => {
+    switch (level) {
+      case "EXCELLENT":
+        return "แม่นยำระดับยอดเยี่ยม";
+      case "GOOD":
+        return "ดีมาก";
+      case "PARTIAL":
+        return "ใกล้เคียง";
+      default:
+        return "ยังไม่ตรงเป้า";
+    }
+  };
+
+  const getAccuracyBadgeStyle = (level) => {
+    switch (level) {
+      case "EXCELLENT":
+        return { backgroundColor: "#dcfce7", borderColor: "#86efac" };
+      case "GOOD":
+        return { backgroundColor: "#e0f2fe", borderColor: "#7dd3fc" };
+      case "PARTIAL":
+        return { backgroundColor: "#fef3c7", borderColor: "#fde68a" };
+      default:
+        return { backgroundColor: "#f1f5f9", borderColor: "#e2e8f0" };
+    }
+  };
+
+  const getAccuracyBadgeTextColor = (level) => {
+    switch (level) {
+      case "EXCELLENT":
+        return "#15803d";
+      case "GOOD":
+        return "#0369a1";
+      case "PARTIAL":
+        return "#b45309";
+      default:
+        return "#64748b";
+    }
+  };
 
   // ====================================================
   // VIEW 1: COUNTDOWN / LOBBY (เวลาก่อน 19:00 น.)
@@ -432,6 +474,21 @@ export default function BlindLoungeScreen() {
           showsVerticalScrollIndicator={false}
         >
           {loungeMessages.map((msg) => {
+            if (msg.isAiGameMaster) {
+              return (
+                <View key={msg.id} style={styles.aiGmMsgCard}>
+                  <View style={styles.aiGmHeaderRow}>
+                    <View style={styles.aiGmIconBadge}>
+                      <Ionicons name="hardware-chip" size={13} color="#c7f65a" />
+                    </View>
+                    <Text style={styles.aiGmTitle}>{msg.senderAlias || "AI Game Master"}</Text>
+                    <Text style={styles.aiGmTime}>{msg.createdAt}</Text>
+                  </View>
+                  <Text style={styles.aiGmBodyText}>{msg.text}</Text>
+                </View>
+              );
+            }
+
             if (msg.isSystem) {
               return (
                 <View key={msg.id} style={styles.sysMsgContainer}>
@@ -498,6 +555,41 @@ export default function BlindLoungeScreen() {
   // VIEW 6: QUIZ VIEW (ตอบคำถามภารกิจและทายโรลเพลย์)
   // ====================================================
   if (loungeStage === "quiz") {
+    if (isEvaluatingQuiz) {
+      return (
+        <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
+          <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={true} />
+
+          <View style={styles.topHeader}>
+            <View style={styles.headerLeft}>
+              <Text style={styles.headerSubtitle}>ขั้นตอนที่ 3 จาก 3</Text>
+              <Text style={styles.headerTitle}>ประเมินผลการสืบสวน</Text>
+            </View>
+          </View>
+
+          <View style={styles.evaluatingContainer}>
+            <View style={styles.evaluatingIconCircle}>
+              <ActivityIndicator size="large" color="#17171c" />
+            </View>
+            <Text style={styles.evaluatingTitle}>AI กำลังประเมินตรรกะและเหตุผล</Text>
+            <Text style={styles.evaluatingSubtitle}>
+              Google Gemini AI กำลังวิเคราะห์คำตอบ ความสอดคล้องกับเบาะแส และตรรกะการสังเกตเพื่อนร่วมกลุ่มของคุณ...
+            </Text>
+
+            <View style={styles.evaluatingTipCard}>
+              <View style={styles.evaluatingTipHeader}>
+                <Ionicons name="hardware-chip-outline" size={16} color="#17171c" />
+                <Text style={styles.evaluatingTipTitle}>เกณฑ์การให้คะแนนด้วย AI</Text>
+              </View>
+              <Text style={styles.evaluatingTipText}>
+                ระบบเข้าใจภาษาพูด การพิมพ์ตกหล่น และการสะกดผิด โดยจะเน้นประเมินความเชื่อมโยงกับบทสนทนาในห้องแชทและความสมเหตุสมผลของข้อสังเกตเป็นหลัก
+              </Text>
+            </View>
+          </View>
+        </SafeAreaView>
+      );
+    }
+
     return (
       <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={true} />
@@ -505,7 +597,7 @@ export default function BlindLoungeScreen() {
         <View style={styles.topHeader}>
           <View style={styles.headerLeft}>
             <Text style={styles.headerSubtitle}>ขั้นตอนที่ 3 จาก 3</Text>
-            <Text style={styles.headerTitle}>แบบทดสอบภารกิจ</Text>
+            <Text style={styles.headerTitle}>แบบทดสอบภารกิจ (AI Evaluated)</Text>
           </View>
         </View>
 
@@ -515,9 +607,9 @@ export default function BlindLoungeScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.infoBanner}>
-            <Ionicons name="help-circle-outline" size={18} color="#17171c" />
+            <Ionicons name="hardware-chip-outline" size={18} color="#17171c" />
             <Text style={styles.infoBannerText}>
-              ตอบคำถามจากข้อมูลที่ได้ยินมาในสเตจแนะนำตัว และทายว่าเพื่อนแต่ละคนสวมบทบาทโรลเพลย์อะไร
+              ตอบคำถามจากข้อมูลที่ได้ยินมาในสเตจแนะนำตัว และทายว่าเพื่อนแต่ละคนสวมบทบาทอะไร ระบบจะใช้ AI (Google Gemini) ประเมินตรรกะและความแม่นยำของคุณ
             </Text>
           </View>
 
@@ -538,10 +630,10 @@ export default function BlindLoungeScreen() {
 
                 {/* Question 1: Item Answer */}
                 <Text style={styles.quizQuestionLabel}>
-                  1. เพื่อนคนนี้พกไอเท็มหรือตอบอะไรเกี่ยวกับหัวข้อ?
+                  1. เพื่อนคนนี้พกไอเท็มหรือมีความลับอะไรเกี่ยวกับหัวข้อ?
                 </Text>
                 <TextInput
-                  style={styles.quizInput}
+                  style={styles.quizMultiInput}
                   value={currentAns.itemAnswer || ""}
                   onChangeText={(val) =>
                     setQuizForm((prev) => ({
@@ -549,9 +641,15 @@ export default function BlindLoungeScreen() {
                       [member.id]: { ...prev[member.id], itemAnswer: val },
                     }))
                   }
-                  placeholder={`คำตอบของ ${member.alias}...`}
+                  placeholder={`พิมพ์สิ่งที่คุณจับสังเกตได้จาก ${member.alias} พร้อมเหตุผล เช่น พกยาทำแผล เพราะในแชทคอยถามเรื่องคนเจ็บ...`}
                   placeholderTextColor="#94a3b8"
+                  multiline={true}
+                  numberOfLines={3}
+                  textAlignVertical="top"
                 />
+                <Text style={styles.quizInputHint}>
+                  พิมพ์อธิบายสิ่งที่คุณจับสังเกตได้ ยิ่งมีเหตุผลเชื่อมโยงกับเบาะแส AI ยิ่งให้คะแนนสูง
+                </Text>
 
                 {/* Question 2: Roleplay Guess */}
                 <Text style={styles.quizQuestionLabel}>
@@ -597,8 +695,8 @@ export default function BlindLoungeScreen() {
             activeOpacity={0.85}
             onPress={handleQuizSubmit}
           >
-            <Text style={styles.primaryActionBtnText}>ส่งคำตอบและตรวจคะแนน</Text>
-            <Ionicons name="checkmark-done" size={18} color="#17171c" />
+            <Text style={styles.primaryActionBtnText}>ส่งคำตอบให้ AI ประเมินผล</Text>
+            <Ionicons name="sparkles-outline" size={18} color="#17171c" />
           </TouchableOpacity>
 
           <View style={{ height: 40 }} />
@@ -629,6 +727,12 @@ export default function BlindLoungeScreen() {
         >
           {/* Score Card */}
           <View style={styles.scoreCard}>
+            <View style={styles.aiScoreBadge}>
+              <Ionicons name="hardware-chip-outline" size={13} color="#c7f65a" />
+              <Text style={styles.aiScoreBadgeText}>
+                {quizEvaluatedWithAi ? "ประเมินโดย Google Gemini AI" : "ประเมินโดย Local Semantic AI"}
+              </Text>
+            </View>
             <Text style={styles.scoreCardPre}>คะแนนรวมของคุณ</Text>
             <Text style={styles.scoreValue}>{quizScore} / 200 PTS</Text>
             <Text style={styles.scoreDesc}>
@@ -639,19 +743,64 @@ export default function BlindLoungeScreen() {
           </View>
 
           {/* Details breakdown */}
-          <Text style={styles.sectionTitle}>ผลการตอบควิซเพื่อนในกลุ่ม</Text>
+          <Text style={styles.sectionTitle}>ผลการวิเคราะห์และประเมินคำตอบโดย AI</Text>
           {quizDetails.map((detail) => (
             <View key={detail.memberId} style={styles.quizDetailCard}>
               <View style={styles.detailHeader}>
-                <Text style={styles.detailAlias}>{detail.memberAlias}</Text>
-                <Text style={styles.detailPoints}>+{detail.points} PTS</Text>
+                <View style={styles.detailHeaderLeft}>
+                  <Text style={styles.detailAlias}>{detail.memberAlias}</Text>
+                  {detail.accuracyLevel && (
+                    <View style={[styles.accuracyBadge, getAccuracyBadgeStyle(detail.accuracyLevel)]}>
+                      <Text style={[styles.accuracyBadgeText, { color: getAccuracyBadgeTextColor(detail.accuracyLevel) }]}>
+                        {getAccuracyBadgeLabel(detail.accuracyLevel)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.detailPoints}>+{detail.points || 0} PTS</Text>
               </View>
-              <Text style={styles.detailLine}>
-                คำตอบจริง: {detail.actualItem}
-              </Text>
-              <Text style={styles.detailLine}>
-                บทบาทจริง: {detail.actualRole}
-              </Text>
+
+              <View style={styles.detailComparisonBox}>
+                <View style={styles.comparisonRow}>
+                  <Text style={styles.comparisonLabel}>คำตอบของคุณ:</Text>
+                  <Text style={styles.comparisonValueUser}>
+                    {detail.userItemAnswer || "ไม่ได้ระบุ"}
+                  </Text>
+                </View>
+                <View style={styles.comparisonRow}>
+                  <Text style={styles.comparisonLabel}>ข้อมูลจริง:</Text>
+                  <Text style={styles.comparisonValueActual}>
+                    {detail.actualItem}
+                  </Text>
+                </View>
+                <View style={styles.comparisonDivider} />
+                <View style={styles.comparisonRow}>
+                  <Text style={styles.comparisonLabel}>บทบาทที่ทาย:</Text>
+                  <Text style={styles.comparisonValueUser}>
+                    {detail.userRoleGuess || "ไม่ได้ระบุ"}
+                  </Text>
+                </View>
+                <View style={styles.comparisonRow}>
+                  <Text style={styles.comparisonLabel}>บทบาทจริง:</Text>
+                  <Text style={styles.comparisonValueActual}>
+                    {detail.actualRole}
+                  </Text>
+                </View>
+              </View>
+
+              {detail.reasoning ? (
+                <View style={styles.aiReasoningBox}>
+                  <Text style={styles.aiReasoningLabel}>การวิเคราะห์ตรรกะของ AI:</Text>
+                  <Text style={styles.aiReasoningText}>{detail.reasoning}</Text>
+                </View>
+              ) : null}
+
+              {detail.feedback ? (
+                <View style={styles.aiFeedbackBox}>
+                  <Text style={styles.aiFeedbackLabel}>คำแนะนำจาก AI:</Text>
+                  <Text style={styles.aiFeedbackText}>{detail.feedback}</Text>
+                </View>
+              ) : null}
             </View>
           ))}
 
@@ -1399,6 +1548,100 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  aiGmMsgCard: {
+    backgroundColor: "#17171c",
+    borderRadius: 14,
+    padding: 14,
+    marginVertical: 10,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: "#334155",
+  },
+  aiGmHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  aiGmIconBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "#27272a",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 8,
+  },
+  aiGmTitle: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#c7f65a",
+  },
+  aiGmTime: {
+    fontSize: 10,
+    color: "#94a3b8",
+  },
+  aiGmBodyText: {
+    fontSize: 12.5,
+    color: "#ffffff",
+    lineHeight: 18,
+  },
+  evaluatingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 40,
+  },
+  evaluatingIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+  },
+  evaluatingTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#17171c",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  evaluatingSubtitle: {
+    fontSize: 13,
+    color: "#64748b",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 28,
+  },
+  evaluatingTipCard: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    padding: 16,
+    width: "100%",
+  },
+  evaluatingTipHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 6,
+  },
+  evaluatingTipTitle: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#17171c",
+  },
+  evaluatingTipText: {
+    fontSize: 12,
+    color: "#64748b",
+    lineHeight: 18,
+  },
   quizCard: {
     backgroundColor: "#f8fafc",
     borderRadius: 14,
@@ -1450,6 +1693,24 @@ const styles = StyleSheet.create({
     color: "#17171c",
     marginBottom: 8,
   },
+  quizMultiInput: {
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    color: "#17171c",
+    minHeight: 76,
+    lineHeight: 18,
+  },
+  quizInputHint: {
+    fontSize: 11,
+    color: "#64748b",
+    marginTop: 4,
+    marginBottom: 10,
+  },
   roleplayPickerGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1484,6 +1745,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
+  aiScoreBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#27272a",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+    marginBottom: 12,
+  },
+  aiScoreBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#c7f65a",
+  },
   scoreCardPre: {
     fontSize: 11,
     fontWeight: "800",
@@ -1509,26 +1785,116 @@ const styles = StyleSheet.create({
   },
   quizDetailCard: {
     backgroundColor: "#f8fafc",
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 14,
+    padding: 14,
     borderWidth: 1,
     borderColor: "#e2e8f0",
-    marginBottom: 8,
+    marginBottom: 12,
   },
   detailHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 4,
+    alignItems: "flex-start",
+    marginBottom: 6,
+  },
+  detailHeaderLeft: {
+    flex: 1,
   },
   detailAlias: {
-    fontSize: 12.5,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "800",
     color: "#17171c",
   },
   detailPoints: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "800",
     color: "#15803d",
+  },
+  accuracyBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginTop: 4,
+    alignSelf: "flex-start",
+  },
+  accuracyBadgeText: {
+    fontSize: 10.5,
+    fontWeight: "700",
+  },
+  detailComparisonBox: {
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
+    padding: 10,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  comparisonRow: {
+    flexDirection: "row",
+    marginBottom: 4,
+  },
+  comparisonLabel: {
+    width: 90,
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: "#64748b",
+  },
+  comparisonValueUser: {
+    flex: 1,
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "#17171c",
+  },
+  comparisonValueActual: {
+    flex: 1,
+    fontSize: 11.5,
+    fontWeight: "600",
+    color: "#0284c7",
+  },
+  comparisonDivider: {
+    height: 1,
+    backgroundColor: "#f1f5f9",
+    marginVertical: 4,
+  },
+  aiReasoningBox: {
+    backgroundColor: "#f0fdf4",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#bbf7d0",
+    padding: 9,
+    marginBottom: 6,
+  },
+  aiReasoningLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#166534",
+    marginBottom: 2,
+  },
+  aiReasoningText: {
+    fontSize: 11.5,
+    color: "#15803d",
+    lineHeight: 16,
+  },
+  aiFeedbackBox: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    padding: 9,
+  },
+  aiFeedbackLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#475569",
+    marginBottom: 2,
+  },
+  aiFeedbackText: {
+    fontSize: 11.5,
+    color: "#64748b",
+    lineHeight: 16,
   },
   detailLine: {
     fontSize: 11.5,
