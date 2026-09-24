@@ -8,6 +8,7 @@ import {
   StatusBar,
   Easing,
 } from "react-native";
+import { MINDCLICK_LOGO_URI } from "../lib/brandAssets";
 
 export default function SplashScreen({ isReady = true, onFinish }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -111,7 +112,7 @@ export default function SplashScreen({ isReady = true, onFinish }) {
           ]}
         >
           <Image
-            source={require("../assets/logo.png")}
+            source={{ uri: MINDCLICK_LOGO_URI }}
             style={styles.logoImage}
             resizeMode="contain"
           />

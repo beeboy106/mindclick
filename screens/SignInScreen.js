@@ -15,6 +15,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
+import { MINDCLICK_LOGO_URI } from "../lib/brandAssets";
 
 export default function SignInScreen() {
   const { signInWithGoogle, signInWithDemo, signInWithPsuEmail, authError } = useAuth();
@@ -68,7 +69,7 @@ export default function SignInScreen() {
       <View style={styles.topHeader}>
         <View style={styles.logoRow}>
           <Image
-            source={require("../assets/logo.png")}
+            source={{ uri: MINDCLICK_LOGO_URI }}
             style={styles.headerLogo}
             resizeMode="contain"
           />
@@ -89,7 +90,7 @@ export default function SignInScreen() {
           <View style={styles.heroLogoWrapper}>
             <View style={styles.heroLogoBadge}>
               <Image
-                source={require("../assets/logo.png")}
+                source={{ uri: MINDCLICK_LOGO_URI }}
                 style={styles.heroLogoImage}
                 resizeMode="contain"
               />
