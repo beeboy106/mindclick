@@ -45,14 +45,12 @@ export function checkProfileCompletion(profile, user) {
   const name = (profile?.name || user?.name || "").trim();
   const image = profile?.image || user?.image;
   const gender = profile?.gender;
-  const faculty = (profile?.faculty || "").trim();
   const bio = (profile?.bio || "").trim();
   const socialLinks = profile?.socialLinks || {};
 
   const hasName = Boolean(name && name.length > 0);
   const hasImage = Boolean(image && typeof image === "string" && image.trim().length > 0);
   const hasGender = Boolean(gender && gender !== "prefer_not_to_say");
-  const hasFaculty = Boolean(faculty && faculty.length > 0);
   const hasBio = Boolean(bio && bio.length > 0);
   const hasSocial = Object.values(socialLinks).some(
     (v) => typeof v === "string" && v.trim().length > 0
@@ -62,7 +60,6 @@ export function checkProfileCompletion(profile, user) {
   if (!hasImage) missingFields.push("รูปโปรไฟล์");
   if (!hasName) missingFields.push("ชื่อผู้ใช้งาน");
   if (!hasGender) missingFields.push("เพศ");
-  if (!hasFaculty) missingFields.push("คณะ/สาขาวิชา");
   if (!hasBio) missingFields.push("คำแนะนำตัว");
   if (!hasSocial) missingFields.push("ช่องทางติดต่อ (อย่างน้อย 1 ช่องทาง)");
 
@@ -73,7 +70,6 @@ export function checkProfileCompletion(profile, user) {
     hasName,
     hasImage,
     hasGender,
-    hasFaculty,
     hasBio,
     hasSocial,
     missingFields,
@@ -83,18 +79,21 @@ export function checkProfileCompletion(profile, user) {
 const DataContext = createContext();
 
 export function DataProvider({ children }) {
-  const { user, updateUserSession } = useAuth();
+  const { user, updateUserSession, isDemoMode = false } = useAuth();
 
   const [profile, setProfile] = useState(defaultProfile);
   const [quizResponse, setQuizResponse] = useState(defaultQuizResponse);
   const [favorites, setFavorites] = useState([]);
-  const [usersPool, setUsersPool] = useState(mockUsers);
+  const [usersPool, setUsersPool] = useState([]);
   const [hasAcceptedPolicy, setHasAcceptedPolicy] = useState(true); // เริ่มต้น true ระหว่างโหลด
   const [isLoadingData, setIsLoadingData] = useState(true);
 
   // ดึงรายชื่อผู้ใช้จาก Cloud Firestore สำหรับคำนวณ Match
   const fetchCloudPool = useCallback(async () => {
-    if (!isFirebaseConfigured()) return;
+    if (!isFirebaseConfigured()) {
+      setUsersPool(isDemoMode ? mockUsers : []);
+      return;
+    }
     try {
       const allCloudUsers = await getAllFirestoreUsers();
       const realUsers = allCloudUsers.filter(
@@ -104,17 +103,20 @@ export function DataProvider({ children }) {
           u.categoryAnswers.length > 0
       );
 
-      // รวมคนจริงไว้บนสุด และใส่ mockUsers เสริมหากคนจริงยังมีน้อย
-      const combined = [
-        ...realUsers,
-        ...mockUsers.filter((m) => !realUsers.some((r) => r.id === m.id)),
-      ];
+      // เมื่อเป็นผู้ใช้จริง จะแสดงเฉพาะผู้ใช้จริงจาก Cloud Firestore เท่านั้น
+      const combined = isDemoMode
+        ? [
+            ...realUsers,
+            ...mockUsers.filter((m) => !realUsers.some((r) => r.id === m.id)),
+          ]
+        : realUsers;
+
       setUsersPool(combined);
       AsyncStorage.setItem(USERS_POOL_KEY, JSON.stringify(combined));
     } catch (err) {
       console.warn("Error fetching cloud users pool:", err);
     }
-  }, [user?.id]);
+  }, [user?.id, isDemoMode]);
 
   // ซิงค์ข้อมูลเมื่อผู้ใช้ล็อกอิน สลับบัญชี หรือออกจากระบบ
   useEffect(() => {

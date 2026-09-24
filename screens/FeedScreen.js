@@ -67,39 +67,35 @@ export default function FeedScreen({ navigation }) {
   const [pullDistanceState, setPullDistanceState] = useState(0);
   const [isReadyToRelease, setIsReadyToRelease] = useState(false);
 
-  const PULL_THRESHOLD = 50;
+  const PULL_THRESHOLD = 45;
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onStartShouldSetPanResponderCapture: () => false,
       onMoveShouldSetPanResponder: (evt, gestureState) => {
-        const isPullDown = gestureState.dy > 8;
-        const isVertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.2;
-        return scrollOffsetRef.current <= 0 && isPullDown && isVertical;
+        const isPullDown = gestureState.dy > 12;
+        const isStrictlyVertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.8;
+        return scrollOffsetRef.current <= 0 && isPullDown && isStrictlyVertical;
       },
-      onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
-        const isPullDown = gestureState.dy > 8;
-        const isVertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.2;
-        return scrollOffsetRef.current <= 0 && isPullDown && isVertical;
-      },
-      onPanResponderTerminationRequest: () => false,
+      onMoveShouldSetPanResponderCapture: () => false,
+      onPanResponderTerminationRequest: () => true,
       onPanResponderMove: (evt, gestureState) => {
         if (gestureState.dy > 0) {
-          const distance = Math.min(100, Math.max(0, gestureState.dy * 0.8));
+          const distance = Math.min(85, Math.max(0, gestureState.dy * 0.6));
           pullAnim.setValue(distance);
           setPullDistanceState(distance);
           setIsReadyToRelease(distance >= PULL_THRESHOLD);
         }
       },
       onPanResponderRelease: (evt, gestureState) => {
-        const distance = gestureState.dy * 0.8;
-        if (distance >= PULL_THRESHOLD || gestureState.dy >= 55) {
+        const distance = gestureState.dy * 0.6;
+        if (distance >= PULL_THRESHOLD || gestureState.dy >= 60) {
           // หากไม่ใช่ผู้ใช้ฟองสบู่ จะไม่สามารถเข้าสู่โหมด Cross-Bubble ได้
           if (!isBubbleUser) {
             Animated.timing(pullAnim, {
               toValue: 0,
-              duration: 200,
+              duration: 180,
               useNativeDriver: false,
             }).start(() => {
               setPullDistanceState(0);
@@ -116,7 +112,7 @@ export default function FeedScreen({ navigation }) {
             if (warnRes?.shouldWarn) {
               Animated.timing(pullAnim, {
                 toValue: 0,
-                duration: 200,
+                duration: 180,
                 useNativeDriver: false,
               }).start(() => {
                 setPullDistanceState(0);
@@ -130,7 +126,7 @@ export default function FeedScreen({ navigation }) {
             // ดีดหน้าขึ้น แล้วเปลี่ยนเข้าสู่โหมด Cross-Bubble ทันที
             Animated.timing(pullAnim, {
               toValue: 0,
-              duration: 200,
+              duration: 180,
               useNativeDriver: false,
             }).start(() => {
               setPullDistanceState(0);
@@ -193,19 +189,19 @@ export default function FeedScreen({ navigation }) {
   // เลือกรูปภาพสำหรับโพสต์
   const handlePickImage = async () => {
     try {
-      if (Platform.OS === "ios") {
-        const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-        if (status !== "granted") {
-          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (!perm.granted) {
-            Alert.alert("ต้องการสิทธิ์", "กรุณาอนุญาตให้เข้าถึงรูปภาพในตั้งค่า");
-            return;
-          }
+      try {
+        const permResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (permResult && permResult.status !== "granted") {
+          Alert.alert("ต้องการสิทธิ์", "กรุณาอนุญาตให้เข้าถึงรูปภาพในตั้งค่าของอุปกรณ์");
+          return;
         }
+      } catch (permErr) {
+        console.warn("Permission check error:", permErr);
       }
 
+      const mediaTypesOption = ImagePicker.MediaTypeOptions?.Images || ["images"];
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
+        mediaTypes: mediaTypesOption,
         allowsEditing: false,
         quality: 0.8,
         base64: false,
@@ -216,7 +212,10 @@ export default function FeedScreen({ navigation }) {
       }
     } catch (e) {
       console.warn("handlePickImage error:", e);
-      Alert.alert("แจ้งเตือน", "ไม่สามารถเปิดคลังภาพได้");
+      Alert.alert(
+        "ไม่สามารถเปิดคลังภาพได้",
+        "กรุณาลองแตะอีกครั้ง หรือตรวจสอบการอนุญาตเข้าถึงรูปภาพในตั้งค่าของอุปกรณ์"
+      );
     }
   };
 

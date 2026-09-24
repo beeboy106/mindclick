@@ -161,27 +161,20 @@ export default function ProfileScreen({ navigation }) {
 
   const handlePickAvatar = async () => {
     try {
-      // บน iOS จำเป็นต้องขอสิทธิ์ แต่บน Android ระบบ Photo Picker ทำงานได้ทันทีโดยไม่ต้องขอสิทธิ์
-      // และการละเว้น permission dialog บน Android ช่วยให้ทำงานในหน้าต่างลอย (Floating / Pop-up view) ได้อย่างสมบูรณ์
-      if (Platform.OS === "ios") {
-        try {
-          const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-          if (status !== "granted") {
-            const permissionResult =
-              await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (!permissionResult.granted) {
-              Alert.alert("ต้องการสิทธิ์", "กรุณาอนุญาตให้เข้าถึงคลังรูปภาพในตั้งค่าของอุปกรณ์");
-              return;
-            }
-          }
-        } catch (permErr) {
-          console.warn("iOS permission error:", permErr);
+      try {
+        const permResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (permResult && permResult.status !== "granted") {
+          Alert.alert("ต้องการสิทธิ์", "กรุณาอนุญาตให้เข้าถึงคลังรูปภาพในตั้งค่าของอุปกรณ์");
+          return;
         }
+      } catch (permErr) {
+        console.warn("Permission check error:", permErr);
       }
 
+      const mediaTypesOption = ImagePicker.MediaTypeOptions?.Images || ["images"];
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: false, // ปิด crop ทั้งหมดเพื่อรองรับหน้าต่างลอย / Samsung Pop-up view
+        mediaTypes: mediaTypesOption,
+        allowsEditing: false,
         quality: 0.8,
         base64: false,
       });
@@ -199,7 +192,6 @@ export default function ProfileScreen({ navigation }) {
             image: cdnUrl,
             name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
             gender,
-            faculty,
             bio,
             socialLinks,
           });
@@ -215,7 +207,7 @@ export default function ProfileScreen({ navigation }) {
       console.warn("handlePickAvatar error:", e);
       Alert.alert(
         "ไม่สามารถเปิดคลังภาพได้",
-        `เกิดข้อผิดพลาด: ${e.message || e}`
+        "กรุณาลองแตะใหม่อีกครั้ง หรือตรวจสอบการอนุญาตเข้าถึงรูปภาพในตั้งค่าของอุปกรณ์"
       );
     }
   };
@@ -227,25 +219,20 @@ export default function ProfileScreen({ navigation }) {
         return;
       }
 
-      if (Platform.OS === "ios") {
-        try {
-          const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-          if (status !== "granted") {
-            const permissionResult =
-              await ImagePicker.requestMediaLibraryPermissionsAsync();
-            if (!permissionResult.granted) {
-              Alert.alert("ต้องการสิทธิ์", "กรุณาอนุญาตให้เข้าถึงคลังรูปภาพในตั้งค่าของอุปกรณ์");
-              return;
-            }
-          }
-        } catch (permErr) {
-          console.warn("iOS permission error:", permErr);
+      try {
+        const permResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (permResult && permResult.status !== "granted") {
+          Alert.alert("ต้องการสิทธิ์", "กรุณาอนุญาตให้เข้าถึงคลังรูปภาพในตั้งค่าของอุปกรณ์");
+          return;
         }
+      } catch (permErr) {
+        console.warn("Permission check error:", permErr);
       }
 
+      const mediaTypesOption = ImagePicker.MediaTypeOptions?.Images || ["images"];
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: false, // ปิด crop ทั้งหมดเพื่อรองรับหน้าต่างลอย / Samsung Pop-up view
+        mediaTypes: mediaTypesOption,
+        allowsEditing: false,
         quality: 0.8,
         base64: false,
       });
@@ -260,7 +247,6 @@ export default function ProfileScreen({ navigation }) {
           await addGalleryImage(cdnUrl, {
             name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
             gender,
-            faculty,
             bio,
             socialLinks,
           });
@@ -275,7 +261,7 @@ export default function ProfileScreen({ navigation }) {
       console.warn("handleAddGalleryPhoto error:", e);
       Alert.alert(
         "ไม่สามารถเปิดคลังภาพได้",
-        `เกิดข้อผิดพลาด: ${e.message || e}`
+        "กรุณาลองแตะใหม่อีกครั้ง หรือตรวจสอบการอนุญาตเข้าถึงรูปภาพในตั้งค่าของอุปกรณ์"
       );
     }
   };
@@ -285,7 +271,6 @@ export default function ProfileScreen({ navigation }) {
     await updateProfile({
       name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
       gender,
-      faculty,
       bio,
       socialLinks,
       image: avatarUri || profile?.image || user?.image || null,
@@ -539,43 +524,6 @@ export default function ProfileScreen({ navigation }) {
                     ]}
                   >
                     {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Form: Faculty (Campus Matching & Cross-Bubble) */}
-        <View style={styles.formCard}>
-          <View style={styles.sectionHeaderRow}>
-            <Ionicons name="school-outline" size={16} color={colors.primary} />
-            <Text style={styles.sectionTitle}>คณะ / สาขาวิชา (Faculty)</Text>
-          </View>
-          <Text style={styles.fieldHelperText}>
-            ช่วยทลาย Social Bubble และค้นหาเพื่อนต่างคณะที่เคมีความคิดตรงกัน
-          </Text>
-
-          <View style={styles.facultyChipsContainer}>
-            {CAMPUS_FACULTIES.map((fac) => {
-              const isSelected = faculty === fac;
-              return (
-                <TouchableOpacity
-                  key={fac}
-                  style={[
-                    styles.facultyChip,
-                    isSelected && styles.facultyChipSelected,
-                  ]}
-                  activeOpacity={0.8}
-                  onPress={() => setFaculty(isSelected ? "" : fac)}
-                >
-                  <Text
-                    style={[
-                      styles.facultyChipText,
-                      isSelected && styles.facultyChipTextSelected,
-                    ]}
-                  >
-                    {fac}
                   </Text>
                 </TouchableOpacity>
               );

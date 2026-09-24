@@ -33,7 +33,7 @@ export default function ChatModal({
   initialFriendData = null,
   suggestedIcebreakers = [],
 }) {
-  const { friends, chats, sendMessage, markAsRead, startChatWithUser, userStatus } = useFeed();
+  const { friends, chats, sendMessage, syncChatWithFriend, markAsRead, startChatWithUser, userStatus } = useFeed();
   const { blockedUserIds = [], blockUser, submitReport } = useAuth();
   const insets = useSafeAreaInsets();
 
@@ -109,7 +109,7 @@ export default function ChatModal({
     })
   ).current;
 
-  // ควบคุม Animation ตอนเปิด Modal
+  // ควบคุม Animation ตอนเปิด-ปิด Modal เท่านั้น (แยกออกจากข้อมูล friends เพื่อป้องกันแอนิเมชันเด้งรัวๆ)
   useEffect(() => {
     if (visible) {
       isClosingRef.current = false;
@@ -131,27 +131,48 @@ export default function ChatModal({
           useNativeDriver: true,
         }),
       ]).start();
-
-      if (initialFriendId) {
-        const found = friends.find((f) => f.id === initialFriendId);
-        if (found) {
-          setActiveFriend(found);
-          markAsRead(found.id);
-        } else if (initialFriendData) {
-          // ถ้ายังไม่มีใน friends ให้เริ่มแชทและสร้าง record ทันที
-          startChatWithUser(initialFriendData).then((createdFriend) => {
-            if (createdFriend) {
-              setActiveFriend(createdFriend);
-            }
-          });
-        }
-      }
     } else {
       if (modalVisible && !isClosingRef.current) {
         handleClose();
       }
     }
-  }, [visible, initialFriendId, initialFriendData, friends, markAsRead, startChatWithUser]);
+  }, [visible]);
+
+  // ตั้งค่าคู่สนทนาเริ่มต้นเมื่อเปิด Modal
+  useEffect(() => {
+    if (visible && initialFriendId) {
+      const found = (friends || []).find((f) => f.id === initialFriendId);
+      if (found) {
+        setActiveFriend(found);
+        markAsRead(found.id);
+      } else if (initialFriendData) {
+        startChatWithUser(initialFriendData).then((createdFriend) => {
+          if (createdFriend) {
+            setActiveFriend(createdFriend);
+          }
+        });
+      }
+    } else if (visible && !initialFriendId) {
+      setActiveFriend(null);
+    }
+  }, [visible, initialFriendId]);
+
+  // ซิงค์ข้อความข้ามเครื่องจาก Cloud Firestore แบบ Real-time ขณะเปิดแชท
+  useEffect(() => {
+    if (!visible || !activeFriend?.id || activeFriend.id.startsWith("user_mock_")) return;
+
+    if (syncChatWithFriend) {
+      syncChatWithFriend(activeFriend.id);
+    }
+
+    const timer = setInterval(() => {
+      if (syncChatWithFriend) {
+        syncChatWithFriend(activeFriend.id);
+      }
+    }, 2500);
+
+    return () => clearInterval(timer);
+  }, [visible, activeFriend?.id, syncChatWithFriend]);
 
   const handleSelectFriend = (friend) => {
     setActiveFriend(friend);

@@ -10,7 +10,7 @@ import {
   Linking,
   Alert,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, categoryColors, shadows } from "../lib/theme";
 import { categories } from "../data/questions";
@@ -49,6 +49,7 @@ function MatchGalleryThumb({ img, onPress }) {
 }
 
 export default function MatchDetailScreen({ route, navigation }) {
+  const insets = useSafeAreaInsets();
   const { userId, isPreview: paramPreview } = route.params || {};
   const { user } = useAuth();
   const { profile, getUserById, quizResponse } = useData();
@@ -203,7 +204,10 @@ export default function MatchDetailScreen({ route, navigation }) {
 
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: 110 + insets.bottom },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* User Hero Section */}
@@ -444,7 +448,7 @@ export default function MatchDetailScreen({ route, navigation }) {
       </ScrollView>
 
       {/* Sticky Bottom Action Bar */}
-      <View style={styles.bottomActionBar}>
+      <View style={[styles.bottomActionBar, { paddingBottom: Math.max(insets.bottom, 14) }]}>
         {isPreview ? (
           <TouchableOpacity
             style={styles.editProfileBtn}

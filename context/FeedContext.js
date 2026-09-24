@@ -6,6 +6,10 @@ import { useData } from "./DataContext";
 import { usePremium } from "./PremiumContext";
 import { mockUsers } from "../data/mockUsers";
 import { sendChatNotification } from "../lib/notificationService";
+import {
+  sendFirestoreChatMessage,
+  getFirestoreChatMessages,
+} from "../lib/firebase";
 
 const POSTS_STORAGE_KEY = "@mindclick_feed_posts";
 const STATUS_STORAGE_PREFIX = "@mindclick_user_status_";
@@ -243,7 +247,12 @@ export function FeedProvider({ children }) {
         const storedPosts = await AsyncStorage.getItem(postsKey);
         if (storedPosts) {
           const parsed = JSON.parse(storedPosts);
-          setPosts(parsed);
+          const cleanPosts = isDemoMode
+            ? parsed
+            : parsed.filter(
+                (p) => !p.id.startsWith("post_init_") && !p.authorId?.startsWith("user_mock_")
+              );
+          setPosts(cleanPosts);
         } else {
           // โหมดสาธิตพรีเซนต์อาจารย์ = มี Mock Posts เริ่มต้น, โหมดใช้งานจริง = ว่างเปล่าสำหรับผู้ใช้จริง
           const initialPostsData = isDemoMode ? INITIAL_POSTS : [];
@@ -264,7 +273,11 @@ export function FeedProvider({ children }) {
         // 3. โหลดรายชื่อเพื่อน
         const storedFriends = await AsyncStorage.getItem(friendsKey);
         if (storedFriends) {
-          setFriends(JSON.parse(storedFriends));
+          const parsed = JSON.parse(storedFriends);
+          const cleanFriends = isDemoMode
+            ? parsed
+            : parsed.filter((f) => !f.id?.startsWith("user_mock_"));
+          setFriends(cleanFriends);
         } else {
           const initialFriendsData = isDemoMode ? DEFAULT_FRIENDS : [];
           setFriends(initialFriendsData);
@@ -274,7 +287,19 @@ export function FeedProvider({ children }) {
         // 4. โหลดประวัติแชท
         const storedChats = await AsyncStorage.getItem(chatsKey);
         if (storedChats) {
-          setChats(JSON.parse(storedChats));
+          const parsed = JSON.parse(storedChats);
+          if (!isDemoMode) {
+            // กรองแชทเพื่อน mock ออก
+            const cleanChats = {};
+            for (const [k, v] of Object.entries(parsed)) {
+              if (!k.startsWith("user_mock_")) {
+                cleanChats[k] = v;
+              }
+            }
+            setChats(cleanChats);
+          } else {
+            setChats(parsed);
+          }
         } else {
           const initialChatMap = isDemoMode
             ? {
@@ -593,8 +618,13 @@ export function FeedProvider({ children }) {
         console.error("Error saving chats:", err);
       }
 
-      // จำลองการตอบกลับของเพื่อน (สำหรับโหมดสาธิตหรือเพื่อน mock) เพื่อทดสอบการแจ้งเตือนระดับ OS เข้าเครื่อง
-      if (friendId && (isDemoMode || friendId.startsWith("user_mock_"))) {
+      // ส่งข้อความขึ้น Cloud Firestore ทันทีเมื่อคุยกับผู้ใช้จริง
+      if (friendId && !friendId.startsWith("user_mock_")) {
+        sendFirestoreChatMessage(userId, friendId, text.trim()).catch((err) => {
+          console.warn("Failed to sync message to Cloud Firestore:", err);
+        });
+      } else if (friendId && isDemoMode && friendId.startsWith("user_mock_")) {
+        // จำลองการตอบกลับของเพื่อน (เฉพาะโหมดสาธิตพรีเซนต์อาจารย์หรือเพื่อน mock เท่านั้น)
         setTimeout(async () => {
           const replyText = "ได้รับข้อความแล้วครับ เดี๋ยวสักครู่ตอบกลับนะครับ";
           const replyNow = new Date();
@@ -643,6 +673,49 @@ export function FeedProvider({ children }) {
       }
     },
     [chats, userId, friendsKey, chatsKey, isDemoMode, userStatus]
+  );
+
+  // ดึงข้อความแชทล่าสุดจาก Cloud Firestore เพื่อให้ได้รับข้อความจากอีกเครื่อง
+  const syncChatWithFriend = useCallback(
+    async (friendId) => {
+      if (!friendId || friendId.startsWith("user_mock_") || !userId) return;
+      try {
+        const cloudMessages = await getFirestoreChatMessages(userId, friendId);
+        if (cloudMessages && cloudMessages.length > 0) {
+          setChats((prev) => {
+            const currentMsgs = prev[friendId] || [];
+            if (currentMsgs.length === cloudMessages.length && currentMsgs.length > 0) {
+              const lastCurrent = currentMsgs[currentMsgs.length - 1];
+              const lastCloud = cloudMessages[cloudMessages.length - 1];
+              if (lastCurrent.id === lastCloud.id) return prev;
+            }
+            const updated = { ...prev, [friendId]: cloudMessages };
+            AsyncStorage.setItem(chatsKey, JSON.stringify(updated)).catch(() => {});
+            return updated;
+          });
+
+          const lastMsg = cloudMessages[cloudMessages.length - 1];
+          if (lastMsg) {
+            setFriends((prevFriends) => {
+              const updated = prevFriends.map((f) =>
+                f.id === friendId
+                  ? {
+                      ...f,
+                      lastMessage: lastMsg.text,
+                      lastTime: lastMsg.createdAt || f.lastTime,
+                    }
+                  : f
+              );
+              AsyncStorage.setItem(friendsKey, JSON.stringify(updated)).catch(() => {});
+              return updated;
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("syncChatWithFriend error:", err);
+      }
+    },
+    [userId, chatsKey, friendsKey]
   );
 
   // 7. มาร์กแชทว่าอ่านแล้ว
@@ -781,6 +854,7 @@ export function FeedProvider({ children }) {
         friends: visibleFriends,
         chats,
         sendMessage,
+        syncChatWithFriend,
         markAsRead,
         startChatWithUser,
         totalUnreadCount,

@@ -47,12 +47,6 @@ export function AuthProvider({ children }) {
         const storedUser = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
         if (storedUser) {
           const parsed = JSON.parse(storedUser);
-          if (parsed?.email && !parsed.email.endsWith("@psu.ac.th")) {
-            parsed.email = "6510110001@psu.ac.th";
-            parsed.studentEmail = "6510110001@psu.ac.th";
-            parsed.isStudentVerified = true;
-            await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(parsed));
-          }
           setUser(parsed);
           if (parsed?.id) {
             const blockedRaw = await AsyncStorage.getItem(`${BLOCKED_USERS_STORAGE_PREFIX}${parsed.id}`);
@@ -255,18 +249,11 @@ export function AuthProvider({ children }) {
           const gUser = response.data?.user || response.user || response;
           if (gUser && (gUser.email || gUser.name)) {
             const gEmail = (gUser.email || "").trim().toLowerCase();
-            if (!gEmail.endsWith("@psu.ac.th")) {
-              setAuthError(`อีเมล ${gEmail || "ที่คุณเลือก"} ไม่ใช่อีเมลมหาวิทยาลัย กรุณาใช้อีเมล @psu.ac.th`);
-              try {
-                await GoogleSignin.signOut();
-              } catch (e) {
-                // ignore
-              }
-              return;
-            }
+            const rawId = gUser.id || gUser.sub || gEmail.replace(/[^a-zA-Z0-9]/g, "_");
+            const consistentId = `google_${rawId}`;
 
             const loggedInUser = {
-              id: gUser.id || "google_" + Date.now(),
+              id: consistentId,
               name: gUser.name || gEmail.split("@")[0],
               email: gEmail,
               studentEmail: gEmail,
@@ -370,14 +357,11 @@ export function AuthProvider({ children }) {
           );
           const googleUser = await userInfoRes.json();
           const googleEmail = (googleUser.email || "").trim().toLowerCase();
-
-          if (!googleEmail.endsWith("@psu.ac.th")) {
-            setAuthError(`อีเมล ${googleEmail || "ที่คุณเลือก"} ไม่ใช่อีเมลมหาวิทยาลัย กรุณาใช้อีเมล @psu.ac.th`);
-            return;
-          }
+          const rawId = googleUser.id || googleUser.sub || googleEmail.replace(/[^a-zA-Z0-9]/g, "_");
+          const consistentId = `google_${rawId}`;
 
           const loggedInUser = {
-            id: googleUser.id || "google_" + Date.now(),
+            id: consistentId,
             name: googleUser.name || googleEmail.split("@")[0],
             email: googleEmail,
             studentEmail: googleEmail,
