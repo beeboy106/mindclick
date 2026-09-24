@@ -31,8 +31,13 @@ import { uploadImageToCloudinary } from "../lib/cloudinary";
 
 export default function FeedScreen({ navigation }) {
   const { user } = useAuth();
-  const { profile } = useData();
+  const { profile, quizResponse } = useData();
   const { isBubbleUser, checkAndTriggerWarning } = usePremium();
+
+  const completedCategories = quizResponse?.completedCategories || [];
+  const completedCount = completedCategories.length;
+  const isFeedUnlocked = completedCount >= 4;
+  const hasChatAccess = completedCount >= 1;
   const {
     posts,
     isLoading,
@@ -171,6 +176,7 @@ export default function FeedScreen({ navigation }) {
     if (selectedTopic === "all") return true;
     return post.topicId === selectedTopic;
   });
+  const displayedPosts = isFeedUnlocked ? filteredPosts : [];
 
   // นำทางไปยังโปรไฟล์ของผู้โพสต์
   const handlePressAuthor = (authorId) => {
@@ -188,6 +194,14 @@ export default function FeedScreen({ navigation }) {
 
   // เลือกรูปภาพสำหรับโพสต์
   const handlePickImage = async () => {
+    if (!isFeedUnlocked) {
+      Alert.alert(
+        "ฟีดยังไม่ถูกปลดล็อค",
+        `กรุณาตอบคำถามให้ครบทั้ง 4 ด้านเพื่อเริ่มแชร์เรื่องราวลงในฟีด (ปัจจุบันตอบแล้ว ${completedCount}/4 ด้าน)`
+      );
+      return;
+    }
+
     try {
       try {
         const permResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -221,6 +235,14 @@ export default function FeedScreen({ navigation }) {
 
   // สร้างโพสต์ (รองรับการโพสต์ลงกระทู้ที่เลือก และจำกัดโควต้าผู้ใช้ปกติ 2 ครั้ง/วัน)
   const handleCreatePost = async () => {
+    if (!isFeedUnlocked) {
+      Alert.alert(
+        "ฟีดยังไม่ถูกปลดล็อค",
+        `กรุณาตอบคำถามให้ครบทั้ง 4 ด้านเพื่อเริ่มแชร์เรื่องราวลงในฟีด (ปัจจุบันตอบแล้ว ${completedCount}/4 ด้าน)`
+      );
+      return;
+    }
+
     if (!postText.trim() && !postImage) {
       Alert.alert("แจ้งเตือน", "กรุณาพิมพ์ข้อความหรือเลือกรูปภาพก่อนโพสต์");
       return;
@@ -272,12 +294,40 @@ export default function FeedScreen({ navigation }) {
 
   // เปิดแชทกับเพื่อนที่ระบุ
   const handleOpenChatWith = (friendId) => {
+    if (!hasChatAccess) {
+      Alert.alert(
+        "ระบบแชท",
+        "ตอบคำถามอย่างน้อย 1 ด้าน เพื่อเริ่มค้นหาเพื่อนและใช้งานระบบแชท",
+        [
+          { text: "ไว้ทีหลัง", style: "cancel" },
+          {
+            text: "ไปตอบคำถาม",
+            onPress: () => navigation.navigate("HomeTab"),
+          },
+        ]
+      );
+      return;
+    }
     setSelectedFriendId(friendId);
     setChatModalVisible(true);
   };
 
   // เปิดหน้ารายชื่อแชททั้งหมด
   const handleOpenChatList = () => {
+    if (!hasChatAccess) {
+      Alert.alert(
+        "ระบบแชท",
+        "ตอบคำถามอย่างน้อย 1 ด้าน เพื่อเริ่มค้นหาเพื่อนและใช้งานระบบแชท",
+        [
+          { text: "ไว้ทีหลัง", style: "cancel" },
+          {
+            text: "ไปตอบคำถาม",
+            onPress: () => navigation.navigate("HomeTab"),
+          },
+        ]
+      );
+      return;
+    }
     setSelectedFriendId(null);
     setChatModalVisible(true);
   };
@@ -407,72 +457,88 @@ export default function FeedScreen({ navigation }) {
             </TouchableOpacity>
           </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.friendsScroll}
-          >
-            {friends.map((friend) => (
-              <TouchableOpacity
-                key={friend.id}
-                style={styles.friendBubble}
-                activeOpacity={0.8}
-                onPress={() => handleOpenChatWith(friend.id)}
-              >
-                <View
-                  style={[
-                    styles.friendBubbleAvatarWrapper,
-                    friend.isBubbleUser && styles.friendBubbleAvatarWrapperBubble,
-                  ]}
+          {!hasChatAccess ? (
+            <View style={styles.friendsLockedBox}>
+              <Text style={styles.friendsLockedText}>
+                ตอบคำถามอย่างน้อย 1 ด้าน เพื่อเริ่มแมตช์และแชทกับเพื่อน
+              </Text>
+            </View>
+          ) : friends.length === 0 ? (
+            <View style={styles.friendsLockedBox}>
+              <Text style={styles.friendsLockedText}>
+                ยังไม่มีเพื่อนที่เคยคุยด้วย เริ่มต้นทักทายจากหน้ารายละเอียดแมตช์ได้เลย
+              </Text>
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.friendsScroll}
+            >
+              {friends.map((friend) => (
+                <TouchableOpacity
+                  key={friend.id}
+                  style={styles.friendBubble}
+                  activeOpacity={0.8}
+                  onPress={() => handleOpenChatWith(friend.id)}
                 >
-                  {friend.avatar ? (
-                    <Image
-                      source={{ uri: friend.avatar }}
-                      style={styles.friendBubbleAvatar}
-                    />
-                  ) : (
-                    <View style={styles.friendBubbleAvatarFallback}>
-                      <Text style={styles.friendBubbleInitial}>
-                        {friend.name.charAt(0).toUpperCase()}
-                      </Text>
-                    </View>
-                  )}
-                  {friend.isBubbleUser && (
-                    <View style={styles.friendBubbleMiniBadge}>
-                      <MaterialCommunityIcons name="chart-bubble" size={10} color={colors.white} />
-                    </View>
-                  )}
                   <View
                     style={[
-                      styles.friendStatusIndicator,
-                      {
-                        backgroundColor:
-                          friend.status === "online"
-                            ? "#22c55e"
-                            : friend.status === "busy"
-                            ? "#ef4444"
-                            : "#9ca3af",
-                      },
+                      styles.friendBubbleAvatarWrapper,
+                      friend.isBubbleUser && styles.friendBubbleAvatarWrapperBubble,
                     ]}
-                  />
-                </View>
-                <Text style={styles.friendBubbleName} numberOfLines={1}>
-                  {friend.name.split(" ")[0]}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+                  >
+                    {friend.avatar ? (
+                      <Image
+                        source={{ uri: friend.avatar }}
+                        style={styles.friendBubbleAvatar}
+                      />
+                    ) : (
+                      <View style={styles.friendBubbleAvatarFallback}>
+                        <Text style={styles.friendBubbleInitial}>
+                          {friend.name.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                    )}
+                    {friend.isBubbleUser && (
+                      <View style={styles.friendBubbleMiniBadge}>
+                        <MaterialCommunityIcons name="chart-bubble" size={10} color={colors.white} />
+                      </View>
+                    )}
+                    <View
+                      style={[
+                        styles.friendStatusIndicator,
+                        {
+                          backgroundColor:
+                            friend.status === "online"
+                              ? "#22c55e"
+                              : friend.status === "busy"
+                              ? "#ef4444"
+                              : "#9ca3af",
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={styles.friendBubbleName} numberOfLines={1}>
+                    {friend.name.split(" ")[0]}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
         </View>
 
         {/* SECTION 3: Post Creator Card (Matching Top Box from Reference) */}
         <View style={styles.createCard}>
           <View style={styles.createCardHeaderRow}>
             <Text style={styles.createCardHeader}>
-              {selectedTopic === "all"
+              {!isFeedUnlocked
+                ? "แชร์เรื่องราวของคุณ (ต้องตอบครบ 4 ด้าน)"
+                : selectedTopic === "all"
                 ? "แชร์เรื่องราวของคุณ"
                 : `แชร์ในกระทู้: ${currentTopic.label}`}
             </Text>
-            {selectedTopic !== "all" && (
+            {selectedTopic !== "all" && isFeedUnlocked && (
               <TouchableOpacity
                 style={styles.resetTopicBtn}
                 activeOpacity={0.7}
@@ -501,7 +567,9 @@ export default function FeedScreen({ navigation }) {
             <TextInput
               style={styles.postTextInput}
               placeholder={
-                selectedTopic !== "all" && currentTopic.placeholder
+                !isFeedUnlocked
+                  ? `ตอบคำถามครบ 4 ด้านเพื่อเริ่มแชร์เรื่องราว (ปัจจุบันตอบแล้ว ${completedCount}/4 ด้าน)`
+                  : selectedTopic !== "all" && currentTopic.placeholder
                   ? currentTopic.placeholder
                   : "แชร์อะไรกับเพื่อนของคุณ..."
               }
@@ -510,6 +578,7 @@ export default function FeedScreen({ navigation }) {
               maxLength={1000}
               value={postText}
               onChangeText={setPostText}
+              editable={isFeedUnlocked}
             />
           </View>
 
@@ -529,12 +598,13 @@ export default function FeedScreen({ navigation }) {
           {/* Bottom Controls */}
           <View style={styles.createActionsRow}>
             <TouchableOpacity
-              style={styles.photoAttachBtn}
+              style={[styles.photoAttachBtn, !isFeedUnlocked && { opacity: 0.5 }]}
               activeOpacity={0.8}
               onPress={handlePickImage}
+              disabled={!isFeedUnlocked}
             >
-              <Ionicons name="image-outline" size={20} color={colors.primary} />
-              <Text style={styles.photoAttachText}>
+              <Ionicons name="image-outline" size={20} color={isFeedUnlocked ? colors.primary : "#9ca3af"} />
+              <Text style={[styles.photoAttachText, !isFeedUnlocked && { color: "#9ca3af" }]}>
                 {postImage ? "เปลี่ยนรูป" : "แนบรูปภาพ"}
               </Text>
             </TouchableOpacity>
@@ -544,11 +614,11 @@ export default function FeedScreen({ navigation }) {
               <TouchableOpacity
                 style={[
                   styles.postSubmitBtn,
-                  (!postText.trim() && !postImage) || isPosting
+                  !isFeedUnlocked || (!postText.trim() && !postImage) || isPosting
                     ? styles.postSubmitBtnDisabled
                     : null,
                 ]}
-                disabled={(!postText.trim() && !postImage) || isPosting}
+                disabled={!isFeedUnlocked || (!postText.trim() && !postImage) || isPosting}
                 activeOpacity={0.85}
                 onPress={handleCreatePost}
               >
@@ -576,9 +646,11 @@ export default function FeedScreen({ navigation }) {
           >
             {FORUM_TOPICS.map((topic) => {
               const isSelected = selectedTopic === topic.id;
-              const topicPostCount = posts.filter((p) =>
-                topic.id === "all" ? true : p.topicId === topic.id
-              ).length;
+              const topicPostCount = isFeedUnlocked
+                ? posts.filter((p) =>
+                    topic.id === "all" ? true : p.topicId === topic.id
+                  ).length
+                : 0;
 
               return (
                 <TouchableOpacity
@@ -633,23 +705,43 @@ export default function FeedScreen({ navigation }) {
               </Text>
             )}
           </View>
-          <TouchableOpacity
-            style={styles.refreshBtn}
-            activeOpacity={0.8}
-            onPress={() => {
-              Alert.alert("รีเฟรช", "อัปเดตข้อมูลโพสต์ล่าสุดแล้ว");
-            }}
-          >
-            <Ionicons name="refresh" size={14} color={colors.ink} />
-            <Text style={styles.refreshText}>Refresh</Text>
-          </TouchableOpacity>
+          {isFeedUnlocked && (
+            <TouchableOpacity
+              style={styles.refreshBtn}
+              activeOpacity={0.8}
+              onPress={() => {
+                Alert.alert("รีเฟรช", "อัปเดตข้อมูลโพสต์ล่าสุดแล้ว");
+              }}
+            >
+              <Ionicons name="refresh" size={14} color={colors.ink} />
+              <Text style={styles.refreshText}>Refresh</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {isLoading ? (
+        {!isFeedUnlocked ? (
+          <View style={styles.feedLockedCard}>
+            <View style={styles.feedLockedHeader}>
+              <Ionicons name="lock-closed-outline" size={16} color="#64748b" />
+              <Text style={styles.feedLockedTitle}>ฟีดชุมชน (0 โพสต์)</Text>
+            </View>
+            <Text style={styles.feedLockedDesc}>
+              ตอบคำถามครบทั้ง 4 ด้านเพื่อปลดล็อคฟีดและการแลกเปลี่ยนมุมมองกับเพื่อนๆ (ปัจจุบันตอบแล้ว {completedCount}/4 ด้าน)
+            </Text>
+            <TouchableOpacity
+              style={styles.feedLockedActionBtn}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate("HomeTab")}
+            >
+              <Text style={styles.feedLockedActionText}>ไปตอบคำถามให้ครบ</Text>
+              <Ionicons name="arrow-forward" size={13} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+        ) : isLoading ? (
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
-        ) : filteredPosts.length === 0 ? (
+        ) : displayedPosts.length === 0 ? (
           <View style={styles.emptyFeed}>
             <Ionicons
               name={selectedTopic === "all" ? "newspaper-outline" : "chatbubbles-outline"}
@@ -668,7 +760,7 @@ export default function FeedScreen({ navigation }) {
             </Text>
           </View>
         ) : (
-          filteredPosts.map((post) => (
+          displayedPosts.map((post) => (
             <PostCard
               key={post.id}
               post={post}
@@ -1333,5 +1425,54 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     zIndex: 2,
+  },
+  friendsLockedBox: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: "#f9fafb",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  friendsLockedText: {
+    fontSize: 12.5,
+    color: "#6b7280",
+  },
+  feedLockedCard: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    padding: 16,
+    marginVertical: 12,
+  },
+  feedLockedHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 6,
+  },
+  feedLockedTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#475569",
+  },
+  feedLockedDesc: {
+    fontSize: 13,
+    color: "#64748b",
+    lineHeight: 19,
+  },
+  feedLockedActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    marginTop: 10,
+    gap: 4,
+    paddingVertical: 4,
+  },
+  feedLockedActionText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.primary,
   },
 });
