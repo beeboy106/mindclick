@@ -15,6 +15,7 @@ import { useCrossBubble } from "../../context/CrossBubbleContext";
 import { useAuth } from "../../context/AuthContext";
 import { useData } from "../../context/DataContext";
 import { useNavigation } from "@react-navigation/native";
+import CrossBubbleAvatar from "../../components/crossbubble/CrossBubbleAvatar";
 
 export default function MyAliasScreen() {
   const navigation = useNavigation();
@@ -80,11 +81,12 @@ export default function MyAliasScreen() {
       >
         {/* Main Persona Card */}
         <View style={styles.personaCard}>
-          <View style={styles.mascotBigCircle}>
-            <Ionicons
-              name={userAlias?.icon || "finger-print-outline"}
-              size={48}
-              color="#17171c"
+          <View style={styles.mascotBigBox}>
+            <CrossBubbleAvatar
+              avatarId={userAlias?.icon || "avatar_1"}
+              size={92}
+              borderRadius={22}
+              borderWidth={2}
             />
           </View>
 
@@ -192,10 +194,12 @@ export default function MyAliasScreen() {
                 activeOpacity={0.8}
                 onPress={() => changeMascot(iconName)}
               >
-                <Ionicons
-                  name={iconName}
-                  size={28}
-                  color={isSelected ? "#17171c" : "#64748b"}
+                <CrossBubbleAvatar
+                  avatarId={iconName}
+                  size={46}
+                  borderRadius={10}
+                  borderWidth={isSelected ? 2 : 1}
+                  borderColor={isSelected ? "#17171c" : "#e2e8f0"}
                 />
                 {isSelected && (
                   <View style={styles.selectedCheckBadge}>
@@ -297,6 +301,9 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: "center",
     marginBottom: 16,
+  },
+  mascotBigBox: {
+    marginBottom: 12,
   },
   mascotBigCircle: {
     width: 80,

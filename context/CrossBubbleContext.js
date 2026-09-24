@@ -5,6 +5,12 @@ import { useData } from "./DataContext";
 import { useFeed } from "./FeedContext";
 import { usePremium } from "./PremiumContext";
 import { evaluateAllQuizAnswers, AI_GAME_MASTER_EVENTS } from "../lib/geminiService";
+import {
+  DEFAULT_AVATARS,
+  DEFAULT_AVATAR_IDS,
+} from "../components/crossbubble/CrossBubbleAvatar";
+
+export { DEFAULT_AVATARS, DEFAULT_AVATAR_IDS };
 
 const CROSS_BUBBLE_STORAGE_KEY = "@mindclick_cross_bubble_active";
 const CROSS_BUBBLE_ALIAS_KEY = "@mindclick_cross_bubble_alias";
@@ -118,7 +124,7 @@ const SIMULATED_CLASSMATES = [
     id: "member_med",
     feedUserId: "user_mock_1",
     alias: "เด็กแพทย์สายลุย",
-    icon: "fitness-outline",
+    icon: "avatar_1",
     faculty: "แพทยศาสตร์",
     roleplay: "นักสืบโคนัน (พูดจาวิเคราะห์ สังเกตพฤติกรรมเพื่อนตลอดเวลา)",
     preAnswers: {
@@ -144,7 +150,7 @@ const SIMULATED_CLASSMATES = [
     id: "member_eng",
     feedUserId: "user_mock_aphisak",
     alias: "เด็กวิศวะสายแฮก",
-    icon: "terminal-outline",
+    icon: "avatar_2",
     faculty: "วิศวกรรมศาสตร์",
     roleplay: "วิศวกรซ่อมทุกอย่าง (เสนอวิธีดัดแปลงสิ่งของรอบตัวให้กลายเป็นอุปกรณ์)",
     preAnswers: {
@@ -170,7 +176,7 @@ const SIMULATED_CLASSMATES = [
     id: "member_arts",
     feedUserId: "user_mock_janon",
     alias: "เด็กอักษรชวนคุย",
-    icon: "headset-outline",
+    icon: "avatar_3",
     faculty: "อักษรศาสตร์",
     roleplay: "กวีพเนจรผู้อารมณ์ดี (พูดจาสละสลวย เปรียบเปรยโลกในแง่ดี)",
     preAnswers: {
@@ -196,7 +202,7 @@ const SIMULATED_CLASSMATES = [
     id: "member_arch",
     feedUserId: "user_mock_kedtisak",
     alias: "เด็กสถาปัตย์ปั้นโมเดล",
-    icon: "color-palette-outline",
+    icon: "avatar_4",
     faculty: "สถาปัตยกรรมศาสตร์",
     roleplay: "เชฟกระทะเหล็ก (เน้นเรื่องเสบียงและคิดเมนูปรุงอาหารจากสิ่งรอบตัว)",
     preAnswers: {
@@ -286,7 +292,7 @@ const INITIAL_DARK_ROOMS = [
     partnerId: "member_arts",
     feedUserId: "user_mock_janon",
     partnerAlias: "เด็กอักษรชวนคุย",
-    partnerIcon: "headset-outline",
+    partnerIcon: "avatar_3",
     partnerRealName: "Janon Kingkohyao",
     partnerRealAvatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=400&auto=format&fit=crop&q=80",
     partnerRealFaculty: "อักษรศาสตร์ (ภาษาอังกฤษ) ปี 3",
@@ -337,7 +343,7 @@ export function CrossBubbleProvider({ children }) {
   const [streakDays, setStreakDays] = useState(3);
   const [isFlameActive, setIsFlameActive] = useState(true);
   const [bubblePoints, setBubblePoints] = useState(160);
-  const [unlockedAvatars, setUnlockedAvatars] = useState(MASCOT_ICONS);
+  const [unlockedAvatars, setUnlockedAvatars] = useState(DEFAULT_AVATAR_IDS);
 
   // ภารกิจรายวัน
   const [dailyMissions, setDailyMissions] = useState(INITIAL_DAILY_MISSIONS);
@@ -397,7 +403,7 @@ export function CrossBubbleProvider({ children }) {
     const facultyName = customFaculty || profile?.faculty || "วิศวกรรมศาสตร์";
     const shortFaculty = facultyName.replace("คณะ", "").split(" ")[0].trim() || "นิรนาม";
     const prefix = ALIAS_PREFIXES[Math.floor(Math.random() * ALIAS_PREFIXES.length)];
-    const icon = MASCOT_ICONS[Math.floor(Math.random() * MASCOT_ICONS.length)];
+    const icon = DEFAULT_AVATAR_IDS[Math.floor(Math.random() * DEFAULT_AVATAR_IDS.length)];
     const num = Math.floor(100 + Math.random() * 900);
 
     return {
@@ -420,6 +426,9 @@ export function CrossBubbleProvider({ children }) {
         if (storedAlias) {
           const parsed = JSON.parse(storedAlias);
           parsed.badge = "ผู้ทลาย Social Bubble";
+          if (!parsed.icon || !DEFAULT_AVATAR_IDS.includes(parsed.icon)) {
+            parsed.icon = "avatar_1";
+          }
           setUserAlias(parsed);
         } else {
           const newAlias = generateRandomAlias();
@@ -475,7 +484,13 @@ export function CrossBubbleProvider({ children }) {
         if (storedStreak) setStreakDays(parseInt(storedStreak, 10));
 
         const storedUnlocked = await AsyncStorage.getItem(CROSS_BUBBLE_UNLOCKED_AVATARS_KEY);
-        if (storedUnlocked) setUnlockedAvatars(JSON.parse(storedUnlocked));
+        if (storedUnlocked) {
+          const parsed = JSON.parse(storedUnlocked);
+          const merged = Array.from(new Set([...DEFAULT_AVATAR_IDS, ...(Array.isArray(parsed) ? parsed : [])]));
+          setUnlockedAvatars(merged);
+        } else {
+          setUnlockedAvatars(DEFAULT_AVATAR_IDS);
+        }
       } catch (err) {
         console.warn("Failed to load cross bubble storage:", err);
       }

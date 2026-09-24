@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useCrossBubble, TOPIC_CATEGORIES } from "../../context/CrossBubbleContext";
+import CrossBubbleAvatar from "../../components/crossbubble/CrossBubbleAvatar";
 
 export default function BlindLoungeScreen() {
   const navigation = useNavigation();
@@ -459,7 +460,7 @@ export default function BlindLoungeScreen() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {loungeMembers.map((m) => (
               <View key={m.id} style={styles.miniMemberChip}>
-                <Ionicons name={m.icon} size={14} color="#17171c" />
+                <CrossBubbleAvatar avatarId={m.icon} size={18} borderRadius={5} borderWidth={1} />
                 <Text style={styles.miniMemberAlias}>{m.alias}</Text>
               </View>
             ))}
@@ -505,8 +506,13 @@ export default function BlindLoungeScreen() {
                 style={[styles.msgRow, isMe ? styles.msgRowRight : styles.msgRowLeft]}
               >
                 {!isMe && (
-                  <View style={styles.msgAvatarCircle}>
-                    <Ionicons name={msg.senderIcon || "person-outline"} size={16} color="#17171c" />
+                  <View style={styles.msgAvatarBox}>
+                    <CrossBubbleAvatar
+                      avatarId={msg.senderIcon}
+                      size={28}
+                      borderRadius={8}
+                      borderWidth={1}
+                    />
                   </View>
                 )}
                 <View style={[styles.msgBubble, isMe ? styles.msgBubbleMe : styles.msgBubbleOther]}>
@@ -871,8 +877,13 @@ export default function BlindLoungeScreen() {
             return (
               <View key={member.id} style={styles.memberRevealCard}>
                 <View style={styles.revealCardTop}>
-                  <View style={styles.revealAvatarCircle}>
-                    <Ionicons name={member.icon} size={28} color="#17171c" />
+                  <View style={styles.revealAvatarBox}>
+                    <CrossBubbleAvatar
+                      avatarId={member.icon}
+                      size={48}
+                      borderRadius={12}
+                      borderWidth={2}
+                    />
                   </View>
                   <View style={styles.revealInfoCol}>
                     <Text style={styles.revealRealName}>{member.alias}</Text>
@@ -1470,10 +1481,14 @@ const styles = StyleSheet.create({
   msgRowRight: {
     justifyContent: "flex-end",
   },
+  msgAvatarBox: {
+    marginRight: 8,
+    marginTop: 4,
+  },
   msgAvatarCircle: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: 8,
     backgroundColor: "#f1f5f9",
     borderWidth: 1,
     borderColor: "#e2e8f0",
@@ -1946,10 +1961,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
+  revealAvatarBox: {
+    marginRight: 12,
+  },
   revealAvatarCircle: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 12,
     backgroundColor: "#c7f65a",
     justifyContent: "center",
     alignItems: "center",

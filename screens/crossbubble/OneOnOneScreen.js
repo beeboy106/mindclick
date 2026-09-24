@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useCrossBubble } from "../../context/CrossBubbleContext";
+import CrossBubbleAvatar from "../../components/crossbubble/CrossBubbleAvatar";
 
 export default function OneOnOneScreen() {
   const {
@@ -125,8 +126,13 @@ export default function OneOnOneScreen() {
                   activeOpacity={0.85}
                   onPress={() => setActiveDarkRoomId(room.id)}
                 >
-                  <View style={styles.roomAvatarFallback}>
-                    <Ionicons name={room.partnerIcon || "person"} size={22} color="#17171c" />
+                  <View style={styles.roomAvatarBox}>
+                    <CrossBubbleAvatar
+                      avatarId={room.partnerIcon}
+                      size={46}
+                      borderRadius={12}
+                      borderWidth={1.5}
+                    />
                   </View>
 
                   <View style={styles.roomInfoCol}>
@@ -186,9 +192,14 @@ export default function OneOnOneScreen() {
           <Ionicons name="arrow-back" size={20} color="#17171c" />
         </TouchableOpacity>
 
-        {/* Mascot Avatar Circle (Always Anonymous in Dark Room) */}
-        <View style={styles.chatHeaderAvatarFallback}>
-          <Ionicons name={currentRoom.partnerIcon || "person"} size={18} color="#17171c" />
+        {/* Mascot Avatar Box (Always Anonymous in Dark Room) */}
+        <View style={styles.chatHeaderAvatarBox}>
+          <CrossBubbleAvatar
+            avatarId={currentRoom.partnerIcon}
+            size={36}
+            borderRadius={10}
+            borderWidth={1.5}
+          />
         </View>
 
         <View style={styles.chatHeaderInfo}>
@@ -558,10 +569,13 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
   },
+  roomAvatarBox: {
+    marginRight: 12,
+  },
   roomAvatarFallback: {
     width: 46,
     height: 46,
-    borderRadius: 23,
+    borderRadius: 12,
     backgroundColor: "#c7f65a",
     justifyContent: "center",
     alignItems: "center",
@@ -647,10 +661,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 10,
   },
+  chatHeaderAvatarBox: {
+    marginRight: 10,
+  },
   chatHeaderAvatarFallback: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: 10,
     backgroundColor: "#c7f65a",
     justifyContent: "center",
     alignItems: "center",

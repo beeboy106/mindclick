@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useCrossBubble } from "../../context/CrossBubbleContext";
+import CrossBubbleAvatar from "../../components/crossbubble/CrossBubbleAvatar";
 
 export default function BubbleRadarScreen() {
   const { radarData, userAlias, toggleCrossBubbleMode } = useCrossBubble();
@@ -67,10 +68,13 @@ export default function BubbleRadarScreen() {
 
             {/* Center User Bubble */}
             <View style={styles.centerBubble}>
-              <Ionicons
-                name={userAlias?.icon || "finger-print-outline"}
-                size={22}
-                color="#818CF8"
+              <CrossBubbleAvatar
+                avatarId={userAlias?.icon || "avatar_1"}
+                size={26}
+                borderRadius={7}
+                borderWidth={1}
+                borderColor="#818CF8"
+                style={{ marginBottom: 2 }}
               />
               <Text style={styles.centerLabel} numberOfLines={1}>
                 คุณ ({userAlias?.shortFaculty || "ฉัน"})

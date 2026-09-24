@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { useCrossBubble } from "../../context/CrossBubbleContext";
+import CrossBubbleAvatar from "../../components/crossbubble/CrossBubbleAvatar";
 
 export default function MissionsScreen() {
   const navigation = useNavigation();
@@ -413,8 +414,14 @@ export default function MissionsScreen() {
                 activeOpacity={0.85}
                 onPress={() => handleUnlockAvatar(item)}
               >
-                <View style={[styles.avatarIconBox, isEquipped && styles.avatarIconBoxEquipped]}>
-                  <Ionicons name={item.id} size={28} color="#17171c" />
+                <View style={styles.shopAvatarWrapper}>
+                  <CrossBubbleAvatar
+                    avatarId={item.id}
+                    size={46}
+                    borderRadius={12}
+                    borderWidth={isEquipped ? 2 : 1}
+                    borderColor={isEquipped ? "#17171c" : "#e2e8f0"}
+                  />
                 </View>
                 <Text style={styles.avatarName} numberOfLines={1}>
                   {item.name}
@@ -847,6 +854,9 @@ const styles = StyleSheet.create({
     borderColor: "#c7f65a",
     borderWidth: 2,
     backgroundColor: "#fcfdf7",
+  },
+  shopAvatarWrapper: {
+    marginBottom: 8,
   },
   avatarIconBox: {
     width: 52,
