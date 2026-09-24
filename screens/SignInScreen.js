@@ -53,9 +53,6 @@ export default function SignInScreen() {
         bounces={false}
       >
         <View style={styles.contentBox}>
-          {/* Eyebrow */}
-          <Text style={styles.eyebrow}>MEET THROUGH QUESTIONS</Text>
-
           {/* Headline */}
           <Text style={styles.headline}>
             เจอเพื่อนที่คลิก{"\n"}จากคำตอบที่ใช่

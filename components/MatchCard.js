@@ -60,7 +60,7 @@ export default function MatchCard({ match, index, onPress }) {
 
         <View style={styles.scoreCol}>
           <Text style={styles.percentageText}>{match.matchPercentage}%</Text>
-          <Text style={styles.percentageLabel}>MATCH</Text>
+          <Text style={styles.percentageLabel}>เข้ากันได้</Text>
         </View>
 
         <View style={styles.actionCol}>
@@ -89,7 +89,7 @@ export default function MatchCard({ match, index, onPress }) {
                   style={[styles.catTagText, { color: catTone.text }]}
                   numberOfLines={1}
                 >
-                  {cat.nameEN}
+                  {cat.name}
                 </Text>
               </View>
             );

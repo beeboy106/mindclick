@@ -226,12 +226,12 @@ export default function MatchDetailScreen({ route, navigation }) {
             {isPreview ? (
               <View style={styles.scoreContainerPreview}>
                 <Ionicons name="person" size={24} color={colors.primary} />
-                <Text style={styles.scoreLabel}>MY PROFILE</Text>
+                <Text style={styles.scoreLabel}>โปรไฟล์ของฉัน</Text>
               </View>
             ) : (
               <View style={styles.scoreContainer}>
                 <Text style={styles.scoreNumber}>{overallPercent}%</Text>
-                <Text style={styles.scoreLabel}>COMPATIBILITY</Text>
+                <Text style={styles.scoreLabel}>ความเข้ากันได้</Text>
               </View>
             )}
           </View>
@@ -303,9 +303,9 @@ export default function MatchDetailScreen({ route, navigation }) {
           <View style={styles.previewNoticeCard}>
             <Ionicons name="information-circle" size={22} color={colors.primary} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.previewNoticeTitle}>โหมดดูโปรไฟล์สาธารณะ (Preview)</Text>
+              <Text style={styles.previewNoticeTitle}>โหมดดูโปรไฟล์สาธารณะ</Text>
               <Text style={styles.previewNoticeText}>
-                นี่คือมุมมองที่ผู้อื่นจะเห็นเมื่อเข้ามาเปิดดูการ์ดโปรไฟล์ของคุณ โดยระบบจะนำคำตอบแบบทดสอบของคุณไปเปรียบเทียบกับคำตอบของพวกเขาเพื่อวิเคราะห์ความเข้ากันได้
+                นี่คือมุมมองที่ผู้อื่นจะเห็นเมื่อเข้ามาเปิดดูการ์ดโปรไฟล์ของคุณ โดยจะนำคำตอบแบบทดสอบของคุณไปเปรียบเทียบกับคำตอบของพวกเขาเพื่อวิเคราะห์ความเข้ากันได้
               </Text>
             </View>
           </View>
@@ -315,7 +315,6 @@ export default function MatchDetailScreen({ route, navigation }) {
         {sharedTopics.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionEyebrow}>MIND-INSIGHT</Text>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                 <Ionicons name="bulb-outline" size={18} color={colors.ink} />
                 <Text style={styles.sectionTitle}>จุดร่วมที่คุณทั้งสองตอบตรงกัน</Text>
@@ -368,9 +367,6 @@ export default function MatchDetailScreen({ route, navigation }) {
         {/* Category Breakdown */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionEyebrow}>
-              {isPreview ? "YOUR ANSWERS" : "BREAKDOWN"}
-            </Text>
             <Text style={styles.sectionTitle}>
               {isPreview ? "ความคืบหน้าคำถามแต่ละด้านของคุณ" : "ความเข้ากันได้แต่ละด้าน"}
             </Text>
@@ -425,7 +421,6 @@ export default function MatchDetailScreen({ route, navigation }) {
         {targetUser.galleryImages && targetUser.galleryImages.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionEyebrow}>GALLERY</Text>
               <Text style={styles.sectionTitle}>
                 รูปภาพ ({targetUser.galleryImages.length})
               </Text>

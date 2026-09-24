@@ -330,7 +330,6 @@ export default function ProfileScreen({ navigation }) {
       >
         {/* Title Section (Matching Image 3) */}
         <View style={styles.titleSection}>
-          <Text style={styles.eyebrow}>YOUR PROFILE</Text>
           <Text style={styles.headline}>เล่าให้คนที่ใช่รู้จักคุณ</Text>
           <View style={styles.titleDivider} />
         </View>
@@ -824,13 +823,13 @@ export default function ProfileScreen({ navigation }) {
 
           {/* Dev Mode Sandbox Actions */}
           <View style={styles.sandboxDevBox}>
-            <Text style={styles.sandboxTitle}>SANDBOX ควบคุมการทดสอบ (DEV MODE)</Text>
+            <Text style={styles.sandboxTitle}>พื้นที่ควบคุมการทดสอบ (DEV MODE)</Text>
 
             {/* System Dual-Mode Switcher (Real vs Advisor Demo Mode) */}
             <View style={styles.modeSwitchBox}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.modeSwitchTitle}>
-                  โหมดระบบ: {isDemoMode ? "โหมดสาธิต (Advisor Demo)" : "โหมดใช้งานจริง (Real Mode)"}
+                  สถานะโหมด: {isDemoMode ? "โหมดสาธิตสำหรับทดสอบ" : "โหมดใช้งานจริง"}
                 </Text>
                 <Text style={styles.modeSwitchSubtitle}>
                   {isDemoMode

@@ -54,7 +54,7 @@ export default function BubbleRadarScreen() {
             <Text style={styles.radarCardTitle}>แผนที่ทลายกรอบคณะ</Text>
             <View style={styles.livePulseBadge}>
               <View style={styles.pulseDot} />
-              <Text style={styles.livePulseText}>ACTIVE SCAN</Text>
+              <Text style={styles.livePulseText}>กำลังสแกน</Text>
             </View>
           </View>
 

@@ -70,7 +70,6 @@ export default function FavoritesScreen({ navigation }) {
       >
         {/* Header Section (Matching Image 4) */}
         <View style={styles.headerSection}>
-          <Text style={styles.eyebrow}>SAVED PEOPLE</Text>
           <View style={styles.titleRow}>
             <Text style={styles.title}>รายการโปรด</Text>
             <Text style={styles.countText}>{favoriteUsers.length} คน</Text>

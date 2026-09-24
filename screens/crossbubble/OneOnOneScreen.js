@@ -71,7 +71,6 @@ export default function OneOnOneScreen() {
         {/* Lobby Header */}
         <View style={styles.topHeader}>
           <View style={styles.headerLeft}>
-            <Text style={styles.headerSubtitle}>PRIVATE ANONYMOUS ROOM</Text>
             <Text style={styles.headerTitle}>ห้องมืด</Text>
           </View>
           <TouchableOpacity
@@ -304,7 +303,7 @@ export default function OneOnOneScreen() {
                     ต้องการทำความรู้จักตัวจริงและคุยต่อในแชทหน้าหลัก?
                   </Text>
                   <Text style={styles.menuActionHint}>
-                    เมื่ออีกฝ่ายตอบรับ ระบบจะแสดงแชทของเพื่อนคนนี้ในหน้าแชทหลักให้ทันที
+                    เมื่ออีกฝ่ายตอบรับ จะแสดงแชทของเพื่อนคนนี้ในหน้าแชทหลักให้ทันที
                   </Text>
                 </View>
 
@@ -336,7 +335,7 @@ export default function OneOnOneScreen() {
                   <Text style={styles.acceptedTitleText}>เป็นเพื่อนกันแล้วในหน้าหลัก</Text>
                 </View>
                 <Text style={styles.acceptedDescText}>
-                  ระบบได้แสดงแชทของเพื่อนคนนี้ขึ้นมาที่หน้าแชทหลักให้เรียบร้อยแล้ว หากกลับไปที่หน้าแชทหลักจะเจอแชทเพื่อนที่พึ่งเพิ่ม
+                  เปิดห้องแชทของเพื่อนคนนี้ในหน้าแชทหลักให้เรียบร้อยแล้ว เมื่อกลับไปที่หน้าแชทหลักจะพบห้องแชทของเพื่อนที่เพิ่งเพิ่ม
                 </Text>
 
                 {/* View friend's posts button */}
@@ -388,7 +387,6 @@ export default function OneOnOneScreen() {
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <View>
-                <Text style={styles.modalSubtitle}>FRIEND POSTS ARCHIVE</Text>
                 <Text style={styles.modalTitle}>
                   สิ่งที่เพื่อนคนนี้เคยโพสต์
                 </Text>
@@ -402,7 +400,7 @@ export default function OneOnOneScreen() {
               {friendPosts.length === 0 ? (
                 <View style={styles.emptyPostsBox}>
                   <Ionicons name="document-text-outline" size={36} color="#cbd5e1" />
-                  <Text style={styles.emptyPostsText}>เพื่อนคนนี้ยังไม่มีโพสต์ในระบบฟีด</Text>
+                  <Text style={styles.emptyPostsText}>เพื่อนคนนี้ยังไม่มีโพสต์บนฟีด</Text>
                 </View>
               ) : (
                 friendPosts.map((post) => (

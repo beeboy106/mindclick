@@ -36,6 +36,7 @@ export default function HomeScreen({ navigation }) {
     isTrialActive,
     daysRemaining,
     hasShownWelcome,
+    dismissWelcome,
   } = usePremium();
 
   const [bubbleModalVisible, setBubbleModalVisible] = useState(false);
@@ -78,7 +79,6 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.heroSection}>
           <View style={styles.heroTopRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.eyebrow}>YOUR MINDCLICK</Text>
               <Text style={styles.greetingTitle}>สวัสดี {firstName}</Text>
             </View>
 
@@ -142,7 +142,7 @@ export default function HomeScreen({ navigation }) {
           >
             <View style={styles.dilemmaHeroTop}>
               <View style={styles.dilemmaTagBadge}>
-                <Text style={styles.dilemmaTagText}>DAILY CAMPUS DILEMMA</Text>
+                <Text style={styles.dilemmaTagText}>ประเด็นขบคิดประจำวัน</Text>
               </View>
 
               <View
@@ -203,7 +203,7 @@ export default function HomeScreen({ navigation }) {
             }}
           >
             <View style={styles.nextMoveTop}>
-              <Text style={styles.nextMoveLabel}>NEXT MOVE</Text>
+              <Text style={styles.nextMoveLabel}>ขั้นตอนถัดไป</Text>
               <Ionicons name="arrow-forward" size={28} color={colors.ink} />
             </View>
 
@@ -227,7 +227,6 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.progressSection}>
           <View style={styles.sectionHeader}>
             <View>
-              <Text style={styles.sectionEyebrow}>QUIZ PROGRESS</Text>
               <Text style={styles.sectionTitle}>ความคืบหน้าของคุณ</Text>
             </View>
             <Text style={styles.fractionText}>
@@ -312,7 +311,6 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.matchesSection}>
           <View style={styles.sectionHeader}>
             <View>
-              <Text style={styles.sectionEyebrow}>TOP MATCHES</Text>
               <Text style={styles.sectionTitle}>คนที่น่าจะคลิกกับคุณ</Text>
             </View>
             {matches.length > 0 && (
@@ -340,7 +338,7 @@ export default function HomeScreen({ navigation }) {
               <Ionicons name="sparkles" size={32} color={colors.primary} />
               <Text style={styles.emptyDashedTitle}>ยังไม่มีแมตช์ให้แสดง</Text>
               <Text style={styles.emptyDashedSub}>
-                ตอบคำถามอย่างน้อยหนึ่งด้าน แล้วระบบจะเริ่มค้นหาคนที่มีคำตอบคล้ายคุณ
+                ตอบคำถามอย่างน้อยหนึ่งด้าน เพื่อเริ่มค้นหาคนที่มีคำตอบคล้ายคุณ
               </Text>
             </View>
           )}
@@ -356,7 +354,12 @@ export default function HomeScreen({ navigation }) {
       {/* Bubble User Upgrade Modal (Welcome on first login / Paywall) */}
       <BubbleUpgradeModal
         visible={bubbleModalVisible || (!hasShownWelcome && Boolean(hasAcceptedPolicy))}
-        onClose={() => setBubbleModalVisible(false)}
+        onClose={() => {
+          if (!hasShownWelcome) {
+            dismissWelcome();
+          }
+          setBubbleModalVisible(false);
+        }}
         mode={!hasShownWelcome && Boolean(hasAcceptedPolicy) ? "welcome" : bubbleModalMode}
       />
     </SafeAreaView>

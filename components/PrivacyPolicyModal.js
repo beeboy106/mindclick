@@ -27,7 +27,7 @@ export default function PrivacyPolicyModal({
   const handleDeclinePress = () => {
     Alert.alert(
       "ยืนยันการปฏิเสธ",
-      "หากท่านปฏิเสธนโยบายการจัดเก็บข้อมูล ท่านจะไม่สามารถใช้งานระบบจับคู่ของ Mindclick ได้ และระบบจะทำการออกจากระบบ ท่านต้องการออกจากระบบใช่หรือไม่?",
+      "หากท่านปฏิเสธนโยบายการจัดเก็บข้อมูล จะไม่สามารถใช้งานการจับคู่ของ Mindclick ได้ และจะทำการออกจากระบบ ท่านต้องการออกจากระบบใช่หรือไม่?",
       [
         { text: "ยกเลิก", style: "cancel" },
         {
@@ -101,7 +101,7 @@ export default function PrivacyPolicyModal({
                   <Text style={styles.sectionTitle}>1. ข้อมูลที่เราจัดเก็บ</Text>
                 </View>
                 <Text style={styles.sectionText}>
-                  เพื่อการทำงานของระบบแอป Mindclick เราจัดเก็บข้อมูลที่จำเป็นดังต่อไปนี้:
+                  เพื่อการทำงานของแอป Mindclick เราจัดเก็บข้อมูลที่จำเป็นดังต่อไปนี้:
                 </Text>
                 <View style={styles.bulletList}>
                   <Text style={styles.bulletItem}>
@@ -157,7 +157,7 @@ export default function PrivacyPolicyModal({
                   </Text>
                 </View>
                 <Text style={styles.sectionText}>
-                  ข้อมูลโปรไฟล์สาธารณะ (ชื่อ, รูปภาพ, ข้อมูลแนะนำตัว, ช่องทางติดต่อที่ท่านระบุ) และเปอร์เซ็นต์ความเข้ากันได้ จะแสดงต่อผู้ใช้งานรายอื่นในระบบ Mindclick เพื่อประโยชน์ในการทำความรู้จักและสร้างมิตรภาพ
+                  ข้อมูลโปรไฟล์สาธารณะ (ชื่อ, รูปภาพ, ข้อมูลแนะนำตัว, ช่องทางติดต่อที่ท่านระบุ) และเปอร์เซ็นต์ความเข้ากันได้ จะแสดงต่อผู้ใช้งานรายอื่นใน Mindclick เพื่อประโยชน์ในการทำความรู้จักและสร้างมิตรภาพ
                 </Text>
                 <View style={styles.highlightBox}>
                   <Ionicons

@@ -59,7 +59,6 @@ export default function DailyDilemmaModal({ visible, onClose }) {
           </TouchableOpacity>
 
           <View style={styles.headerTitleBox}>
-            <Text style={styles.eyebrowText}>DAILY CAMPUS DILEMMA</Text>
             <Text style={styles.mainTitleText}>คำถามประจำวันสะท้อนตัวตน</Text>
           </View>
 
@@ -218,7 +217,7 @@ export default function DailyDilemmaModal({ visible, onClose }) {
                     <Ionicons name="sparkles" size={18} color="#bbf44a" />
                   </View>
                   <Text style={styles.reflectionHeaderTitle}>
-                    AI IDENTITY INSIGHT
+                    บทวิเคราะห์ตัวตน
                   </Text>
                 </View>
 

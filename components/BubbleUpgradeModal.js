@@ -182,6 +182,96 @@ export default function BubbleUpgradeModal({
 
   const config = getModeConfig();
 
+  if (mode === "welcome") {
+    return (
+      <Modal
+        visible={visible}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={handleStartTrial}
+      >
+        <View style={styles.welcomeOverlay}>
+          <TouchableOpacity
+            style={styles.welcomeBackdropTouch}
+            activeOpacity={1}
+            onPress={handleStartTrial}
+          />
+          <View style={styles.welcomeCard}>
+            {/* Top Close Button */}
+            <TouchableOpacity
+              style={styles.welcomeCloseBtn}
+              onPress={handleStartTrial}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="close" size={20} color={colors.ink} />
+            </TouchableOpacity>
+
+            {/* Header Badge */}
+            <View style={styles.welcomeBadge}>
+              <Ionicons name="sparkles" size={13} color="#15803d" style={{ marginRight: 5 }} />
+              <Text style={styles.welcomeBadgeText}>แจ้งสิทธิ์พิเศษสำหรับคุณ</Text>
+            </View>
+
+            {/* Title & Subtitle */}
+            <Text style={styles.welcomeTitle}>คุณได้รับสิทธิ์ผู้ใช้ฟองสบู่ฟรี 7 วัน</Text>
+            <Text style={styles.welcomeSubtitle}>
+              เพื่อต้อนรับสู่ Mindclick คุณได้รับสิทธิ์ใช้งานฟังก์ชันพิเศษฟรี 7 วันแรกเรียบร้อยแล้ว โดยทุกคนจะได้รับสิทธิ์นี้ทันทีโดยไม่ต้องกดรับหรือผูกบัตรใดๆ
+            </Text>
+
+            {/* Perks List */}
+            <View style={styles.welcomePerksList}>
+              <View style={styles.welcomePerkItem}>
+                <View style={styles.welcomePerkIcon}>
+                  <Ionicons name="planet" size={18} color="#0284c7" />
+                </View>
+                <View style={styles.welcomePerkTextCol}>
+                  <Text style={styles.welcomePerkTitle}>ห้องสังสรรค์ลับและห้องมืด (Cross-Bubble)</Text>
+                  <Text style={styles.welcomePerkDesc}>สุ่มคุยกลุ่ม 5 คนทุก 19:00 น. แลกเปลี่ยนมุมมองต่างคณะ</Text>
+                </View>
+              </View>
+
+              <View style={styles.welcomePerkItem}>
+                <View style={styles.welcomePerkIcon}>
+                  <Ionicons name="eye" size={18} color="#0284c7" />
+                </View>
+                <View style={styles.welcomePerkTextCol}>
+                  <Text style={styles.welcomePerkTitle}>ดูคนมาส่องโปรไฟล์ 30 วัน</Text>
+                  <Text style={styles.welcomePerkDesc}>เห็นชื่อจริง ภาพชัด และจุดที่ตอบตรงกัน</Text>
+                </View>
+              </View>
+
+              <View style={styles.welcomePerkItem}>
+                <View style={styles.welcomePerkIcon}>
+                  <Ionicons name="chatbubbles" size={18} color="#0284c7" />
+                </View>
+                <View style={styles.welcomePerkTextCol}>
+                  <Text style={styles.welcomePerkTitle}>โพสต์เรื่องราวบนฟีดได้ไม่จำกัด</Text>
+                  <Text style={styles.welcomePerkDesc}>แชร์เรื่องราว รีวิวหนัง และคุยได้ไม่จำกัดโควต้า</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Status Pill */}
+            <View style={styles.welcomeStatusBox}>
+              <Ionicons name="checkmark-circle" size={16} color="#059669" style={{ marginRight: 6 }} />
+              <Text style={styles.welcomeStatusText}>สถานะ: เปิดใช้งานแล้ว (เหลือเวลา 7 วัน)</Text>
+            </View>
+
+            {/* Confirm CTA Button */}
+            <TouchableOpacity
+              style={styles.welcomeActionBtn}
+              activeOpacity={0.88}
+              onPress={handleStartTrial}
+            >
+              <Text style={styles.welcomeActionBtnText}>รับทราบและเริ่มใช้งาน</Text>
+              <Ionicons name="arrow-forward" size={18} color={colors.ink} style={{ marginLeft: 6 }} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    );
+  }
+
   return (
     <Modal
       visible={visible}
@@ -892,5 +982,140 @@ const styles = StyleSheet.create({
   trustDivider: {
     fontSize: 10,
     color: "#cbd5e1",
+  },
+  welcomeOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.55)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  welcomeBackdropTouch: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  welcomeCard: {
+    width: "100%",
+    maxWidth: 400,
+    backgroundColor: "#ffffff",
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: colors.darkBorder,
+    padding: 20,
+    ...shadows.neo,
+  },
+  welcomeCloseBtn: {
+    position: "absolute",
+    top: 14,
+    right: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    backgroundColor: "#f1f5f9",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+  },
+  welcomeBadge: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#dcfce7",
+    borderWidth: 1.5,
+    borderColor: "#86efac",
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginBottom: 12,
+  },
+  welcomeBadgeText: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: "#15803d",
+  },
+  welcomeTitle: {
+    fontSize: 17.5,
+    fontWeight: "900",
+    color: colors.ink,
+    marginBottom: 6,
+    paddingRight: 24,
+  },
+  welcomeSubtitle: {
+    fontSize: 12.5,
+    fontWeight: "500",
+    color: colors.mutedForeground,
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  welcomePerksList: {
+    backgroundColor: "#f8fafc",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "#e2e8f0",
+    padding: 12,
+    marginBottom: 14,
+    gap: 10,
+  },
+  welcomePerkItem: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  welcomePerkIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 9,
+    backgroundColor: "#e0f2fe",
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  welcomePerkTextCol: {
+    flex: 1,
+  },
+  welcomePerkTitle: {
+    fontSize: 12.5,
+    fontWeight: "800",
+    color: colors.ink,
+    marginBottom: 1,
+  },
+  welcomePerkDesc: {
+    fontSize: 11,
+    color: colors.mutedForeground,
+    lineHeight: 15,
+  },
+  welcomeStatusBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0fdf4",
+    borderWidth: 1.5,
+    borderColor: "#bbf7d0",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 16,
+  },
+  welcomeStatusText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#15803d",
+  },
+  welcomeActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#bbf44a",
+    borderWidth: 2,
+    borderColor: colors.darkBorder,
+    borderRadius: 14,
+    paddingVertical: 13,
+    ...shadows.neo,
+  },
+  welcomeActionBtnText: {
+    fontSize: 14.5,
+    fontWeight: "900",
+    color: colors.ink,
   },
 });

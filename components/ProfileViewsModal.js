@@ -217,7 +217,6 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
             </TouchableOpacity>
 
             <View style={styles.headerTitleBox}>
-              <Text style={styles.eyebrowText}>MIND-INSIGHT VISITORS</Text>
               <Text style={styles.mainTitleText}>ประวัติการส่องโปรไฟล์</Text>
             </View>
 
@@ -372,7 +371,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
                     </View>
                     <View style={styles.sparkTextBox}>
                       <View style={styles.sparkHeaderRow}>
-                        <Text style={styles.sparkEyebrow}>MUTUAL SPARK DETECTED</Text>
+                        <Text style={styles.sparkEyebrow}>พบคนเคมีตรงกันสูง</Text>
                       </View>
                       <Text style={styles.sparkTitle}>
                         มีคนเคมีตรงกับคุณถึง {topSparkVisitor?.matchPercentage || 85}% แอบมาส่อง!
@@ -502,7 +501,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
                                 </Text>
                                 {isSpark && (
                                   <View style={styles.sparkBadgePill}>
-                                    <Text style={styles.sparkBadgePillText}>SPARK</Text>
+                                    <Text style={styles.sparkBadgePillText}>เคมีตรงกัน</Text>
                                   </View>
                                 )}
                               </View>
@@ -677,7 +676,7 @@ export default function ProfileViewsModal({ visible, onClose, onSelectUser }) {
 
             {/* Developer Sandbox */}
             <View style={styles.devBar}>
-              <Text style={styles.devBarTitle}>DEVELOPER SANDBOX</Text>
+              <Text style={styles.devBarTitle}>พื้นที่ควบคุมการทดสอบ</Text>
               <View style={styles.devBtnRow}>
                 <TouchableOpacity
                   style={styles.devBtn}

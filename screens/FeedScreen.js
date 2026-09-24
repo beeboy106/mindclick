@@ -66,32 +66,39 @@ export default function FeedScreen({ navigation }) {
   const [pullDistanceState, setPullDistanceState] = useState(0);
   const [isReadyToRelease, setIsReadyToRelease] = useState(false);
 
-  const PULL_THRESHOLD = 60;
+  const PULL_THRESHOLD = 50;
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
+      onStartShouldSetPanResponderCapture: () => false,
       onMoveShouldSetPanResponder: (evt, gestureState) => {
-        const isPullDown = gestureState.dy > 6;
-        const isVertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.3;
-        return scrollOffsetRef.current <= 5 && isPullDown && isVertical;
+        const isPullDown = gestureState.dy > 8;
+        const isVertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.2;
+        return scrollOffsetRef.current <= 0 && isPullDown && isVertical;
       },
+      onMoveShouldSetPanResponderCapture: (evt, gestureState) => {
+        const isPullDown = gestureState.dy > 8;
+        const isVertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.2;
+        return scrollOffsetRef.current <= 0 && isPullDown && isVertical;
+      },
+      onPanResponderTerminationRequest: () => false,
       onPanResponderMove: (evt, gestureState) => {
         if (gestureState.dy > 0) {
-          const distance = Math.min(115, gestureState.dy * 0.65);
+          const distance = Math.min(100, Math.max(0, gestureState.dy * 0.8));
           pullAnim.setValue(distance);
           setPullDistanceState(distance);
           setIsReadyToRelease(distance >= PULL_THRESHOLD);
         }
       },
       onPanResponderRelease: (evt, gestureState) => {
-        const distance = gestureState.dy * 0.65;
-        if (distance >= PULL_THRESHOLD) {
+        const distance = gestureState.dy * 0.8;
+        if (distance >= PULL_THRESHOLD || gestureState.dy >= 55) {
           // หากไม่ใช่ผู้ใช้ฟองสบู่ จะไม่สามารถเข้าสู่โหมด Cross-Bubble ได้
           if (!isBubbleUser) {
             Animated.timing(pullAnim, {
               toValue: 0,
-              duration: 220,
+              duration: 200,
               useNativeDriver: false,
             }).start(() => {
               setPullDistanceState(0);
@@ -108,7 +115,7 @@ export default function FeedScreen({ navigation }) {
             if (warnRes?.shouldWarn) {
               Animated.timing(pullAnim, {
                 toValue: 0,
-                duration: 220,
+                duration: 200,
                 useNativeDriver: false,
               }).start(() => {
                 setPullDistanceState(0);
@@ -119,10 +126,10 @@ export default function FeedScreen({ navigation }) {
               return;
             }
 
-            // ดีดหน้าขึ้น แล้วเปลี่ยนเข้าสู่โหมด Cross-Bubble
+            // ดีดหน้าขึ้น แล้วเปลี่ยนเข้าสู่โหมด Cross-Bubble ทันที
             Animated.timing(pullAnim, {
               toValue: 0,
-              duration: 220,
+              duration: 200,
               useNativeDriver: false,
             }).start(() => {
               setPullDistanceState(0);
@@ -134,7 +141,7 @@ export default function FeedScreen({ navigation }) {
           // ดีดกลับขึ้นไป
           Animated.spring(pullAnim, {
             toValue: 0,
-            bounciness: 6,
+            bounciness: 4,
             useNativeDriver: false,
           }).start(() => {
             setPullDistanceState(0);
@@ -156,36 +163,7 @@ export default function FeedScreen({ navigation }) {
 
   const handleScroll = (event) => {
     const y = event.nativeEvent.contentOffset.y;
-    scrollOffsetRef.current = y;
-    if (y < -8) {
-      const dist = Math.min(115, Math.abs(y));
-      pullAnim.setValue(dist);
-      setPullDistanceState(dist);
-      setIsReadyToRelease(dist >= PULL_THRESHOLD);
-    }
-  };
-
-  const handleScrollEndDrag = (event) => {
-    const y = event.nativeEvent.contentOffset.y;
-    if (y < -PULL_THRESHOLD || pullDistanceState >= PULL_THRESHOLD) {
-      Animated.timing(pullAnim, {
-        toValue: 0,
-        duration: 220,
-        useNativeDriver: false,
-      }).start(() => {
-        setPullDistanceState(0);
-        setIsReadyToRelease(false);
-        toggleCrossBubbleMode(true);
-      });
-    } else if (y < 0 || pullDistanceState > 0) {
-      Animated.spring(pullAnim, {
-        toValue: 0,
-        useNativeDriver: false,
-      }).start(() => {
-        setPullDistanceState(0);
-        setIsReadyToRelease(false);
-      });
-    }
+    scrollOffsetRef.current = Math.max(0, y);
   };
 
   const currentTopic =
@@ -399,7 +377,7 @@ export default function FeedScreen({ navigation }) {
               </Text>
               <Text style={styles.pullDrawerDesc}>
                 {isReadyToRelease
-                  ? "ปล่อยเพื่อสลับธีมมืดและเปิดพื้นที่ Underground Lounge ทันที"
+                  ? "ปล่อยเพื่อเข้าสู่ห้องสังสรรค์ลับและโหมดข้ามคณะทันที"
                   : "ดึงหน้าจอลงอีกนิดเพื่อเปิดใช้งานโหมดลับข้ามคณะ"}
               </Text>
             </View>
@@ -411,13 +389,14 @@ export default function FeedScreen({ navigation }) {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           onScroll={handleScroll}
-          onScrollEndDrag={handleScrollEndDrag}
           scrollEventThrottle={16}
+          overScrollMode="never"
+          bounces={false}
         >
           {/* SECTION 1: Friends Online / Chat Quick Access Bar */}
         <View style={styles.friendsSection}>
           <View style={styles.friendsSectionHeader}>
-            <Text style={styles.sectionTitle}>เพื่อนที่เคยคุยด้วย (Friends)</Text>
+            <Text style={styles.sectionTitle}>เพื่อนที่เคยคุยด้วย</Text>
             <TouchableOpacity onPress={handleOpenChatList}>
               <Text style={styles.seeAllText}>เปิดแชททั้งหมด</Text>
             </TouchableOpacity>

@@ -135,7 +135,6 @@ export default function QuizScreen({ route, navigation }) {
         {/* STEP 1: Select Category */}
         {step === "select-category" && (
           <View>
-            <Text style={styles.sectionEyebrow}>CATEGORIES</Text>
             <Text style={styles.pageTitle}>เลือกด้านที่คุณต้องการตอบ</Text>
             <Text style={styles.pageSubtitle}>
               แต่ละด้านมี 10 คำถามเพื่อวัดระดับความเข้ากันได้
@@ -275,7 +274,7 @@ export default function QuizScreen({ route, navigation }) {
             <Text style={styles.completeTitle}>บันทึกคำตอบเรียบร้อย!</Text>
             <Text style={styles.completeSubtitle}>
               คุณได้ตอบคำถาม{selectedCategory?.name}ครบ 10 ข้อแล้ว{"\n"}
-              ระบบได้นำคำตอบไปคำนวณความเข้ากันได้ทันที
+              นำคำตอบไปประมวลผลความเข้ากันได้ทันที
             </Text>
 
             <View style={styles.completeActions}>

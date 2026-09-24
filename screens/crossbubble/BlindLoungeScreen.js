@@ -113,7 +113,6 @@ export default function BlindLoungeScreen() {
         {/* Header */}
         <View style={styles.topHeader}>
           <View style={styles.headerLeft}>
-            <Text style={styles.headerSubtitle}>CAMPUS SOCIAL LOUNGE</Text>
             <Text style={styles.headerTitle}>ห้องสังสรรค์</Text>
           </View>
           <TouchableOpacity
@@ -136,10 +135,9 @@ export default function BlindLoungeScreen() {
             <View style={styles.scheduleClockCircle}>
               <Ionicons name="time" size={28} color="#17171c" />
             </View>
-            <Text style={styles.schedulePre}>DAILY 19:00 MATCHING</Text>
-            <Text style={styles.scheduleTitle}>ระบบสุ่มกลุ่ม 5 คนทุก 19:00 น.</Text>
+            <Text style={styles.scheduleTitle}>สุ่มกลุ่ม 5 คนทุก 19:00 น.</Text>
             <Text style={styles.scheduleDesc}>
-              ระบบจะจัดกลุ่มเพื่อน 5 คนจากต่างคณะ พร้อมหัวข้อและภารกิจลับ เพื่อให้ทุกคนได้เปิดใจพูดคุยกันอย่างเป็นธรรมชาติ
+              จัดกลุ่มเพื่อน 5 คนจากต่างคณะ พร้อมหัวข้อและภารกิจลับ เพื่อให้ทุกคนได้เปิดใจพูดคุยกันอย่างเป็นธรรมชาติ
             </Text>
 
             {/* Countdown Display */}
@@ -224,7 +222,7 @@ export default function BlindLoungeScreen() {
             <Ionicons name="arrow-back" size={20} color="#17171c" />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerSubtitle}>STEP 1 OF 3</Text>
+            <Text style={styles.headerSubtitle}>ขั้นตอนที่ 1 จาก 3</Text>
             <Text style={styles.headerTitle}>เตรียมข้อมูลภารกิจ</Text>
           </View>
           <View style={{ width: 32 }} />
@@ -297,7 +295,7 @@ export default function BlindLoungeScreen() {
 
         <View style={styles.topHeader}>
           <View style={styles.headerLeft}>
-            <Text style={styles.headerSubtitle}>STEP 2 OF 3</Text>
+            <Text style={styles.headerSubtitle}>ขั้นตอนที่ 2 จาก 3</Text>
             <Text style={styles.headerTitle}>ภารกิจลับของคุณ</Text>
           </View>
         </View>
@@ -311,7 +309,7 @@ export default function BlindLoungeScreen() {
           <View style={styles.missionBriefCard}>
             <View style={styles.briefBadge}>
               <Ionicons name="shield-outline" size={14} color="#17171c" />
-              <Text style={styles.briefBadgeText}>SECRET ASSIGNMENT</Text>
+              <Text style={styles.briefBadgeText}>ภารกิจลับ</Text>
             </View>
 
             <Text style={styles.missionBriefTitle}>{userMission.secretTask}</Text>
@@ -506,7 +504,7 @@ export default function BlindLoungeScreen() {
 
         <View style={styles.topHeader}>
           <View style={styles.headerLeft}>
-            <Text style={styles.headerSubtitle}>STEP 3 OF 3</Text>
+            <Text style={styles.headerSubtitle}>ขั้นตอนที่ 3 จาก 3</Text>
             <Text style={styles.headerTitle}>แบบทดสอบภารกิจ</Text>
           </View>
         </View>
@@ -619,7 +617,7 @@ export default function BlindLoungeScreen() {
 
         <View style={styles.topHeader}>
           <View style={styles.headerLeft}>
-            <Text style={styles.headerSubtitle}>SESSION COMPLETED</Text>
+            <Text style={styles.headerSubtitle}>เสร็จสิ้นกิจกรรม</Text>
             <Text style={styles.headerTitle}>คะแนนการตอบควิซ</Text>
           </View>
         </View>
@@ -692,7 +690,7 @@ export default function BlindLoungeScreen() {
 
         <View style={styles.topHeader}>
           <View style={styles.headerLeft}>
-            <Text style={styles.headerSubtitle}>SESSION SUMMARY</Text>
+            <Text style={styles.headerSubtitle}>สรุปผลกิจกรรม</Text>
             <Text style={styles.headerTitle}>เฉลยภารกิจลับ</Text>
           </View>
           <TouchableOpacity

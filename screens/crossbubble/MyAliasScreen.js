@@ -61,7 +61,6 @@ export default function MyAliasScreen() {
       {/* Header */}
       <View style={styles.topHeader}>
         <View style={styles.headerLeft}>
-          <Text style={styles.headerSubtitle}>CROSS-BUBBLE PROFILE</Text>
           <Text style={styles.headerTitle}>โปรไฟล์ & นามแฝง</Text>
         </View>
         <TouchableOpacity

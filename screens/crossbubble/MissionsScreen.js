@@ -123,7 +123,7 @@ export default function MissionsScreen() {
             if (ok) {
               Alert.alert(
                 "ขยายเวลาสำเร็จ",
-                "ระบบเพิ่มวันทดลองใช้งานผู้ใช้ฟองสบู่ให้คุณอีก 1 วันเรียบร้อยแล้ว คุณสามารถเข้าถึงฟีเจอร์พรีเมียมทั้งหมดได้อย่างต่อเนื่อง"
+                "เพิ่มวันทดลองใช้งานผู้ใช้ฟองสบู่ให้คุณอีก 1 วันเรียบร้อยแล้ว สามารถเข้าถึงฟังก์ชันพิเศษทั้งหมดได้อย่างต่อเนื่อง"
               );
             }
           },
@@ -169,7 +169,6 @@ export default function MissionsScreen() {
       {/* Header */}
       <View style={styles.topHeader}>
         <View style={styles.headerLeft}>
-          <Text style={styles.headerSubtitle}>DAILY MISSIONS & STREAK</Text>
           <Text style={styles.headerTitle}>ภารกิจ & สถานะไฟ</Text>
         </View>
         <TouchableOpacity
@@ -198,7 +197,6 @@ export default function MissionsScreen() {
               />
             </View>
             <View style={styles.flameTextCol}>
-              <Text style={styles.flameCardPre}>CAMPUS FLAME STREAK</Text>
               <Text style={styles.flameCardTitle}>
                 {streakDays} วันต่อเนื่อง
               </Text>
