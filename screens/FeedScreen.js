@@ -532,9 +532,7 @@ export default function FeedScreen({ navigation }) {
         <View style={styles.createCard}>
           <View style={styles.createCardHeaderRow}>
             <Text style={styles.createCardHeader}>
-              {!isFeedUnlocked
-                ? "แชร์เรื่องราวของคุณ (ต้องตอบครบ 4 ด้าน)"
-                : selectedTopic === "all"
+              {selectedTopic === "all"
                 ? "แชร์เรื่องราวของคุณ"
                 : `แชร์ในกระทู้: ${currentTopic.label}`}
             </Text>
@@ -719,25 +717,7 @@ export default function FeedScreen({ navigation }) {
           )}
         </View>
 
-        {!isFeedUnlocked ? (
-          <View style={styles.feedLockedCard}>
-            <View style={styles.feedLockedHeader}>
-              <Ionicons name="lock-closed-outline" size={16} color="#64748b" />
-              <Text style={styles.feedLockedTitle}>ฟีดชุมชน (0 โพสต์)</Text>
-            </View>
-            <Text style={styles.feedLockedDesc}>
-              ตอบคำถามครบทั้ง 4 ด้านเพื่อปลดล็อคฟีดและการแลกเปลี่ยนมุมมองกับเพื่อนๆ (ปัจจุบันตอบแล้ว {completedCount}/4 ด้าน)
-            </Text>
-            <TouchableOpacity
-              style={styles.feedLockedActionBtn}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate("HomeTab")}
-            >
-              <Text style={styles.feedLockedActionText}>ไปตอบคำถามให้ครบ</Text>
-              <Ionicons name="arrow-forward" size={13} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
-        ) : isLoading ? (
+        {!isFeedUnlocked ? null : isLoading ? (
           <View style={styles.loadingBox}>
             <ActivityIndicator size="large" color={colors.primary} />
           </View>
@@ -1437,42 +1417,5 @@ const styles = StyleSheet.create({
   friendsLockedText: {
     fontSize: 12.5,
     color: "#6b7280",
-  },
-  feedLockedCard: {
-    backgroundColor: "#f8fafc",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    padding: 16,
-    marginVertical: 12,
-  },
-  feedLockedHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 6,
-  },
-  feedLockedTitle: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#475569",
-  },
-  feedLockedDesc: {
-    fontSize: 13,
-    color: "#64748b",
-    lineHeight: 19,
-  },
-  feedLockedActionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    marginTop: 10,
-    gap: 4,
-    paddingVertical: 4,
-  },
-  feedLockedActionText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.primary,
   },
 });
