@@ -5,16 +5,22 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
     "splash": {
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#f7f8fc"
+      "backgroundColor": "#ffffff"
     },
     "scheme": "mindclick",
     "android": {
       "package": "com.mindclick.app",
       "adaptiveIcon": {
-        "backgroundColor": "#f7f8fc"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
       }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
     },
     "ios": {
       "supportsTablet": true,
