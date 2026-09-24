@@ -2,21 +2,23 @@ import React from "react";
 import { View, Image, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-// แผนที่รูปภาพอวาตารในเครื่อง
+import { AVATAR_ASSETS } from "../../lib/avatarAssets";
+
+// แผนที่รูปภาพอวาตารในเครื่อง (Data URIs เพื่อรองรับ Expo Snack และ Expo Go ได้ 100%)
 export const AVATAR_IMAGE_MAP = {
-  avatar_1: require("../../assets/avatars/default_avatar_1.jpg"),
-  avatar_2: require("../../assets/avatars/default_avatar_2.jpg"),
-  avatar_3: require("../../assets/avatars/default_avatar_3.jpg"),
-  avatar_4: require("../../assets/avatars/default_avatar_4.jpg"),
-  shop_blueberry: require("../../assets/avatars/shop_avatar_blueberry.jpg"),
-  shop_red_apple: require("../../assets/avatars/shop_avatar_red_apple.jpg"),
-  shop_green_apple: require("../../assets/avatars/shop_avatar_green_apple.jpg"),
-  shop_funny_cat: require("../../assets/avatars/shop_avatar_funny_cat.jpg"),
-  shop_curious_cat: require("../../assets/avatars/shop_avatar_curious_cat.jpg"),
-  shop_shrimp_chicken: require("../../assets/avatars/shop_avatar_shrimp_chicken.jpg"),
-  shop_pink_shrimp_chicken: require("../../assets/avatars/shop_avatar_pink_shrimp_chicken.jpg"),
-  shop_cyber_flame: require("../../assets/avatars/shop_avatar_cyber_flame.jpg"),
-  shop_soul_flame: require("../../assets/avatars/shop_avatar_soul_flame.jpg"),
+  avatar_1: AVATAR_ASSETS.avatar_1,
+  avatar_2: AVATAR_ASSETS.avatar_2,
+  avatar_3: AVATAR_ASSETS.avatar_3,
+  avatar_4: AVATAR_ASSETS.avatar_4,
+  shop_blueberry: AVATAR_ASSETS.shop_blueberry,
+  shop_red_apple: AVATAR_ASSETS.shop_red_apple,
+  shop_green_apple: AVATAR_ASSETS.shop_green_apple,
+  shop_funny_cat: AVATAR_ASSETS.shop_funny_cat,
+  shop_curious_cat: AVATAR_ASSETS.shop_curious_cat,
+  shop_shrimp_chicken: AVATAR_ASSETS.shop_shrimp_chicken,
+  shop_pink_shrimp_chicken: AVATAR_ASSETS.shop_pink_shrimp_chicken,
+  shop_cyber_flame: AVATAR_ASSETS.shop_cyber_flame,
+  shop_soul_flame: AVATAR_ASSETS.shop_soul_flame,
 };
 
 // รายการอวาตารเริ่มต้น 4 แบบ
@@ -24,25 +26,25 @@ export const DEFAULT_AVATARS = [
   {
     id: "avatar_1",
     name: "กรีนบับเบิ้ล (Green Chill)",
-    source: AVATAR_IMAGE_MAP.avatar_1,
+    source: { uri: AVATAR_IMAGE_MAP.avatar_1 },
     color: "#22c55e",
   },
   {
     id: "avatar_2",
     name: "เยลโล่วสปาร์ค (Yellow Spark)",
-    source: AVATAR_IMAGE_MAP.avatar_2,
+    source: { uri: AVATAR_IMAGE_MAP.avatar_2 },
     color: "#eab308",
   },
   {
     id: "avatar_3",
     name: "เพอร์เพิลฮาร์ท (Purple Heart)",
-    source: AVATAR_IMAGE_MAP.avatar_3,
+    source: { uri: AVATAR_IMAGE_MAP.avatar_3 },
     color: "#a855f7",
   },
   {
     id: "avatar_4",
     name: "บลูเวฟ (Blue Wave)",
-    source: AVATAR_IMAGE_MAP.avatar_4,
+    source: { uri: AVATAR_IMAGE_MAP.avatar_4 },
     color: "#38bdf8",
   },
 ];
@@ -83,7 +85,11 @@ export default function CrossBubbleAvatar({
         ]}
       >
         <Image
-          source={AVATAR_IMAGE_MAP[avatarId]}
+          source={
+            typeof AVATAR_IMAGE_MAP[avatarId] === "string"
+              ? { uri: AVATAR_IMAGE_MAP[avatarId] }
+              : AVATAR_IMAGE_MAP[avatarId]
+          }
           style={[
             styles.image,
             {
