@@ -7,6 +7,8 @@ import {
   Image,
   StatusBar,
   Easing,
+  TouchableOpacity,
+  Platform,
 } from "react-native";
 import { MINDCLICK_LOGO_URI } from "../lib/brandAssets";
 
@@ -15,29 +17,50 @@ export default function SplashScreen({ isReady = true, onFinish }) {
   const scaleAnim = useRef(new Animated.Value(0.82)).current;
   const contentFadeAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const minTimeElapsed = useRef(false);
+  const hasDismissed = useRef(false);
+  const onFinishRef = useRef(onFinish);
+
+  useEffect(() => {
+    onFinishRef.current = onFinish;
+  }, [onFinish]);
+
+  const tryDismiss = () => {
+    if (hasDismissed.current) return;
+    hasDismissed.current = true;
+
+    Animated.timing(fadeAnim, {
+      toValue: 0,
+      duration: 300,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: Platform.OS !== "web",
+    }).start(() => {
+      if (onFinishRef.current) {
+        onFinishRef.current();
+      }
+    });
+  };
 
   useEffect(() => {
     // 1. Entrance animation: Logo fade and scale in
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 700,
+        duration: 600,
         easing: Easing.out(Easing.back(1.5)),
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== "web",
       }),
       Animated.spring(scaleAnim, {
         toValue: 1,
         friction: 6,
         tension: 40,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== "web",
       }),
     ]).start(() => {
       // 2. Tagline and subtitle fade in
       Animated.timing(contentFadeAnim, {
         toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
+        duration: 350,
+        useNativeDriver: Platform.OS !== "web",
       }).start();
 
       // 3. Subtle breathing pulse on logo
@@ -47,51 +70,32 @@ export default function SplashScreen({ isReady = true, onFinish }) {
             toValue: 1.04,
             duration: 1000,
             easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== "web",
           }),
           Animated.timing(pulseAnim, {
             toValue: 1,
             duration: 1000,
             easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
+            useNativeDriver: Platform.OS !== "web",
           }),
         ])
       ).start();
     });
 
-    // Ensure splash is visible for at least 2000ms
+    // แสดงผลอย่างน้อย 1.8 วินาทีแล้วเปลี่ยนเข้าสู่แอปพลิเคชันโดยอัตโนมัติ
     const timer = setTimeout(() => {
-      minTimeElapsed.current = true;
       tryDismiss();
-    }, 2000);
+    }, 1800);
 
     return () => clearTimeout(timer);
   }, []);
 
-  // When isReady changes to true, check if minimum time has passed
-  useEffect(() => {
-    if (isReady && minTimeElapsed.current) {
-      tryDismiss();
-    }
-  }, [isReady]);
-
-  const tryDismiss = () => {
-    if (!onFinish) return;
-    if (!isReady) return;
-
-    // Smooth fade out
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 350,
-      easing: Easing.inOut(Easing.ease),
-      useNativeDriver: true,
-    }).start(() => {
-      onFinish();
-    });
-  };
-
   return (
-    <View style={styles.container}>
+    <TouchableOpacity
+      activeOpacity={1}
+      onPress={tryDismiss}
+      style={styles.container}
+    >
       <StatusBar barStyle="dark-content" backgroundColor="#f7f8fc" />
 
       <Animated.View
@@ -142,7 +146,7 @@ export default function SplashScreen({ isReady = true, onFinish }) {
         </Animated.View>
       </Animated.View>
 
-      {/* Footer Info */}
+      {/* Footer Info & Tap Hint */}
       <Animated.View
         style={[
           styles.footerContainer,
@@ -151,12 +155,13 @@ export default function SplashScreen({ isReady = true, onFinish }) {
           },
         ]}
       >
+        <Text style={styles.tapToEnterText}>แตะหน้าจอเพื่อเข้าสู่แอป</Text>
         <View style={styles.loadingBar}>
           <View style={styles.loadingProgress} />
         </View>
         <Text style={styles.versionText}>มหาวิทยาลัยสงขลานครินทร์</Text>
       </Animated.View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -239,6 +244,13 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 48,
     alignItems: "center",
+  },
+  tapToEnterText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#3457ff",
+    marginBottom: 10,
+    letterSpacing: 0.3,
   },
   loadingBar: {
     width: 60,

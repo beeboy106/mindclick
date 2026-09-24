@@ -1,5 +1,5 @@
 import "../lib/snackPolyfill";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, ActivityIndicator, StyleSheet } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -144,6 +144,14 @@ export default function AppNavigator() {
   const { isCrossBubbleMode } = useCrossBubble();
 
   const [splashFinished, setSplashFinished] = useState(false);
+
+  // รับประกันว่าจะเข้าสู่แอปพลิเคชันอย่างแน่นอนภายใน 2.2 วินาที แม้ในสภาพแวดล้อมที่ช้า
+  useEffect(() => {
+    const fallbackTimer = setTimeout(() => {
+      setSplashFinished(true);
+    }, 2200);
+    return () => clearTimeout(fallbackTimer);
+  }, []);
 
   // แสดงหน้าจอโลโก้ (Splash Screen) ก่อนเข้าสู่แอปพลิเคชัน
   if (!splashFinished) {
