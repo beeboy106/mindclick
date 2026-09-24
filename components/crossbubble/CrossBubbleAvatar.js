@@ -8,6 +8,8 @@ export const AVATAR_IMAGE_MAP = {
   avatar_2: require("../../assets/avatars/default_avatar_2.jpg"),
   avatar_3: require("../../assets/avatars/default_avatar_3.jpg"),
   avatar_4: require("../../assets/avatars/default_avatar_4.jpg"),
+  shop_blueberry: require("../../assets/avatars/shop_avatar_blueberry.jpg"),
+  shop_red_apple: require("../../assets/avatars/shop_avatar_red_apple.jpg"),
 };
 
 // รายการอวาตารเริ่มต้น 4 แบบ
