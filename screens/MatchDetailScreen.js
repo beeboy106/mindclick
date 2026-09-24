@@ -7,8 +7,7 @@ import {
   TouchableOpacity,
   Image,
   StatusBar,
-  Linking,
-  Alert,
+  Platform,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,34 +18,6 @@ import { useAuth } from "../context/AuthContext";
 import { useData } from "../context/DataContext";
 import { usePremium } from "../context/PremiumContext";
 import FavoriteButton from "../components/FavoriteButton";
-import GalleryViewer from "../components/GalleryViewer";
-import ChatModal from "../components/ChatModal";
-import { useFeed } from "../context/FeedContext";
-import { getSharedInsights, getIcebreakerList } from "../lib/mindInsight";
-
-function MatchGalleryThumb({ img, onPress }) {
-  const [loadError, setLoadError] = useState(false);
-
-  if (loadError) return null;
-
-  const uri = typeof img === "string" ? img : img?.url;
-  if (!uri) return null;
-
-  return (
-    <TouchableOpacity
-      style={styles.galleryThumbWrapper}
-      activeOpacity={0.85}
-      onPress={onPress}
-    >
-      <Image
-        source={{ uri }}
-        style={styles.galleryThumb}
-        resizeMode="cover"
-        onError={() => setLoadError(true)}
-      />
-    </TouchableOpacity>
-  );
-}
 
 export default function MatchDetailScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
@@ -54,11 +25,8 @@ export default function MatchDetailScreen({ route, navigation }) {
   const { user } = useAuth();
   const { profile, getUserById, quizResponse } = useData();
   const { recordProfileView } = usePremium();
-  const { startChatWithUser } = useFeed();
 
-  const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [avatarError, setAvatarError] = useState(false);
-  const [chatVisible, setChatVisible] = useState(false);
 
   // ตรวจสอบว่าเป็นโหมดพรีวิวโปรไฟล์ตนเองหรือไม่
   const isPreview = Boolean(paramPreview || (user?.id && userId === user?.id));
@@ -94,10 +62,10 @@ export default function MatchDetailScreen({ route, navigation }) {
         <View style={styles.notFoundContainer}>
           <Text style={styles.notFoundTitle}>ไม่พบข้อมูลผู้ใช้</Text>
           <TouchableOpacity
-            style={styles.backBtn}
+            style={styles.notFoundBackBtn}
             onPress={() => navigation.goBack()}
           >
-            <Text style={styles.backBtnText}>ย้อนกลับ</Text>
+            <Text style={styles.notFoundBackBtnText}>ย้อนกลับ</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -146,385 +114,155 @@ export default function MatchDetailScreen({ route, navigation }) {
       ? "มีทั้งจุดที่คิดคล้ายกันและต่างกันพอดี น่าจะมีเรื่องให้แลกเปลี่ยนกันเยอะ"
       : "มุมมองค่อนข้างต่างกัน ซึ่งอาจเปิดบทสนทนาและประสบการณ์ใหม่ๆ ให้กันได้";
 
-  // วิเคราะห์จุดร่วมและประโยคเปิดบทสนทนา (Mind-Insight & Icebreakers)
-  const sharedTopics = (!isPreview && targetUser)
-    ? getSharedInsights(quizResponse.categoryAnswers, targetUser.categoryAnswers)
-    : [];
-  const icebreakerPrompts = (!isPreview && targetUser)
-    ? getIcebreakerList(sharedTopics, targetUser.name)
-    : [];
-
-  const handleStartSparkChat = async (starterText = null) => {
-    if (isPreview) return;
-    await startChatWithUser(targetUser, starterText);
-    setChatVisible(true);
-  };
-
-  const handleOpenSocial = async (platform, username) => {
-    if (!username) return;
-    let url = "";
-    if (platform === "instagram") url = `https://instagram.com/${username}`;
-    if (platform === "facebook") url = `https://facebook.com/${username}`;
-    if (platform === "tiktok") url = `https://tiktok.com/@${username}`;
-    if (platform === "line") url = `https://line.me/ti/p/~${username}`;
-
-    if (url) {
-      try {
-        const supported = await Linking.canOpenURL(url);
-        if (supported) {
-          await Linking.openURL(url);
-        } else {
-          Alert.alert("ไม่สามารถเปิดลิงก์ได้", `ไม่พบแอปหรือเบราว์เซอร์ที่รองรับ ${url}`);
-        }
-      } catch (err) {
-        console.error("Failed to open link:", err);
-        Alert.alert("ไม่สามารถเปิดลิงก์", `เกิดข้อผิดพลาดในการเปิดลิงก์ ${platform}`);
-      }
-    }
-  };
-
   return (
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom", "left", "right"]}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
-
-      {/* Top Header */}
-      <View style={styles.topBar}>
-        <TouchableOpacity
-          style={styles.iconBtn}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="arrow-back" size={22} color={colors.ink} />
-        </TouchableOpacity>
-
-        <Text style={styles.topBarTitle}>
-          {isPreview ? "มุมมองโปรไฟล์ของคุณ" : "รายละเอียดคู่แมตช์"}
-        </Text>
-
-        {isPreview ? (
-          <View style={styles.previewTag}>
-            <Text style={styles.previewTagText}>มุมมองผู้อื่น</Text>
-          </View>
-        ) : (
-          <FavoriteButton userId={targetUser.id} size="sm" />
-        )}
-      </View>
 
       <ScrollView
         style={styles.container}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: 110 + insets.bottom },
+          { paddingBottom: 40 + insets.bottom },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* User Hero Section */}
-        <View style={styles.heroCard}>
-          <View style={styles.heroTopRow}>
+        {/* Back Link "กลับไปหน้าแมตช์" */}
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={16} color={colors.mutedForeground} style={{ marginRight: 6 }} />
+          <Text style={styles.backBtnText}>กลับไปหน้าแมตช์</Text>
+        </TouchableOpacity>
+
+        {/* Main FriendQ Match Card */}
+        <View style={styles.matchCard}>
+          {/* Hero Profile Photo / Fallback */}
+          <View style={styles.heroBox}>
             {!avatarError && targetUser.image ? (
               <Image
                 source={{ uri: targetUser.image }}
-                style={styles.heroAvatar}
+                style={styles.heroImage}
+                resizeMode="cover"
                 onError={() => setAvatarError(true)}
               />
             ) : (
-              <View style={[styles.heroAvatar, styles.heroAvatarFallback]}>
-                <Text style={styles.heroAvatarInitial}>
+              <View style={styles.heroFallback}>
+                <Text style={styles.heroFallbackText}>
                   {(targetUser.name || "U").charAt(0).toUpperCase()}
                 </Text>
               </View>
             )}
 
-            {isPreview ? (
-              <View style={styles.scoreContainerPreview}>
-                <Ionicons name="person" size={24} color={colors.primary} />
-                <Text style={styles.scoreLabel}>โปรไฟล์ของฉัน</Text>
-              </View>
-            ) : (
-              <View style={styles.scoreContainer}>
-                <Text style={styles.scoreNumber}>{overallPercent}%</Text>
-                <Text style={styles.scoreLabel}>ความเข้ากันได้</Text>
+            {!isPreview && (
+              <View style={styles.heroFavBtn}>
+                <FavoriteButton userId={targetUser.id} size="md" />
               </View>
             )}
           </View>
 
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
-            <Text style={styles.heroName}>{targetUser.name}</Text>
-            {targetUser.isRealUser && (
-              <View style={styles.realBadge}>
-                <Ionicons name="checkmark-circle" size={14} color="#10b981" />
-                <Text style={styles.realBadgeText}>ผู้ใช้จริง</Text>
+          {/* Details Content Box */}
+          <View style={styles.contentBox}>
+            {/* Header: Name & Match Score */}
+            <View style={styles.headerInfoRow}>
+              <View style={{ flex: 1, marginRight: 12 }}>
+                <Text style={styles.eyebrow}>MATCH DETAIL</Text>
+                <Text style={styles.userName} numberOfLines={1}>
+                  {targetUser.name}
+                </Text>
+                <Text style={styles.userSubtitle}>
+                  มีคำตอบร่วมกัน {commonCount} จาก {categories.length} ด้าน
+                </Text>
+              </View>
+              <View style={styles.scoreCol}>
+                <Text style={styles.scoreLabel}>เข้ากัน</Text>
+                <Text style={styles.scoreValue}>
+                  {overallPercent}%
+                </Text>
+              </View>
+            </View>
+
+            {/* About / Bio Section */}
+            {Boolean(targetUser.bio && targetUser.bio.trim()) && (
+              <View style={styles.aboutSection}>
+                <Text style={styles.aboutEyebrow}>ABOUT</Text>
+                <Text style={styles.aboutText}>{targetUser.bio}</Text>
               </View>
             )}
-          </View>
-          {targetUser.bio ? (
-            <Text style={styles.heroBio}>{targetUser.bio}</Text>
-          ) : null}
 
-          {/* Social Links */}
-          {targetUser.socialLinks &&
-            Object.values(targetUser.socialLinks).some(Boolean) && (
-              <View style={styles.socialRow}>
-                {targetUser.socialLinks.instagram && (
-                  <TouchableOpacity
-                    style={styles.socialBadge}
-                    onPress={() =>
-                      handleOpenSocial("instagram", targetUser.socialLinks.instagram)
-                    }
-                  >
-                    <Ionicons name="logo-instagram" size={16} color={colors.ink} />
-                    <Text style={styles.socialText}>
-                      @{targetUser.socialLinks.instagram}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
-                {targetUser.socialLinks.facebook && (
-                  <TouchableOpacity
-                    style={styles.socialBadge}
-                    onPress={() =>
-                      handleOpenSocial("facebook", targetUser.socialLinks.facebook)
-                    }
-                  >
-                    <Ionicons name="logo-facebook" size={16} color={colors.ink} />
-                    <Text style={styles.socialText}>
-                      {targetUser.socialLinks.facebook}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
-                {targetUser.socialLinks.line && (
-                  <TouchableOpacity
-                    style={styles.socialBadge}
-                    onPress={() =>
-                      handleOpenSocial("line", targetUser.socialLinks.line)
-                    }
-                  >
-                    <Ionicons name="chatbubble-ellipses" size={16} color={colors.ink} />
-                    <Text style={styles.socialText}>
-                      Line: {targetUser.socialLinks.line}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-        </View>
-
-        {/* Preview Info Notice Banner */}
-        {isPreview && (
-          <View style={styles.previewNoticeCard}>
-            <Ionicons name="information-circle" size={22} color={colors.primary} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.previewNoticeTitle}>โหมดดูโปรไฟล์สาธารณะ</Text>
-              <Text style={styles.previewNoticeText}>
-                นี่คือมุมมองที่ผู้อื่นจะเห็นเมื่อเข้ามาเปิดดูการ์ดโปรไฟล์ของคุณ โดยจะนำคำตอบแบบทดสอบของคุณไปเปรียบเทียบกับคำตอบของพวกเขาเพื่อวิเคราะห์ความเข้ากันได้
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Mind-Insight Section: จุดร่วมที่คุณทั้งสองตอบตรงกัน */}
-        {sharedTopics.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-                <Ionicons name="bulb-outline" size={18} color={colors.ink} />
-                <Text style={styles.sectionTitle}>จุดร่วมที่คุณทั้งสองตอบตรงกัน</Text>
-              </View>
-            </View>
-
-            <View style={styles.insightCard}>
-              <View style={styles.insightTagList}>
-                {sharedTopics.map((topic, i) => (
-                  <View
-                    key={i}
-                    style={[styles.insightChip, { backgroundColor: topic.color || "#FEF08A" }]}
-                  >
-                    <Ionicons
-                      name={topic.icon || "sparkles"}
-                      size={14}
-                      color={colors.ink}
-                      style={{ marginRight: 6 }}
-                    />
-                    <Text style={styles.insightChipText}>{topic.tag}</Text>
-                  </View>
-                ))}
-              </View>
-
-              {icebreakerPrompts.length > 0 && (
-                <View style={styles.icebreakerOpenerBox}>
-                  <View style={styles.icebreakerPromptHeader}>
-                    <Ionicons name="chatbubble-ellipses" size={14} color={colors.primary} />
-                    <Text style={styles.icebreakerOpenerLabel}>
-                      ประเด็นเปิดบทสนทนาที่แนะนำ (ไม่เก้อเขิน):
-                    </Text>
-                  </View>
-                  <Text style={styles.icebreakerOpenerQuote}>
-                    "{icebreakerPrompts[0]}"
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.useOpenerBtn}
-                    activeOpacity={0.85}
-                    onPress={() => handleStartSparkChat(icebreakerPrompts[0])}
-                  >
-                    <Ionicons name="paper-plane" size={15} color={colors.white} style={{ marginRight: 6 }} />
-                    <Text style={styles.useOpenerBtnText}>ส่งทักทายด้วยประเด็นนี้ทันที</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          </View>
-        )}
-
-        {/* Category Breakdown (สิ่งที่เราคล้ายกัน) */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              {isPreview ? "ความคืบหน้าคำถามแต่ละด้านของคุณ" : "สิ่งที่เราคล้ายกัน"}
-            </Text>
-          </View>
-
-          <View style={styles.breakdownList}>
-            {categoryBreakdown.map(({ category, isCommon, percent }) => {
-              const tone = categoryColors[category.id] || { bg: colors.primary, text: colors.white };
-
-              return (
-                <View
-                  key={category.id}
-                  style={[
-                    styles.breakdownCard,
-                    !isCommon && !isPreview && styles.breakdownCardDimmed,
-                  ]}
-                >
-                  <View style={styles.breakdownCardHeader}>
-                    <View style={styles.catLeft}>
+            {/* สิ่งที่เราคล้ายกัน Section */}
+            <View style={styles.categoriesSection}>
+              <Text style={styles.sectionTitle}>สิ่งที่เราคล้ายกัน</Text>
+              <View style={styles.categoryList}>
+                {categoryBreakdown.map(({ category, isCommon, percent }) => {
+                  const tone = categoryColors[category.id] || {
+                    bg: colors.primary,
+                    text: colors.white,
+                  };
+                  return (
+                    <View
+                      key={category.id}
+                      style={[
+                        styles.categoryRow,
+                        !isCommon && styles.categoryRowDimmed,
+                      ]}
+                    >
                       <View style={[styles.catColorBar, { backgroundColor: tone.bg }]} />
-                      <View>
-                        <Text style={styles.breakdownName}>{category.name}</Text>
-                        <Text style={styles.breakdownSub}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.categoryName}>{category.name}</Text>
+                        <Text style={styles.categorySub}>
                           {isCommon ? category.nameEN : "ยังไม่มีคำตอบร่วมกัน"}
                         </Text>
                       </View>
+                      <Text
+                        style={[
+                          styles.categoryPercent,
+                          { color: isCommon ? colors.ink : colors.mutedForeground },
+                        ]}
+                      >
+                        {isCommon ? `${percent}%` : "—"}
+                      </Text>
                     </View>
-
-                    <Text
-                      style={[
-                        styles.breakdownPercent,
-                        { color: isCommon ? colors.primary : colors.mutedForeground },
-                      ]}
-                    >
-                      {isPreview
-                        ? isCommon
-                          ? "ตอบแล้ว (10/10)"
-                          : "ยังไม่ตอบ"
-                        : isCommon
-                        ? `${percent}%`
-                        : "—"}
-                    </Text>
-                  </View>
-
-                  <View style={styles.breakdownTrack}>
-                    <View
-                      style={[
-                        styles.breakdownFill,
-                        {
-                          width: `${isCommon ? (isPreview ? 100 : percent) : 0}%`,
-                          backgroundColor: tone.bg,
-                        },
-                      ]}
-                    />
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-
-          {/* Chemistry Summary Box & View Public Profile Button */}
-          {!isPreview && (
-            <View style={styles.chemistrySummaryBox}>
-              <Text style={styles.chemistrySummaryText}>{chemistrySummary}</Text>
-              <TouchableOpacity
-                style={styles.viewPublicProfileBtn}
-                activeOpacity={0.88}
-                onPress={() =>
-                  navigation.navigate("PublicProfile", {
-                    userId: targetUser.id,
-                    user: targetUser,
-                  })
-                }
-              >
-                <Text style={styles.viewPublicProfileBtnText}>
-                  ดูโปรไฟล์ของ {targetUser.name}
-                </Text>
-                <Ionicons name="arrow-forward" size={18} color={colors.ink} />
-              </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
-          )}
+
+            {/* Chemistry Summary & Action Button */}
+            <View style={styles.summaryFooter}>
+              <Text style={styles.summaryText}>{chemistrySummary}</Text>
+
+              {isPreview ? (
+                <TouchableOpacity
+                  style={styles.viewProfileBtn}
+                  activeOpacity={0.88}
+                  onPress={() => navigation.goBack()}
+                >
+                  <Ionicons name="create-outline" size={18} color={colors.ink} style={{ marginRight: 8 }} />
+                  <Text style={styles.viewProfileBtnText}>ย้อนกลับไปแก้ไขโปรไฟล์</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.viewProfileBtn}
+                  activeOpacity={0.88}
+                  onPress={() =>
+                    navigation.navigate("PublicProfile", {
+                      userId: targetUser.id,
+                      user: targetUser,
+                    })
+                  }
+                >
+                  <Text style={styles.viewProfileBtnText}>
+                    ดูโปรไฟล์ของ {targetUser.name}
+                  </Text>
+                  <Ionicons name="arrow-forward" size={18} color={colors.ink} style={{ marginLeft: 8 }} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
         </View>
-
-        {/* Gallery Images */}
-        {targetUser.galleryImages && targetUser.galleryImages.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>
-                รูปภาพ ({targetUser.galleryImages.length})
-              </Text>
-            </View>
-
-            <View style={styles.galleryGrid}>
-              {targetUser.galleryImages.map((img, idx) => (
-                <MatchGalleryThumb
-                  key={img?.id || `thumb_${idx}`}
-                  img={img}
-                  onPress={() => setSelectedPhoto(typeof img === "string" ? img : img.url)}
-                />
-              ))}
-            </View>
-          </View>
-        )}
       </ScrollView>
-
-      {/* Sticky Bottom Action Bar */}
-      <View style={[styles.bottomActionBar, { paddingBottom: Math.max(insets.bottom, 14) }]}>
-        {isPreview ? (
-          <TouchableOpacity
-            style={styles.editProfileBtn}
-            activeOpacity={0.88}
-            onPress={() => navigation.goBack()}
-          >
-            <Ionicons name="create-outline" size={20} color={colors.ink} style={{ marginRight: 8 }} />
-            <Text style={styles.editProfileBtnText}>ย้อนกลับไปแก้ไขโปรไฟล์</Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={styles.sparkChatMainBtn}
-            activeOpacity={0.88}
-            onPress={() => handleStartSparkChat()}
-          >
-            <Ionicons name="chatbubbles" size={20} color={colors.white} style={{ marginRight: 8 }} />
-            <View>
-              <Text style={styles.sparkChatMainBtnText}>เริ่มแชทด้วยจุดร่วม (Spark Chat)</Text>
-              <Text style={styles.sparkChatMainBtnSub}>เปิดห้องแชทพร้อมหัวข้อคุยแนะนำ</Text>
-            </View>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Image Fullscreen Viewer */}
-      <GalleryViewer
-        visible={Boolean(selectedPhoto)}
-        imageUrl={selectedPhoto}
-        onClose={() => setSelectedPhoto(null)}
-      />
-
-      {/* Embedded Chat Modal */}
-      <ChatModal
-        visible={chatVisible}
-        onClose={() => setChatVisible(false)}
-        initialFriendId={targetUser.id}
-        initialFriendData={targetUser}
-        suggestedIcebreakers={icebreakerPrompts}
-      />
     </SafeAreaView>
   );
 }
@@ -532,442 +270,225 @@ export default function MatchDetailScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.card,
-  },
-  topBar: {
-    height: 56,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    backgroundColor: colors.card,
-    borderBottomWidth: 1.5,
-    borderBottomColor: colors.darkBorder,
-  },
-  iconBtn: {
-    width: 38,
-    height: 38,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  topBarTitle: {
-    fontSize: 16,
-    fontWeight: "900",
-    color: colors.ink,
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
     backgroundColor: colors.background,
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 95,
+    padding: 16,
   },
-  heroCard: {
+  backBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+    paddingVertical: 6,
+    alignSelf: "flex-start",
+  },
+  backBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.mutedForeground,
+  },
+  matchCard: {
     backgroundColor: colors.card,
     borderWidth: 1.5,
     borderColor: colors.darkBorder,
-    padding: 20,
-    marginBottom: 24,
+    overflow: "hidden",
     ...shadows.neo,
   },
-  heroTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  heroBox: {
+    height: 380,
+    width: "100%",
+    backgroundColor: colors.muted,
+    position: "relative",
+    justifyContent: "center",
     alignItems: "center",
-    marginBottom: 16,
   },
-  heroAvatar: {
-    width: 80,
-    height: 80,
-    borderWidth: 2,
-    borderColor: colors.darkBorder,
+  heroImage: {
+    width: "100%",
+    height: "100%",
   },
-  heroAvatarFallback: {
+  heroFallback: {
+    width: "100%",
+    height: "100%",
     backgroundColor: colors.primary,
     justifyContent: "center",
     alignItems: "center",
   },
-  heroAvatarInitial: {
-    color: colors.white,
-    fontSize: 32,
+  heroFallbackText: {
+    fontSize: 72,
     fontWeight: "900",
+    color: colors.white,
   },
-  scoreContainer: {
+  heroFavBtn: {
+    position: "absolute",
+    top: 14,
+    left: 14,
+    zIndex: 10,
+  },
+  contentBox: {
+    padding: 20,
+  },
+  headerInfoRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    borderBottomWidth: 1.5,
+    borderBottomColor: colors.darkBorder,
+    paddingBottom: 20,
+  },
+  eyebrow: {
+    fontSize: 11,
+    fontWeight: "900",
+    color: colors.primary,
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  userName: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: colors.ink,
+    lineHeight: 34,
+  },
+  userSubtitle: {
+    fontSize: 13,
+    color: colors.mutedForeground,
+    fontWeight: "600",
+    marginTop: 6,
+  },
+  scoreCol: {
     alignItems: "flex-end",
   },
-  scoreNumber: {
+  scoreLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: colors.mutedForeground,
+    marginBottom: 2,
+  },
+  scoreValue: {
     fontSize: 42,
     fontWeight: "900",
     color: colors.primary,
-    lineHeight: 48,
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
   },
-  scoreLabel: {
+  aboutSection: {
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  aboutEyebrow: {
     fontSize: 11,
-    fontWeight: "800",
+    fontWeight: "900",
     color: colors.mutedForeground,
     letterSpacing: 1,
+    marginBottom: 4,
   },
-  heroName: {
-    fontSize: 24,
-    fontWeight: "900",
-    color: colors.ink,
-  },
-  realBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#ecfdf5",
-    borderWidth: 1,
-    borderColor: "#a7f3d0",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 12,
-  },
-  realBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: "#047857",
-  },
-  heroBio: {
-    fontSize: 14,
-    color: colors.mutedForeground,
+  aboutText: {
+    fontSize: 14.5,
     lineHeight: 22,
-    marginBottom: 14,
-  },
-  socialRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  socialBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.muted,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: 6,
-  },
-  socialText: {
-    fontSize: 12,
-    fontWeight: "700",
     color: colors.ink,
+    fontWeight: "500",
+    marginTop: 4,
   },
-  section: {
-    marginBottom: 24,
-  },
-  sectionHeader: {
-    marginBottom: 12,
-    borderBottomWidth: 1.5,
-    borderBottomColor: colors.darkBorder,
-    paddingBottom: 8,
-  },
-  sectionEyebrow: {
-    fontSize: 11,
-    fontWeight: "900",
-    color: colors.primary,
-    letterSpacing: 1,
+  categoriesSection: {
+    paddingVertical: 20,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: "900",
     color: colors.ink,
-    marginTop: 2,
+    marginBottom: 14,
   },
-  breakdownList: {
-    gap: 12,
+  categoryList: {
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.border,
   },
-  breakdownCard: {
-    backgroundColor: colors.card,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    padding: 14,
+  categoryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  breakdownCardDimmed: {
+  categoryRowDimmed: {
     opacity: 0.45,
-  },
-  breakdownCardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  catLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
   },
   catColorBar: {
     width: 8,
     height: 36,
-    marginRight: 10,
+    marginRight: 12,
     borderRadius: 2,
   },
-  breakdownName: {
+  categoryName: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: colors.ink,
+  },
+  categorySub: {
+    fontSize: 12,
+    color: colors.mutedForeground,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  categoryPercent: {
+    fontSize: 20,
+    fontWeight: "900",
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    marginLeft: 10,
+  },
+  summaryFooter: {
+    borderTopWidth: 1.5,
+    borderTopColor: colors.darkBorder,
+    paddingTop: 20,
+    marginTop: 6,
+  },
+  summaryText: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: colors.mutedForeground,
+    fontWeight: "500",
+  },
+  viewProfileBtn: {
+    backgroundColor: "#bbf44a",
+    height: 52,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    marginTop: 18,
+    borderRadius: 8,
+    ...shadows.neo,
+  },
+  viewProfileBtnText: {
     fontSize: 15,
     fontWeight: "900",
     color: colors.ink,
-  },
-  breakdownSub: {
-    fontSize: 11,
-    color: colors.mutedForeground,
-    fontWeight: "700",
-    marginTop: 1,
-  },
-  breakdownPercent: {
-    fontSize: 18,
-    fontWeight: "900",
-    marginLeft: 8,
-  },
-  chemistrySummaryBox: {
-    backgroundColor: colors.card,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    padding: 16,
-    marginTop: 16,
-    ...shadows.neo,
-  },
-  chemistrySummaryText: {
-    fontSize: 13.5,
-    lineHeight: 21,
-    color: colors.mutedForeground,
-    fontWeight: "600",
-    marginBottom: 14,
-  },
-  viewPublicProfileBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#bbf44a",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    paddingVertical: 13,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    ...shadows.neo,
-  },
-  viewPublicProfileBtnText: {
-    fontSize: 14,
-    fontWeight: "900",
-    color: colors.ink,
-  },
-  breakdownTrack: {
-    height: 8,
-    backgroundColor: colors.muted,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  breakdownFill: {
-    height: 8,
-    borderRadius: 4,
-  },
-  galleryGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  galleryThumbWrapper: {
-    width: "31%",
-    aspectRatio: 1,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    overflow: "hidden",
-  },
-  galleryThumb: {
-    width: "100%",
-    height: "100%",
   },
   notFoundContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    padding: 24,
   },
   notFoundTitle: {
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "800",
     color: colors.ink,
     marginBottom: 16,
   },
-  backBtn: {
+  notFoundBackBtn: {
     backgroundColor: colors.ink,
     paddingHorizontal: 20,
     paddingVertical: 10,
-  },
-  backBtnText: {
-    color: colors.white,
-    fontWeight: "800",
-  },
-  insightCard: {
-    backgroundColor: colors.card,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    padding: 16,
-    ...shadows.neo,
-  },
-  insightTagList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 12,
-  },
-  insightChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
     borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
   },
-  insightChipText: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: colors.ink,
-  },
-  icebreakerOpenerBox: {
-    backgroundColor: "#FEF9C3",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 4,
-  },
-  icebreakerPromptHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 6,
-  },
-  icebreakerOpenerLabel: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#854D0E",
-  },
-  icebreakerOpenerQuote: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.ink,
-    lineHeight: 18,
-    marginBottom: 10,
-    fontStyle: "italic",
-  },
-  useOpenerBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.primary,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    ...shadows.neoSm,
-  },
-  useOpenerBtnText: {
+  notFoundBackBtnText: {
     color: colors.white,
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  bottomActionBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.card,
-    borderTopWidth: 1.5,
-    borderTopColor: colors.darkBorder,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    ...shadows.neo,
-  },
-  sparkChatMainBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.primary,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    ...shadows.neo,
-  },
-  sparkChatMainBtnText: {
-    color: colors.white,
-    fontSize: 15,
-    fontWeight: "900",
-  },
-  sparkChatMainBtnSub: {
-    color: "rgba(255, 255, 255, 0.85)",
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  previewTag: {
-    backgroundColor: "#bbf44a",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-  },
-  previewTagText: {
-    fontSize: 12,
-    fontWeight: "900",
-    color: colors.ink,
-  },
-  scoreContainerPreview: {
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: colors.muted,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    minWidth: 80,
-  },
-  previewNoticeCard: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    backgroundColor: colors.card,
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    padding: 14,
-    marginBottom: 20,
-    gap: 12,
-    ...shadows.neoSm,
-  },
-  previewNoticeTitle: {
+    fontWeight: "800",
     fontSize: 14,
-    fontWeight: "900",
-    color: colors.ink,
-    marginBottom: 4,
-  },
-  previewNoticeText: {
-    fontSize: 13,
-    color: colors.mutedForeground,
-    lineHeight: 18,
-  },
-  editProfileBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#bbf44a",
-    borderWidth: 1.5,
-    borderColor: colors.darkBorder,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    ...shadows.neo,
-  },
-  editProfileBtnText: {
-    color: colors.ink,
-    fontSize: 15,
-    fontWeight: "900",
   },
 });

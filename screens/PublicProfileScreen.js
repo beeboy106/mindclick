@@ -16,6 +16,7 @@ import { colors, shadows } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 import { useData } from "../context/DataContext";
 import { useFeed } from "../context/FeedContext";
+import { getSharedInsights, getIcebreakerList } from "../lib/mindInsight";
 import FavoriteButton from "../components/FavoriteButton";
 import GalleryViewer from "../components/GalleryViewer";
 import ChatModal from "../components/ChatModal";
@@ -55,7 +56,7 @@ export default function PublicProfileScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const { userId, user: initialUser } = route.params || {};
   const { user: authUser } = useAuth();
-  const { profile: myProfile, getUserById } = useData();
+  const { profile: myProfile, getUserById, quizResponse } = useData();
   const { startChatWithUser } = useFeed();
 
   const [selectedPhoto, setSelectedPhoto] = useState(null);
@@ -95,6 +96,16 @@ export default function PublicProfileScreen({ route, navigation }) {
   }
 
   const genderInfo = targetUser.gender ? genderMeta[targetUser.gender] : null;
+
+  // วิเคราะห์จุดร่วมและประโยคเปิดบทสนทนา (Mind-Insight & Icebreakers)
+  const sharedTopics =
+    !isOwnProfile && targetUser?.categoryAnswers
+      ? getSharedInsights(quizResponse?.categoryAnswers, targetUser.categoryAnswers)
+      : [];
+  const icebreakerPrompts =
+    !isOwnProfile && targetUser
+      ? getIcebreakerList(sharedTopics, targetUser.name)
+      : [];
 
   // เตรียมรายการโซเชียลมีเดีย
   const socialList = [
@@ -148,9 +159,9 @@ export default function PublicProfileScreen({ route, navigation }) {
     }
   };
 
-  const handleStartChat = async () => {
+  const handleStartChat = async (starterText = null) => {
     if (isOwnProfile) return;
-    await startChatWithUser(targetUser);
+    await startChatWithUser(targetUser, starterText);
     setChatVisible(true);
   };
 
@@ -270,6 +281,55 @@ export default function PublicProfileScreen({ route, navigation }) {
           )}
         </View>
 
+        {/* Mind-Insight Section: จุดร่วมที่คุณทั้งสองตอบตรงกัน */}
+        {!isOwnProfile && sharedTopics.length > 0 && (
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons name="bulb-outline" size={18} color={colors.ink} style={{ marginRight: 6 }} />
+              <Text style={styles.sectionHeaderTitle}>จุดร่วมที่คุณทั้งสองตอบตรงกัน</Text>
+            </View>
+
+            <View style={styles.insightTagList}>
+              {sharedTopics.map((topic, i) => (
+                <View
+                  key={i}
+                  style={[styles.insightChip, { backgroundColor: topic.color || "#FEF08A" }]}
+                >
+                  <Ionicons
+                    name={topic.icon || "sparkles"}
+                    size={14}
+                    color={colors.ink}
+                    style={{ marginRight: 6 }}
+                  />
+                  <Text style={styles.insightChipText}>{topic.tag}</Text>
+                </View>
+              ))}
+            </View>
+
+            {icebreakerPrompts.length > 0 && (
+              <View style={styles.icebreakerOpenerBox}>
+                <View style={styles.icebreakerPromptHeader}>
+                  <Ionicons name="chatbubble-ellipses" size={14} color={colors.primary} />
+                  <Text style={styles.icebreakerOpenerLabel}>
+                    ประเด็นเปิดบทสนทนาที่แนะนำ (ไม่เก้อเขิน):
+                  </Text>
+                </View>
+                <Text style={styles.icebreakerOpenerQuote}>
+                  "{icebreakerPrompts[0]}"
+                </Text>
+                <TouchableOpacity
+                  style={styles.useOpenerBtn}
+                  activeOpacity={0.85}
+                  onPress={() => handleStartChat(icebreakerPrompts[0])}
+                >
+                  <Ionicons name="paper-plane" size={15} color={colors.white} style={{ marginRight: 6 }} />
+                  <Text style={styles.useOpenerBtnText}>ส่งทักทายด้วยประเด็นนี้ทันที</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Social Media Channels Section */}
         {socialList.length > 0 && (
           <View style={styles.sectionCard}>
@@ -339,10 +399,19 @@ export default function PublicProfileScreen({ route, navigation }) {
           <TouchableOpacity
             style={styles.startChatBtn}
             activeOpacity={0.88}
-            onPress={handleStartChat}
+            onPress={() => handleStartChat(icebreakerPrompts[0] || null)}
           >
             <Ionicons name="chatbubbles" size={20} color={colors.white} style={{ marginRight: 8 }} />
-            <Text style={styles.startChatBtnText}>เริ่มแชทกับ {targetUser.name}</Text>
+            <View style={{ alignItems: "center" }}>
+              <Text style={styles.startChatBtnText}>
+                {icebreakerPrompts.length > 0
+                  ? "เริ่มแชทด้วยจุดร่วม (Spark Chat)"
+                  : `เริ่มแชทกับ ${targetUser.name}`}
+              </Text>
+              {icebreakerPrompts.length > 0 && (
+                <Text style={styles.startChatBtnSub}>เปิดห้องแชทพร้อมหัวข้อคุยแนะนำ</Text>
+              )}
+            </View>
           </TouchableOpacity>
         </View>
       )}
@@ -554,6 +623,80 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: colors.ink,
     marginBottom: 12,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  insightTagList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 14,
+  },
+  insightChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    borderRadius: 6,
+    ...shadows.neo,
+  },
+  insightChipText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: colors.ink,
+  },
+  icebreakerOpenerBox: {
+    backgroundColor: "#f8fafc",
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    padding: 14,
+    marginTop: 4,
+  },
+  icebreakerPromptHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 6,
+  },
+  icebreakerOpenerLabel: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: colors.primary,
+  },
+  icebreakerOpenerQuote: {
+    fontSize: 13.5,
+    lineHeight: 20,
+    fontWeight: "700",
+    color: colors.ink,
+    fontStyle: "italic",
+    marginBottom: 12,
+  },
+  useOpenerBtn: {
+    backgroundColor: colors.primary,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderWidth: 1.5,
+    borderColor: colors.darkBorder,
+    ...shadows.neo,
+  },
+  useOpenerBtnText: {
+    color: colors.white,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  startChatBtnSub: {
+    color: "rgba(255, 255, 255, 0.8)",
+    fontSize: 11,
+    fontWeight: "600",
+    marginTop: 2,
   },
   socialListContainer: {
     borderTopWidth: 1,
