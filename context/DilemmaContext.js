@@ -4,6 +4,7 @@ import { useAuth } from "./AuthContext";
 import {
   getTodayDateString,
   getDilemmaForDate,
+  getOrGenerateDilemmaForDate,
   evaluateStreak,
 } from "../lib/dilemmaService";
 
@@ -26,54 +27,74 @@ export function DilemmaProvider({ children }) {
 
   // โหลดข้อมูลสตรีคและคำตอบจาก AsyncStorage
   useEffect(() => {
+    let isMounted = true;
+
     async function loadDilemmaState() {
       try {
         const key = `${DILEMMA_STORAGE_PREFIX}${userId}`;
         const stored = await AsyncStorage.getItem(key);
 
-        const currentQuestion = getDilemmaForDate(todayStr);
-        setTodayQuestion(currentQuestion);
-
+        let history = {};
         if (stored) {
           const parsed = JSON.parse(stored);
-          const history = parsed.historyAnswers || {};
-          setHistoryAnswers(history);
+          history = parsed.historyAnswers || {};
+          if (isMounted) {
+            setHistoryAnswers(history);
 
-          // ตรวจสอบคำตอบของวันนี้
-          const todayEntry = history[todayStr];
-          if (todayEntry) {
-            setTodayAnswer(todayEntry.choiceId);
-          } else {
-            setTodayAnswer(null);
+            // ตรวจสอบคำตอบของวันนี้
+            const todayEntry = history[todayStr];
+            if (todayEntry) {
+              setTodayAnswer(todayEntry.choiceId);
+            } else {
+              setTodayAnswer(null);
+            }
+
+            // ประเมินสถานะสตรีคไฟตามเวลาจริง
+            const streakEvaluation = evaluateStreak(parsed.lastAnswerDate, parsed.streakCount || 0);
+            setStreakCount(streakEvaluation.streak);
+            setStreakStatus(streakEvaluation.status);
+            setHasAnsweredToday(streakEvaluation.hasAnsweredToday);
           }
-
-          // ประเมินสถานะสตรีคไฟตามเวลาจริง
-          const streakEvaluation = evaluateStreak(parsed.lastAnswerDate, parsed.streakCount || 0);
-          setStreakCount(streakEvaluation.streak);
-          setStreakStatus(streakEvaluation.status);
-          setHasAnsweredToday(streakEvaluation.hasAnsweredToday);
         } else {
           // ผู้ใช้ใหม่ เริ่มต้นที่สตรีค 0 ไฟดับ
-          setStreakCount(0);
-          setStreakStatus("extinguished");
-          setHasAnsweredToday(false);
-          setTodayAnswer(null);
-          setHistoryAnswers({});
+          if (isMounted) {
+            setStreakCount(0);
+            setStreakStatus("extinguished");
+            setHasAnsweredToday(false);
+            setTodayAnswer(null);
+            setHistoryAnswers({});
+          }
+        }
+
+        // ดึงคำถามประจำวัน หรือสร้างคำถาม AI อัตโนมัติเมื่อคำถามที่เตรียมไว้หมด
+        const currentQuestion = await getOrGenerateDilemmaForDate(
+          todayStr,
+          history,
+          userId
+        );
+        if (isMounted && currentQuestion) {
+          setTodayQuestion(currentQuestion);
         }
       } catch (err) {
         console.error("Error loading dilemma state:", err);
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     }
 
     loadDilemmaState();
+
+    return () => {
+      isMounted = false;
+    };
   }, [userId, todayStr]);
 
   // ฟังก์ชันบันทึกคำตอบสำหรับคำถามวันนี้
   const answerDilemma = useCallback(
     async (choiceId) => {
-      if (!choiceId) return;
+      if (!choiceId || !todayQuestion) return;
 
       const newHistory = {
         ...historyAnswers,
@@ -81,6 +102,7 @@ export function DilemmaProvider({ children }) {
           questionId: todayQuestion.id,
           choiceId: choiceId,
           answeredAt: new Date().toISOString(),
+          isAiGenerated: !!todayQuestion.isAiGenerated,
         },
       };
 
@@ -114,6 +136,11 @@ export function DilemmaProvider({ children }) {
           `${DILEMMA_STORAGE_PREFIX}${userId}`,
           JSON.stringify(stateToSave)
         );
+
+        if (todayQuestion.isAiGenerated) {
+          const aiCacheKey = `@mindclick_ai_dilemma_${userId}_${todayStr}`;
+          await AsyncStorage.setItem(aiCacheKey, JSON.stringify(todayQuestion));
+        }
       } catch (err) {
         console.error("Error saving dilemma answer:", err);
       }

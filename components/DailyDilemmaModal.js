@@ -107,9 +107,18 @@ export default function DailyDilemmaModal({ visible, onClose }) {
           {/* Situation Card */}
           <View style={styles.situationCard}>
             <View style={styles.tagRow}>
-              <View style={styles.categoryTag}>
-                <Ionicons name="school-outline" size={13} color={colors.primary} />
-                <Text style={styles.categoryTagText}>{todayQuestion.tag}</Text>
+              <View style={styles.tagLeftGroup}>
+                <View style={styles.categoryTag}>
+                  <Ionicons name="school-outline" size={13} color={colors.primary} />
+                  <Text style={styles.categoryTagText}>{todayQuestion.tag}</Text>
+                </View>
+
+                {todayQuestion.isAiGenerated && (
+                  <View style={styles.aiBadgeTag}>
+                    <Ionicons name="sparkles" size={11} color="#4d7c0f" />
+                    <Text style={styles.aiBadgeTagText}>AI Gemini</Text>
+                  </View>
+                )}
               </View>
 
               <Text style={styles.dailyMark}>คำถามประจำวันนี้</Text>
@@ -351,6 +360,27 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 10,
+  },
+  tagLeftGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  aiBadgeTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#ecfccb",
+    borderWidth: 1,
+    borderColor: "#bef264",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  aiBadgeTagText: {
+    fontSize: 10,
+    fontWeight: "800",
+    color: "#4d7c0f",
   },
   categoryTag: {
     flexDirection: "row",

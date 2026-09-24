@@ -147,8 +147,16 @@ export default function HomeScreen({ navigation }) {
             onPress={() => setDilemmaModalVisible(true)}
           >
             <View style={styles.dilemmaHeroTop}>
-              <View style={styles.dilemmaTagBadge}>
-                <Text style={styles.dilemmaTagText}>ประเด็นขบคิดประจำวัน</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                <View style={styles.dilemmaTagBadge}>
+                  <Text style={styles.dilemmaTagText}>ประเด็นขบคิดประจำวัน</Text>
+                </View>
+                {todayQuestion?.isAiGenerated && (
+                  <View style={styles.dilemmaAiBadge}>
+                    <Ionicons name="sparkles" size={10} color="#bef264" />
+                    <Text style={styles.dilemmaAiBadgeText}>AI Gemini</Text>
+                  </View>
+                )}
               </View>
 
               <View
@@ -494,6 +502,22 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: colors.ink,
     letterSpacing: 0.5,
+  },
+  dilemmaAiBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(190, 242, 100, 0.15)",
+    borderWidth: 1,
+    borderColor: "#bef264",
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  dilemmaAiBadgeText: {
+    fontSize: 9,
+    fontWeight: "800",
+    color: "#bef264",
   },
   dilemmaStreakPill: {
     flexDirection: "row",
