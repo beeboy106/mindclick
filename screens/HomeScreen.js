@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -66,16 +65,6 @@ export default function HomeScreen({ navigation }) {
 
   const handleStartQuiz = (categoryId = null) => {
     if (!isProfileComplete) {
-      Alert.alert(
-        "กรุณากรอกข้อมูลโปรไฟล์ให้ครบถ้วน",
-        `คุณต้องกรอกข้อมูลโปรไฟล์ให้ครบก่อน จึงจะสามารถเริ่มตอบคำถามแมตช์ได้\n\nข้อมูลที่ยังขาด:\n• ${profileCompletion.missingFields.join("\n• ")}`,
-        [
-          {
-            text: "ไปที่โปรไฟล์",
-            onPress: () => navigation.navigate("ProfileTab"),
-          },
-        ]
-      );
       navigation.navigate("ProfileTab");
       return;
     }
@@ -92,33 +81,6 @@ export default function HomeScreen({ navigation }) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Banner แจ้งเตือนหากข้อมูลโปรไฟล์ยังไม่ครบถ้วน */}
-        {!isProfileComplete && (
-          <TouchableOpacity
-            style={styles.profileWarningBanner}
-            activeOpacity={0.88}
-            onPress={() => navigation.navigate("ProfileTab")}
-          >
-            <View style={styles.profileWarningLeft}>
-              <View style={styles.profileWarningIconBox}>
-                <Ionicons name="alert-circle" size={20} color="#b45309" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.profileWarningTitle}>
-                  โปรไฟล์ยังไม่สมบูรณ์
-                </Text>
-                <Text style={styles.profileWarningSub} numberOfLines={2}>
-                  กรุณากรอกข้อมูลโปรไฟล์ให้ครบก่อน เพื่อเริ่มตอบคำถามแมตช์ (ยังขาด: {profileCompletion.missingFields.join(", ")})
-                </Text>
-              </View>
-            </View>
-            <View style={styles.profileWarningArrow}>
-              <Text style={styles.profileWarningBtnText}>ไปกรอก</Text>
-              <Ionicons name="chevron-forward" size={14} color="#b45309" />
-            </View>
-          </TouchableOpacity>
-        )}
-
         {/* Welcome Section */}
         <View style={styles.heroSection}>
           <View style={styles.heroTopRow}>
@@ -164,25 +126,14 @@ export default function HomeScreen({ navigation }) {
           {!isCompletedAll && (
             <View style={styles.heroActions}>
               <TouchableOpacity
-                style={[
-                  styles.blueBtn,
-                  !isProfileComplete && styles.amberBtn,
-                ]}
+                style={styles.blueBtn}
                 activeOpacity={0.85}
                 onPress={() => handleStartQuiz(nextCategory?.id)}
               >
                 <Text style={styles.blueBtnText}>
-                  {!isProfileComplete
-                    ? "กรอกโปรไฟล์เพื่อเริ่มตอบคำถาม"
-                    : completed.length > 0
-                    ? "ตอบคำถามต่อ"
-                    : "เริ่มตอบคำถาม"}
+                  {completed.length > 0 ? "ตอบคำถามต่อ" : "เริ่มตอบคำถาม"}
                 </Text>
-                <Ionicons
-                  name={!isProfileComplete ? "person-circle-outline" : "arrow-forward"}
-                  size={16}
-                  color={colors.white}
-                />
+                <Ionicons name="arrow-forward" size={16} color={colors.white} />
               </TouchableOpacity>
             </View>
           )}
@@ -264,7 +215,7 @@ export default function HomeScreen({ navigation }) {
 
             <Text style={styles.nextMoveHeadline}>
               {!isProfileComplete
-                ? "กรอกข้อมูลโปรไฟล์ให้ครบถ้วน"
+                ? "เติมโปรไฟล์ให้คนอื่นรู้จักคุณ"
                 : `ตอบ${nextCategory?.name}ต่อ`}
             </Text>
 
@@ -272,7 +223,7 @@ export default function HomeScreen({ navigation }) {
 
             <Text style={styles.nextMoveSub}>
               {!isProfileComplete
-                ? `ยังขาด: ${profileCompletion.missingFields.join(", ")} (แตะเพื่อไปกรอก)`
+                ? "เพิ่ม bio หรือช่องทางติดต่ออย่างน้อย 1 รายการ"
                 : `เหลืออีก ${categories.length - completed.length} ด้าน`}
             </Text>
           </TouchableOpacity>
@@ -503,60 +454,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
-  },
-  amberBtn: {
-    backgroundColor: "#d97706",
-  },
-  profileWarningBanner: {
-    backgroundColor: "#fffbeb",
-    borderWidth: 1.5,
-    borderColor: "#fde68a",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  profileWarningLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flex: 1,
-  },
-  profileWarningIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#fef3c7",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  profileWarningTitle: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: "#92400e",
-    marginBottom: 2,
-  },
-  profileWarningSub: {
-    fontSize: 12,
-    color: "#b45309",
-    lineHeight: 16,
-  },
-  profileWarningArrow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#fef3c7",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  profileWarningBtnText: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#92400e",
   },
   blueBtnText: {
     color: colors.white,

@@ -34,8 +34,6 @@ function MainTabNavigator({ navigation }) {
   const insets = useSafeAreaInsets();
   const { totalUnreadCount } = useFeed();
   const { targetMainTab } = useCrossBubble();
-  const { isProfileComplete, isLoadingData } = useData();
-  const hasRedirectedRef = React.useRef(false);
 
   React.useEffect(() => {
     if (targetMainTab && targetMainTab !== "HomeTab") {
@@ -43,19 +41,11 @@ function MainTabNavigator({ navigation }) {
     }
   }, [targetMainTab, navigation]);
 
-  // หากผู้ใช้ยังไม่ได้กรอกข้อมูลโปรไฟล์ให้ครบ จะเด้งไปหน้าโปรไฟล์ให้เพื่อกรอกข้อมูลให้เรียบร้อย
-  React.useEffect(() => {
-    if (!isLoadingData && !isProfileComplete && !hasRedirectedRef.current) {
-      hasRedirectedRef.current = true;
-      navigation.navigate("ProfileTab");
-    }
-  }, [isProfileComplete, isLoadingData, navigation]);
-
-  const defaultInitialTab = targetMainTab || (!isProfileComplete ? "ProfileTab" : "HomeTab");
+  const defaultInitialTab = targetMainTab || "HomeTab";
 
   return (
     <Tab.Navigator
-      key={targetMainTab || (!isProfileComplete ? "main_tabs_profile" : "main_tabs_home")}
+      key={targetMainTab || "main_tabs"}
       initialRouteName={defaultInitialTab}
       screenOptions={({ route }) => ({
         headerShown: false,

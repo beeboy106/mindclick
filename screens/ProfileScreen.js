@@ -80,9 +80,6 @@ export default function ProfileScreen({ navigation }) {
     addGalleryImage,
     removeGalleryImage,
     resetQuizData,
-    isProfileComplete,
-    profileCompletion,
-    checkProfileCompletion,
   } = useData();
 
   const {
@@ -156,19 +153,11 @@ export default function ProfileScreen({ navigation }) {
     setAvatarError(false);
   }, [avatarUri, profile?.image, user?.image]);
 
-  const currentInputsComplete = checkProfileCompletion
-    ? checkProfileCompletion(
-        {
-          name: displayName,
-          gender,
-          faculty,
-          bio,
-          socialLinks,
-          image: avatarUri || profile?.image || user?.image,
-        },
-        user
-      )
-    : profileCompletion;
+  const profileReady = Boolean(
+    profile?.bio ||
+      (profile?.gender && profile.gender !== "prefer_not_to_say") ||
+      Object.values(profile?.socialLinks || {}).some(Boolean)
+  );
 
   const handlePickAvatar = async () => {
     try {
@@ -293,40 +282,16 @@ export default function ProfileScreen({ navigation }) {
 
   const handleSave = async () => {
     setIsSaving(true);
-    const updatedData = {
+    await updateProfile({
       name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
       gender,
       faculty,
       bio,
       socialLinks,
       image: avatarUri || profile?.image || user?.image || null,
-    };
-    await updateProfile(updatedData);
+    });
     setIsSaving(false);
-
-    const checkRes = checkProfileCompletion
-      ? checkProfileCompletion(updatedData, user)
-      : { isComplete: false, missingFields: [] };
-
-    if (checkRes.isComplete) {
-      Alert.alert(
-        "บันทึกข้อมูลสำเร็จ",
-        "ข้อมูลโปรไฟล์ของคุณครบถ้วนเรียบร้อยแล้ว พร้อมเริ่มตอบคำถามแมตช์ได้ทันที!",
-        [
-          {
-            text: "เริ่มตอบคำถามแมตช์",
-            onPress: () => navigation.navigate("HomeTab"),
-          },
-          { text: "ตกลง" },
-        ]
-      );
-    } else {
-      Alert.alert(
-        "บันทึกข้อมูลเรียบร้อยแล้ว",
-        `ข้อมูลโปรไฟล์ยังไม่ครบถ้วน (ยังขาด: ${checkRes.missingFields.join(", ")})\nกรุณากรอกให้ครบเพื่อปลดล็อกการตอบคำถามแมตช์`,
-        [{ text: "รับทราบ" }]
-      );
-    }
+    Alert.alert("สำเร็จ", "บันทึกข้อมูลโปรไฟล์เรียบร้อยแล้ว");
   };
 
   return (
@@ -346,35 +311,14 @@ export default function ProfileScreen({ navigation }) {
         </View>
 
         {/* Pink Alert Banner (Shown if profile not filled yet) */}
-        {!currentInputsComplete.isComplete && (
+        {!profileReady && (
           <View style={styles.warningBanner}>
-            <View style={styles.warningHeaderRow}>
-              <Ionicons name="alert-circle" size={18} color={colors.destructive} />
-              <Text style={styles.warningTitle}>
-                กรุณากรอกข้อมูลโปรไฟล์ให้ครบก่อนตอบคำถามแมตช์
-              </Text>
-            </View>
-            <Text style={styles.warningSub}>
-              คุณต้องกรอกข้อมูลให้ครบถ้วนเพื่อให้เพื่อนรู้จักคุณ และเปิดใช้งานการตอบคำถามแมตช์
+            <Text style={styles.warningTitle}>
+              กรุณากรอกข้อมูลโปรไฟล์ก่อนตอบคำถาม
             </Text>
-            {currentInputsComplete.missingFields?.length > 0 && (
-              <View style={styles.missingListContainer}>
-                <Text style={styles.missingListHeader}>
-                  ข้อมูลที่ยังต้องระบุ ({currentInputsComplete.missingFields.length} รายการ):
-                </Text>
-                {currentInputsComplete.missingFields.map((field, idx) => (
-                  <View key={idx} style={styles.missingItemRow}>
-                    <Ionicons
-                      name="ellipse"
-                      size={5}
-                      color={colors.destructive}
-                      style={{ marginRight: 6 }}
-                    />
-                    <Text style={styles.missingItemText}>{field}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
+            <Text style={styles.warningSub}>
+              อัปโหลดรูปโปรไฟล์ และใส่ข้อมูลอย่างน้อย 1 อย่าง (เพศ, แนะนำตัว หรือช่องทางติดต่อ)
+            </Text>
           </View>
         )}
 
@@ -1073,48 +1017,19 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: "#ef4444",
     padding: 14,
-    borderRadius: 8,
+    borderRadius: 6,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#fecaca",
-  },
-  warningHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 4,
   },
   warningTitle: {
     fontSize: 14,
     fontWeight: "800",
     color: "#b91c1c",
+    marginBottom: 4,
   },
   warningSub: {
     fontSize: 12,
     color: "#7f1d1d",
     lineHeight: 18,
-  },
-  missingListContainer: {
-    marginTop: 10,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#fecaca",
-  },
-  missingListHeader: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#991b1b",
-    marginBottom: 6,
-  },
-  missingItemRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 3,
-  },
-  missingItemText: {
-    fontSize: 12,
-    color: "#b91c1c",
-    fontWeight: "700",
   },
   userCard: {
     backgroundColor: colors.white,
