@@ -33,7 +33,7 @@ export default function ChatModal({
   initialFriendData = null,
   suggestedIcebreakers = [],
 }) {
-  const { friends, chats, sendMessage, markAsRead, startChatWithUser } = useFeed();
+  const { friends, chats, sendMessage, markAsRead, startChatWithUser, userStatus } = useFeed();
   const { blockedUserIds = [], blockUser, submitReport } = useAuth();
   const insets = useSafeAreaInsets();
 
@@ -251,7 +251,11 @@ export default function ChatModal({
                           styles.statusDotSmall,
                           {
                             backgroundColor:
-                              activeFriend.status === "online" ? "#22c55e" : "#9ca3af",
+                              activeFriend.status === "online"
+                                ? "#22c55e"
+                                : activeFriend.status === "busy"
+                                ? "#ef4444"
+                                : "#9ca3af",
                           },
                         ]}
                       />
@@ -260,9 +264,16 @@ export default function ChatModal({
                       <Text style={styles.roomFriendName} numberOfLines={1}>
                         {activeFriend.name}
                       </Text>
-                      <Text style={styles.roomStatusText}>
+                      <Text
+                        style={[
+                          styles.roomStatusText,
+                          activeFriend.status === "busy" && { color: "#ef4444" },
+                        ]}
+                      >
                         {activeFriend.status === "online"
                           ? "กำลังใช้งาน"
+                          : activeFriend.status === "busy"
+                          ? "ห้ามรบกวน"
                           : "ออฟไลน์"}
                       </Text>
                     </View>
@@ -416,6 +427,16 @@ export default function ChatModal({
                   </TouchableOpacity>
                 </View>
 
+                {/* DND Banner if user has Do Not Disturb active */}
+                {userStatus === "busy" && (
+                  <View style={styles.dndBanner}>
+                    <Ionicons name="notifications-off-outline" size={14} color="#ef4444" />
+                    <Text style={styles.dndBannerText}>
+                      โหมดห้ามรบกวนเปิดอยู่: จะไม่แสดงการแจ้งเตือนแชท
+                    </Text>
+                  </View>
+                )}
+
                 {/* Friends List */}
                 <FlatList
                   data={visibleFriends}
@@ -448,7 +469,11 @@ export default function ChatModal({
                             styles.statusDot,
                             {
                               backgroundColor:
-                                item.status === "online" ? "#22c55e" : "#9ca3af",
+                                item.status === "online"
+                                  ? "#22c55e"
+                                  : item.status === "busy"
+                                  ? "#ef4444"
+                                  : "#9ca3af",
                             },
                           ]}
                         />
@@ -629,6 +654,26 @@ const styles = StyleSheet.create({
     borderRadius: 6.5,
     borderWidth: 2,
     borderColor: colors.white,
+  },
+  dndBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "#fef2f2",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginHorizontal: 16,
+    marginTop: 6,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: "#fecaca",
+  },
+  dndBannerText: {
+    fontSize: 12,
+    color: "#b91c1c",
+    fontWeight: "700",
   },
   friendInfo: {
     flex: 1,

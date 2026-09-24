@@ -358,6 +358,19 @@ export default function ProfileScreen({ navigation }) {
           </View>
 
           <View style={styles.userNameRow}>
+            <View
+              style={[
+                styles.nameStatusDot,
+                {
+                  backgroundColor:
+                    userStatus === "online"
+                      ? "#22c55e"
+                      : userStatus === "busy"
+                      ? "#ef4444"
+                      : "#9ca3af",
+                },
+              ]}
+            />
             <TextInput
               style={styles.userNameInput}
               value={displayName}
@@ -371,12 +384,17 @@ export default function ProfileScreen({ navigation }) {
 
           {/* Status Switcher (ออนไลน์ / ห้ามรบกวน) */}
           <View style={styles.statusSection}>
-            <Text style={styles.statusSectionLabel}>สถานะของคุณ</Text>
+            <View style={styles.statusSectionHeaderRow}>
+              <Text style={styles.statusSectionLabel}>สถานะของคุณ</Text>
+              <Text style={styles.statusAutoHint}>
+                (จะออฟไลน์อัตโนมัติเมื่อออกจากแอป)
+              </Text>
+            </View>
             <View style={styles.statusRow}>
               <TouchableOpacity
                 style={[
                   styles.statusPill,
-                  userStatus !== "busy" && styles.statusPillActiveGreen,
+                  userStatus === "online" && styles.statusPillActiveGreen,
                 ]}
                 activeOpacity={0.8}
                 onPress={() => setUserStatus("online")}
@@ -385,7 +403,7 @@ export default function ProfileScreen({ navigation }) {
                 <Text
                   style={[
                     styles.statusPillText,
-                    userStatus !== "busy" && styles.statusTextActive,
+                    userStatus === "online" && styles.statusTextActive,
                   ]}
                 >
                   ออนไลน์
@@ -401,14 +419,24 @@ export default function ProfileScreen({ navigation }) {
                 onPress={() => setUserStatus("busy")}
               >
                 <View style={[styles.statusDot, { backgroundColor: "#ef4444" }]} />
-                <Text
-                  style={[
-                    styles.statusPillText,
-                    userStatus === "busy" && styles.statusTextActive,
-                  ]}
-                >
-                  ห้ามรบกวน
-                </Text>
+                <View style={{ alignItems: "center" }}>
+                  <Text
+                    style={[
+                      styles.statusPillText,
+                      userStatus === "busy" && styles.statusTextActive,
+                    ]}
+                  >
+                    ห้ามรบกวน
+                  </Text>
+                  <Text
+                    style={[
+                      styles.statusSubText,
+                      userStatus === "busy" && styles.statusSubTextActive,
+                    ]}
+                  >
+                    จะไม่แสดงแจ้งเตือนแชท
+                  </Text>
+                </View>
               </TouchableOpacity>
             </View>
           </View>
@@ -1574,16 +1602,32 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: colors.ink,
   },
+  nameStatusDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+    marginRight: 6,
+  },
   statusSection: {
     marginTop: 12,
     marginBottom: 8,
     alignItems: "center",
   },
+  statusSectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
   statusSectionLabel: {
     fontSize: 12,
     fontWeight: "700",
     color: colors.mutedForeground,
-    marginBottom: 8,
+  },
+  statusAutoHint: {
+    fontSize: 11,
+    color: colors.mutedForeground,
+    fontWeight: "500",
   },
   statusRow: {
     flexDirection: "row",
@@ -1617,6 +1661,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     color: colors.mutedForeground,
+  },
+  statusSubText: {
+    fontSize: 9.5,
+    color: colors.mutedForeground,
+    marginTop: 1,
+    fontWeight: "600",
+  },
+  statusSubTextActive: {
+    color: "#b91c1c",
+    fontWeight: "800",
   },
   statusTextActive: {
     color: colors.ink,

@@ -36,6 +36,7 @@ export default function FeedScreen({ navigation }) {
   const {
     posts,
     isLoading,
+    userStatus,
     addPost,
     deletePost,
     toggleLike,
@@ -316,9 +317,14 @@ export default function FeedScreen({ navigation }) {
             onPress={handleOpenChatList}
           >
             <Ionicons name="chatbubbles-outline" size={22} color={colors.ink} />
-            {totalUnreadCount > 0 && (
+            {totalUnreadCount > 0 && userStatus !== "busy" && (
               <View style={styles.badgeCount}>
                 <Text style={styles.badgeText}>{totalUnreadCount}</Text>
+              </View>
+            )}
+            {userStatus === "busy" && (
+              <View style={styles.dndBadgeIcon}>
+                <Ionicons name="notifications-off" size={9} color={colors.white} />
               </View>
             )}
           </TouchableOpacity>
@@ -442,7 +448,11 @@ export default function FeedScreen({ navigation }) {
                       styles.friendStatusIndicator,
                       {
                         backgroundColor:
-                          friend.status === "online" ? "#22c55e" : "#9ca3af",
+                          friend.status === "online"
+                            ? "#22c55e"
+                            : friend.status === "busy"
+                            ? "#ef4444"
+                            : "#9ca3af",
                       },
                     ]}
                   />
@@ -834,6 +844,19 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 10,
     fontWeight: "900",
+  },
+  dndBadgeIcon: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#ef4444",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: colors.white,
   },
   container: {
     flex: 1,

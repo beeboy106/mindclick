@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import { AppState } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useAuth } from "./AuthContext";
 import { useData } from "./DataContext";
@@ -176,7 +177,7 @@ const DEFAULT_FRIENDS = [
     name: "Janon Kingkohyao",
     avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=400&auto=format&fit=crop&q=80",
     isBubbleUser: false,
-    status: "offline",
+    status: "busy",
     lastMessage: "ขอบคุณครับ เจอกันพรุ่งนี้",
     lastTime: "14:15",
     unread: 0,
@@ -224,7 +225,10 @@ export function FeedProvider({ children }) {
 
   const [posts, setPosts] = useState([]);
   const [dailyPostCount, setDailyPostCount] = useState(0);
-  const [userStatus, setUserStatusState] = useState("online"); // 'online' | 'busy' | 'offline'
+  const userPreferenceRef = useRef("online");
+  const [userStatus, setUserStatusState] = useState(
+    AppState.currentState === "active" ? "online" : "offline"
+  );
   const [friends, setFriends] = useState([]);
   const [chats, setChats] = useState({}); // { [friendId]: [ { id, senderId, text, createdAt } ] }
   const [isLoading, setIsLoading] = useState(true);
@@ -248,8 +252,12 @@ export function FeedProvider({ children }) {
 
         // 2. โหลดสถานะของผู้ใช้
         const storedStatus = await AsyncStorage.getItem(`${STATUS_STORAGE_PREFIX}${userId}`);
-        if (storedStatus) {
-          setUserStatusState(storedStatus);
+        const pref = storedStatus === "busy" || storedStatus === "online" ? storedStatus : "online";
+        userPreferenceRef.current = pref;
+        if (AppState.currentState === "active") {
+          setUserStatusState(pref);
+        } else {
+          setUserStatusState("offline");
         }
 
         // 3. โหลดรายชื่อเพื่อน
@@ -314,6 +322,22 @@ export function FeedProvider({ children }) {
 
     loadData();
   }, [userId, isDemoMode, postsKey, friendsKey, chatsKey]);
+
+  // ติดตามการสลับเข้า-ออกจากแอป (AppState) เพื่อปรับสถานะ 'ออฟไลน์' อัตโนมัติเมื่อออกจากแอป
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState) => {
+      if (nextAppState === "active") {
+        setUserStatusState(userPreferenceRef.current || "online");
+      } else {
+        setUserStatusState("offline");
+      }
+    };
+
+    const sub = AppState.addEventListener("change", handleAppStateChange);
+    return () => {
+      sub.remove();
+    };
+  }, []);
 
   // ฟังก์ชันจัดเก็บโพสต์ลง AsyncStorage
   const savePosts = async (newPosts) => {
@@ -505,12 +529,16 @@ export function FeedProvider({ children }) {
     }
   }, [profile?.name, profile?.image, userId, user?.name, user?.image]);
 
-  // 5. เปลี่ยนสถานะผู้ใช้ (ออนไลน์ / ห้ามรบกวน / ออฟไลน์)
+  // 5. เปลี่ยนสถานะผู้ใช้ (ออนไลน์ / ห้ามรบกวน) - ออฟไลน์จะตรวจจับอัตโนมัติตาม AppState
   const setUserStatus = useCallback(
     async (status) => {
-      setUserStatusState(status);
+      const validStatus = status === "busy" ? "busy" : "online";
+      userPreferenceRef.current = validStatus;
+      if (AppState.currentState === "active") {
+        setUserStatusState(validStatus);
+      }
       try {
-        await AsyncStorage.setItem(`${STATUS_STORAGE_PREFIX}${userId}`, status);
+        await AsyncStorage.setItem(`${STATUS_STORAGE_PREFIX}${userId}`, validStatus);
       } catch (err) {
         console.error("Error saving status:", err);
       }
@@ -666,7 +694,9 @@ export function FeedProvider({ children }) {
   );
 
   // คำนวณจำนวนแจ้งเตือนแชทที่ยังไม่ได้อ่าน
-  const totalUnreadCount = friends.reduce((sum, f) => sum + (f.unread || 0), 0);
+  // โหมดห้ามรบกวน (userStatus === "busy"): จะไม่แสดงการแจ้งเตือนแชท (badge count = 0)
+  const rawUnreadCount = friends.reduce((sum, f) => sum + (f.unread || 0), 0);
+  const totalUnreadCount = userStatus === "busy" ? 0 : rawUnreadCount;
 
   // คำนวณจำนวนโพสต์ที่เหลือสำหรับวันนี้
   const remainingPostsToday = isBubbleUser ? Infinity : Math.max(0, DAILY_POST_LIMIT - dailyPostCount);
@@ -693,6 +723,7 @@ export function FeedProvider({ children }) {
         isLoading,
         userStatus,
         setUserStatus,
+        isDndActive: userStatus === "busy",
         addPost,
         deletePost,
         toggleLike,
@@ -703,6 +734,7 @@ export function FeedProvider({ children }) {
         markAsRead,
         startChatWithUser,
         totalUnreadCount,
+        rawUnreadCount,
         dailyPostCount,
         dailyPostLimit: DAILY_POST_LIMIT,
         remainingPostsToday,
