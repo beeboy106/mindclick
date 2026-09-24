@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors, categoryColors, shadows } from "../lib/theme";
-import { categories } from "../data/questions";
+import { colors, shadows } from "../lib/theme";
 import FavoriteButton from "./FavoriteButton";
 
 export default function MatchCard({ match, index, onPress }) {
@@ -12,10 +11,6 @@ export default function MatchCard({ match, index, onPress }) {
   useEffect(() => {
     setImgError(false);
   }, [match?.image]);
-
-  const matchedCatObjects = match.matchedCategories
-    .map((catId) => categories.find((c) => c.id === catId))
-    .filter(Boolean);
 
   return (
     <TouchableOpacity
@@ -73,39 +68,6 @@ export default function MatchCard({ match, index, onPress }) {
           />
         </View>
       </View>
-
-      {matchedCatObjects.length > 0 && (
-        <View style={styles.tagsRow}>
-          {matchedCatObjects.map((cat) => {
-            const catTone = categoryColors[cat.id] || {
-              bg: colors.muted,
-              text: colors.ink,
-              border: colors.border,
-            };
-            return (
-              <View
-                key={cat.id}
-                style={[
-                  styles.catTag,
-                  { backgroundColor: catTone.bg, borderColor: colors.darkBorder },
-                ]}
-              >
-                <Ionicons
-                  name={cat.icon}
-                  size={12}
-                  color={catTone.text}
-                />
-                <Text
-                  style={[styles.catTagText, { color: catTone.text }]}
-                  numberOfLines={1}
-                >
-                  {cat.nameEN ? cat.nameEN.toUpperCase() : cat.name}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-      )}
     </TouchableOpacity>
   );
 }
@@ -189,29 +151,5 @@ const styles = StyleSheet.create({
   actionCol: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  tagsRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  catTag: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1,
-    gap: 4,
-  },
-  catIcon: {
-    fontSize: 11,
-  },
-  catTagText: {
-    fontSize: 11,
-    fontWeight: "700",
   },
 });
