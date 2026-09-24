@@ -146,7 +146,7 @@ export default function SplashScreen({ isReady = true, onFinish }) {
         </Animated.View>
       </Animated.View>
 
-      {/* Footer Info & Tap Hint */}
+      {/* Footer Info & Loading Indicator */}
       <Animated.View
         style={[
           styles.footerContainer,
@@ -155,7 +155,6 @@ export default function SplashScreen({ isReady = true, onFinish }) {
           },
         ]}
       >
-        <Text style={styles.tapToEnterText}>แตะหน้าจอเพื่อเข้าสู่แอป</Text>
         <View style={styles.loadingBar}>
           <View style={styles.loadingProgress} />
         </View>
@@ -244,13 +243,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 48,
     alignItems: "center",
-  },
-  tapToEnterText: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#3457ff",
-    marginBottom: 10,
-    letterSpacing: 0.3,
   },
   loadingBar: {
     width: 60,
