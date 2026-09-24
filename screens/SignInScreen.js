@@ -15,7 +15,6 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 import PrivacyPolicyModal from "../components/PrivacyPolicyModal";
-import { MINDCLICK_LOGO_URI } from "../lib/brandAssets";
 
 export default function SignInScreen() {
   const { signInWithGoogle, signInWithDemo, signInWithPsuEmail, authError } = useAuth();
@@ -65,20 +64,6 @@ export default function SignInScreen() {
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom", "left", "right"]}>
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
 
-      {/* Top Header */}
-      <View style={styles.topHeader}>
-        <View style={styles.logoRow}>
-          <Image
-            source={{ uri: MINDCLICK_LOGO_URI }}
-            style={styles.headerLogo}
-            resizeMode="contain"
-          />
-          <Text style={styles.brandTitle}>
-            Mind<Text style={styles.brandTitleAccent}>click</Text>
-          </Text>
-        </View>
-      </View>
-
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContainer}
@@ -86,14 +71,13 @@ export default function SignInScreen() {
         bounces={false}
       >
         <View style={styles.contentBox}>
-          {/* Brand Logo Hero */}
+          {/* Brand Logo Hero (Typographic Mindclick + Lime Cursor Badge) */}
           <View style={styles.heroLogoWrapper}>
-            <View style={styles.heroLogoBadge}>
-              <Image
-                source={{ uri: MINDCLICK_LOGO_URI }}
-                style={styles.heroLogoImage}
-                resizeMode="contain"
-              />
+            <Text style={styles.heroBrandTitle}>
+              Mind<Text style={styles.heroBrandTitleAccent}>click</Text>
+            </Text>
+            <View style={styles.heroBrandBadge}>
+              <MaterialCommunityIcons name="cursor-default-click" size={24} color={colors.ink} />
             </View>
           </View>
 
@@ -185,54 +169,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.white,
   },
-  topHeader: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+  heroLogoWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 10,
+    marginBottom: 20,
   },
-  logoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  headerLogo: {
-    width: 28,
-    height: 28,
-  },
-  brandTitle: {
-    fontSize: 22,
+  heroBrandTitle: {
+    fontSize: 34,
     fontWeight: "900",
     color: colors.ink,
-    letterSpacing: -0.5,
+    letterSpacing: -0.8,
   },
-  brandTitleAccent: {
+  heroBrandTitleAccent: {
     color: colors.primary,
   },
-  heroLogoWrapper: {
-    alignItems: "flex-start",
-    marginBottom: 16,
-  },
-  heroLogoBadge: {
-    width: 68,
-    height: 68,
-    borderRadius: 20,
-    backgroundColor: "#ffffff",
-    alignItems: "center",
+  heroBrandBadge: {
+    width: 38,
+    height: 38,
+    backgroundColor: "#bbf44a",
+    borderRadius: 10,
     justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: "#e2e8f0",
-    shadowColor: "#0f172a",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3,
-    padding: 8,
-  },
-  heroLogoImage: {
-    width: "100%",
-    height: "100%",
+    alignItems: "center",
   },
   container: {
     flex: 1,
