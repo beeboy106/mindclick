@@ -4,7 +4,7 @@ import * as WebBrowser from "expo-web-browser";
 import { Platform, NativeModules } from "react-native";
 
 let GoogleSignin = null;
-if (Platform.OS !== "web" && NativeModules?.RNGoogleSignin) {
+if (Platform.OS !== "web") {
   try {
     const gSigninModule = require("@react-native-google-signin/google-signin");
     GoogleSignin = gSigninModule.GoogleSignin;
@@ -66,7 +66,7 @@ export function AuthProvider({ children }) {
 
   // กำหนดค่า GoogleSignin บน Native เมื่อเริ่มต้นแอป
   useEffect(() => {
-    if (Platform.OS !== "web" && GoogleSignin && NativeModules?.RNGoogleSignin) {
+    if (Platform.OS !== "web" && GoogleSignin) {
       try {
         GoogleSignin.configure({
           webClientId: GOOGLE_CONFIG.webClientId,
@@ -236,153 +236,77 @@ export function AuthProvider({ children }) {
     await saveUserSession(demoUser);
   };
 
-  // ฟังก์ชันเข้าสู่ระบบด้วย Google จริง (บังคับโดเมน @psu.ac.th)
+  // ฟังก์ชันเข้าสู่ระบบด้วย Google จริง (เฉพาะ Native Google Sign-In บนอุปกรณ์)
   const signInWithGoogle = async () => {
     setAuthError(null);
 
-    const isConfigured =
-      GOOGLE_CONFIG.webClientId &&
-      !GOOGLE_CONFIG.webClientId.includes("YOUR_WEB_CLIENT_ID");
+    if (Platform.OS === "web") {
+      setAuthError("การเข้าสู่ระบบด้วย Google บนเว็บยังไม่เปิดใช้งาน กรุณาใช้งานบนแอปมือถือหรือเข้าสู่ระบบด้วยโหมดสาธิต");
+      return;
+    }
 
-    if (isConfigured) {
-      // 1. บน Native (เฉพาะ Development Build ที่มี Google Play Services จริง)
-      if (Platform.OS !== "web" && GoogleSignin && NativeModules?.RNGoogleSignin) {
-        try {
-          await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-          const response = await GoogleSignin.signIn();
-          const gUser = response.data?.user || response.user || response;
-          if (gUser && (gUser.email || gUser.name)) {
-            const gEmail = (gUser.email || "").trim().toLowerCase();
-            const rawId = gUser.id || gUser.sub || gEmail.replace(/[^a-zA-Z0-9]/g, "_");
-            const consistentId = `google_${rawId}`;
-
-            const loggedInUser = {
-              id: consistentId,
-              name: gUser.name || gEmail.split("@")[0],
-              email: gEmail,
-              studentEmail: gEmail,
-              isStudentVerified: true,
-              image: gUser.photo || gUser.photoUrl || gUser.picture || null,
-              provider: "google",
-            };
-            await saveUserSession(loggedInUser);
-            return;
-          }
-        } catch (nativeErr) {
-          console.warn("Native GoogleSignin error:", nativeErr);
-          // หากผู้ใช้กดยกเลิก
-          if (nativeErr.code === "SIGN_IN_CANCELLED" || nativeErr.code === "12501") {
-            return;
-          }
-          // หากติดปัญหา Native Play Services ให้ปล่อยไหลลงไปทำ OAuth WebBrowser ด้านล่าง
-        }
-      }
-
-      // 2. บน Web (หรือโหมดทดสอบ) - ใช้ Pop-up OAuth ดักจับ Token จาก Hash
+    if (!GoogleSignin) {
       try {
-        let redirectUrl = "https://snack-runtime.eascdn.net/v2/54/index.html";
-        if (Platform.OS === "web" && typeof window !== "undefined") {
-          redirectUrl = window.location.origin + window.location.pathname;
-        }
-
-        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
-          GOOGLE_CONFIG.webClientId
-        )}&response_type=token&scope=profile%20email&prompt=select_account&redirect_uri=${encodeURIComponent(
-          redirectUrl
-        )}`;
-
-        let accessToken = null;
-
-        if (Platform.OS === "web" && typeof window !== "undefined") {
-          // บน Web ให้เปิด popup window และจับ token จาก hash เมื่อ Google redirect กลับมา
-          const popup = window.open(
-            authUrl,
-            "google_oauth",
-            "width=520,height=650,top=100,left=100"
-          );
-
-          if (!popup) {
-            throw new Error("หน้าต่างล็อกอินถูกเบราว์เซอร์บล็อก (Pop-up blocked)");
-          }
-
-          accessToken = await new Promise((resolve) => {
-            const timer = setInterval(() => {
-              try {
-                if (popup.closed) {
-                  clearInterval(timer);
-                  resolve(null);
-                  return;
-                }
-
-                // เมื่อ Google redirect กลับมาที่โดเมน snack-runtime.eascdn.net
-                if (popup.location && popup.location.href) {
-                  const hash = popup.location.hash || "";
-                  if (hash.includes("access_token=")) {
-                    clearInterval(timer);
-                    const params = new URLSearchParams(hash.substring(1));
-                    const token = params.get("access_token");
-                    try {
-                      popup.close();
-                    } catch (e) {
-                      // ignore
-                    }
-                    resolve(token);
-                  }
-                }
-              } catch (e) {
-                // ขณะอยู่บน accounts.google.com จะติด cross-origin ให้ข้ามไป
-              }
-            }, 300);
-
-            // Timeout หลังจาก 2 นาที
-            setTimeout(() => {
-              clearInterval(timer);
-              try {
-                if (!popup.closed) popup.close();
-              } catch (e) {
-                // ignore
-              }
-              resolve(null);
-            }, 120000);
-          });
-        } else {
-          // Fallback สำหรับ Native หากไม่ได้ใช้ GoogleSignin
-          const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUrl);
-          if (result.type === "success" && result.url) {
-            const params = new URLSearchParams(result.url.split("#")[1] || "");
-            accessToken = params.get("access_token");
-          }
-        }
-
-        if (accessToken) {
-          const userInfoRes = await fetch(
-            "https://www.googleapis.com/userinfo/v2/me",
-            { headers: { Authorization: `Bearer ${accessToken}` } }
-          );
-          const googleUser = await userInfoRes.json();
-          const googleEmail = (googleUser.email || "").trim().toLowerCase();
-          const rawId = googleUser.id || googleUser.sub || googleEmail.replace(/[^a-zA-Z0-9]/g, "_");
-          const consistentId = `google_${rawId}`;
-
-          const loggedInUser = {
-            id: consistentId,
-            name: googleUser.name || googleEmail.split("@")[0],
-            email: googleEmail,
-            studentEmail: googleEmail,
-            isStudentVerified: true,
-            image: googleUser.picture || googleUser.photo || googleUser.avatar_url || null,
-            provider: "google",
-          };
-          await saveUserSession(loggedInUser);
-          return;
-        }
-      } catch (err) {
-        console.error("Google OAuth error:", err);
+        const gSigninModule = require("@react-native-google-signin/google-signin");
+        GoogleSignin = gSigninModule.GoogleSignin;
+      } catch (e) {
+        setAuthError("ไม่พบโมดูล Native Google Sign-In ในสภาพแวดล้อมนี้ กรุณาเปิดผ่านไฟล์ติดตั้ง APK หรือใช้โหมดสาธิต");
+        return;
       }
     }
 
-    // หากยังไม่สามารถเข้าสู่ระบบได้
-    setAuthError("ไม่สามารถเข้าสู่ระบบได้ กรุณาลองใหม่อีกครั้ง");
+    if (!GoogleSignin) {
+      setAuthError("อุปกรณ์นี้ไม่รองรับ Native Google Sign-In กรุณาใช้งานผ่านโหมดสาธิต");
+      return;
+    }
+
+    try {
+      try {
+        GoogleSignin.configure({
+          webClientId: GOOGLE_CONFIG.webClientId,
+        });
+      } catch (cfgErr) {
+        // ignore if already configured
+      }
+
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const response = await GoogleSignin.signIn();
+      const gUser = response.data?.user || response.user || response;
+      if (gUser && (gUser.email || gUser.name)) {
+        const gEmail = (gUser.email || "").trim().toLowerCase();
+        const rawId = gUser.id || gUser.sub || gEmail.replace(/[^a-zA-Z0-9]/g, "_");
+        const consistentId = `google_${rawId}`;
+
+        const loggedInUser = {
+          id: consistentId,
+          name: gUser.name || gEmail.split("@")[0],
+          email: gEmail,
+          studentEmail: gEmail,
+          isStudentVerified: true,
+          image: gUser.photo || gUser.photoUrl || gUser.picture || null,
+          provider: "google",
+        };
+        await saveUserSession(loggedInUser);
+        return;
+      }
+
+      setAuthError("ไม่สามารถดึงข้อมูลบัญชี Google ได้ กรุณาลองใหม่อีกครั้ง");
+    } catch (nativeErr) {
+      console.warn("Native GoogleSignin error:", nativeErr);
+      if (nativeErr.code === "SIGN_IN_CANCELLED" || nativeErr.code === "12501") {
+        // ผู้ใช้กดยกเลิกหน้าต่างเลือกบัญชีเอง
+        return;
+      }
+      if (nativeErr.code === "PLAY_SERVICES_NOT_AVAILABLE" || nativeErr.code === "12500") {
+        setAuthError("Google Play Services ไม่พร้อมใช้งานในอุปกรณ์นี้");
+        return;
+      }
+      if (nativeErr.code === "DEVELOPER_ERROR" || nativeErr.code === "10") {
+        setAuthError("เกิดข้อผิดพลาดในการเชื่อมต่อ (Developer Error 10): ตรวจสอบ SHA-1 ใน Google Cloud Console หรือเข้าใช้งานผ่านโหมดสาธิต");
+        return;
+      }
+      setAuthError("เข้าสู่ระบบด้วย Google ไม่สำเร็จ (" + (nativeErr.message || nativeErr.code || "กรุณาลองใหม่อีกครั้ง") + ")");
+    }
   };
 
   // ออกจากระบบ
