@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,7 +16,7 @@ import { useData } from "../context/DataContext";
 
 export default function QuizScreen({ route, navigation }) {
   const { categoryId: initialCategoryId } = route.params || {};
-  const { quizResponse, saveCategoryAnswers } = useData();
+  const { quizResponse, saveCategoryAnswers, isProfileComplete, profileCompletion } = useData();
 
   const completedCategories = quizResponse.completedCategories || [];
 
@@ -26,12 +27,32 @@ export default function QuizScreen({ route, navigation }) {
   const [answers, setAnswers] = useState(Array(10).fill(null));
   const [isSaving, setIsSaving] = useState(false);
 
-  // เริ่มต้นหมวดหมู่หากส่ง param มา
+  // หากข้อมูลโปรไฟล์ยังไม่ครบถ้วน จะเด้งไปหน้าโปรไฟล์ให้
   useEffect(() => {
+    if (!isProfileComplete) {
+      Alert.alert(
+        "กรุณากรอกข้อมูลโปรไฟล์ให้ครบถ้วน",
+        `คุณต้องกรอกข้อมูลโปรไฟล์ให้ครบก่อน จึงจะสามารถตอบคำถามแมตช์ได้\n\nข้อมูลที่ยังขาด:\n• ${profileCompletion?.missingFields?.join("\n• ") || "ข้อมูลโปรไฟล์"}`,
+        [
+          {
+            text: "ไปที่โปรไฟล์",
+            onPress: () => {
+              navigation.replace("Main", { screen: "ProfileTab" });
+            },
+          },
+        ]
+      );
+      navigation.replace("Main", { screen: "ProfileTab" });
+    }
+  }, [isProfileComplete, navigation, profileCompletion]);
+
+  // เริ่มต้นหมวดหมู่หากส่ง param มา (เฉพาะเมื่อโปรไฟล์สมบูรณ์แล้ว)
+  useEffect(() => {
+    if (!isProfileComplete) return;
     if (initialCategoryId) {
       startCategoryQuiz(initialCategoryId);
     }
-  }, [initialCategoryId]);
+  }, [initialCategoryId, isProfileComplete]);
 
   const startCategoryQuiz = (catId) => {
     const cat = categories.find((c) => c.id === catId);

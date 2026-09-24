@@ -40,6 +40,46 @@ const defaultQuizResponse = {
   categoryAnswers: [],
 };
 
+// ฟังก์ชันตรวจสอบความสมบูรณ์ของโปรไฟล์ (ต้องกรอกให้ครบถ้วนก่อนตอบคำถามแมตช์)
+export function checkProfileCompletion(profile, user) {
+  const name = (profile?.name || user?.name || "").trim();
+  const image = profile?.image || user?.image;
+  const gender = profile?.gender;
+  const faculty = (profile?.faculty || "").trim();
+  const bio = (profile?.bio || "").trim();
+  const socialLinks = profile?.socialLinks || {};
+
+  const hasName = Boolean(name && name.length > 0);
+  const hasImage = Boolean(image && typeof image === "string" && image.trim().length > 0);
+  const hasGender = Boolean(gender && gender !== "prefer_not_to_say");
+  const hasFaculty = Boolean(faculty && faculty.length > 0);
+  const hasBio = Boolean(bio && bio.length > 0);
+  const hasSocial = Object.values(socialLinks).some(
+    (v) => typeof v === "string" && v.trim().length > 0
+  );
+
+  const missingFields = [];
+  if (!hasImage) missingFields.push("รูปโปรไฟล์");
+  if (!hasName) missingFields.push("ชื่อผู้ใช้งาน");
+  if (!hasGender) missingFields.push("เพศ");
+  if (!hasFaculty) missingFields.push("คณะ/สาขาวิชา");
+  if (!hasBio) missingFields.push("คำแนะนำตัว");
+  if (!hasSocial) missingFields.push("ช่องทางติดต่อ (อย่างน้อย 1 ช่องทาง)");
+
+  const isComplete = missingFields.length === 0;
+
+  return {
+    isComplete,
+    hasName,
+    hasImage,
+    hasGender,
+    hasFaculty,
+    hasBio,
+    hasSocial,
+    missingFields,
+  };
+}
+
 const DataContext = createContext();
 
 export function DataProvider({ children }) {
@@ -451,6 +491,9 @@ export function DataProvider({ children }) {
     }
   };
 
+  const profileCompletion = checkProfileCompletion(profile, user);
+  const isProfileComplete = profileCompletion.isComplete;
+
   return (
     <DataContext.Provider
       value={{
@@ -472,6 +515,9 @@ export function DataProvider({ children }) {
         resetQuizData,
         resetAllData,
         refreshPool: fetchCloudPool,
+        isProfileComplete,
+        profileCompletion,
+        checkProfileCompletion,
       }}
     >
       {children}

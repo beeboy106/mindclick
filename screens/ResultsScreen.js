@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,12 +17,26 @@ import Header from "../components/Header";
 import MatchCard from "../components/MatchCard";
 
 export default function ResultsScreen({ navigation }) {
-  const { quizResponse, getMatchList } = useData();
+  const { quizResponse, getMatchList, isProfileComplete, profileCompletion } = useData();
 
   const completed = quizResponse.completedCategories || [];
   const matches = getMatchList();
 
   const handleOpenQuiz = () => {
+    if (!isProfileComplete) {
+      Alert.alert(
+        "กรุณากรอกข้อมูลโปรไฟล์ให้ครบถ้วน",
+        `คุณต้องกรอกข้อมูลโปรไฟล์ให้ครบก่อน จึงจะสามารถตอบคำถามแมตช์ได้\n\nข้อมูลที่ยังขาด:\n• ${profileCompletion.missingFields.join("\n• ")}`,
+        [
+          {
+            text: "ไปที่โปรไฟล์",
+            onPress: () => navigation.navigate("ProfileTab"),
+          },
+        ]
+      );
+      navigation.navigate("ProfileTab");
+      return;
+    }
     navigation.navigate("Quiz");
   };
 
