@@ -1,5 +1,5 @@
 import "./lib/snackPolyfill";
-import React from "react";
+import React, { useEffect } from "react";
 import { registerRootComponent } from "expo";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
@@ -11,8 +11,12 @@ import { PremiumProvider } from "./context/PremiumContext";
 import { FeedProvider } from "./context/FeedContext";
 import { CrossBubbleProvider } from "./context/CrossBubbleContext";
 import AppNavigator from "./navigation/AppNavigator";
+import { registerForPushNotificationsAsync } from "./lib/notificationService";
 
 export default function App() {
+  useEffect(() => {
+    registerForPushNotificationsAsync();
+  }, []);
   return (
     <SafeAreaProvider initialWindowMetrics={initialWindowMetrics}>
       <AuthProvider>

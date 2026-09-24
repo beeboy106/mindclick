@@ -28,7 +28,8 @@
         {
           "photosPermission": "The app accesses your photos to let you pick profile pictures."
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "extra": {
       "eas": {

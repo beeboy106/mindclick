@@ -27,6 +27,7 @@ import ProfileViewsModal from "../components/ProfileViewsModal";
 import BubbleUpgradeModal from "../components/BubbleUpgradeModal";
 import { CAMPUS_FACULTIES } from "../lib/mindInsight";
 import { uploadImageToCloudinary } from "../lib/cloudinary";
+import { sendTestNotification } from "../lib/notificationService";
 
 const genderOptions = [
   { value: "male", label: "ชาย", icon: "male", color: "#3b82f6", bgActive: "#eff6ff" },
@@ -890,6 +891,34 @@ export default function ProfileScreen({ navigation }) {
                 </Text>
               </TouchableOpacity>
             </View>
+
+            {/* ปุ่มทดสอบส่งการแจ้งเตือนเข้าเครื่อง (Local Device Notification) */}
+            <TouchableOpacity
+              style={styles.testNotiBtn}
+              activeOpacity={0.8}
+              onPress={async () => {
+                const res = await sendTestNotification(userStatus === "busy");
+                if (res.success) {
+                  Alert.alert(
+                    "ส่งการแจ้งเตือนสำเร็จ",
+                    "ระบบได้ส่งการแจ้งเตือนระดับ OS ไปยังเครื่องของคุณแล้ว กรุณาเลื่อนดูที่แถบ Notification ด้านบน"
+                  );
+                } else if (res.reason === "dnd_active") {
+                  Alert.alert(
+                    "โหมดห้ามรบกวน",
+                    "ไม่สามารถส่งการแจ้งเตือนได้ เนื่องจากคุณเปิดโหมด 'ห้ามรบกวน' อยู่ (ระบบระงับการแจ้งเตือนเข้าเครื่องอย่างถูกต้อง)"
+                  );
+                } else {
+                  Alert.alert(
+                    "แจ้งเตือนไม่สำเร็จ",
+                    res.message || "กรุณาเปิดสิทธิ์การแจ้งเตือนในการตั้งค่าของเครื่อง"
+                  );
+                }
+              }}
+            >
+              <Ionicons name="notifications-outline" size={14} color="#4338ca" style={{ marginRight: 6 }} />
+              <Text style={styles.testNotiBtnText}>ทดสอบส่งแจ้งเตือนเข้าเครื่อง (Local Push)</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -1567,6 +1596,22 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "800",
     color: colors.ink,
+  },
+  testNotiBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#e0e7ff",
+    borderWidth: 1.5,
+    borderColor: "#818cf8",
+    borderRadius: 6,
+    paddingVertical: 9,
+    marginTop: 8,
+  },
+  testNotiBtnText: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#3730a3",
   },
   fieldHelperText: {
     fontSize: 12,

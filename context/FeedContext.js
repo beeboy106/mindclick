@@ -5,6 +5,7 @@ import { useAuth } from "./AuthContext";
 import { useData } from "./DataContext";
 import { usePremium } from "./PremiumContext";
 import { mockUsers } from "../data/mockUsers";
+import { sendChatNotification } from "../lib/notificationService";
 
 const POSTS_STORAGE_KEY = "@mindclick_feed_posts";
 const STATUS_STORAGE_PREFIX = "@mindclick_user_status_";
@@ -591,8 +592,57 @@ export function FeedProvider({ children }) {
       } catch (err) {
         console.error("Error saving chats:", err);
       }
+
+      // จำลองการตอบกลับของเพื่อน (สำหรับโหมดสาธิตหรือเพื่อน mock) เพื่อทดสอบการแจ้งเตือนระดับ OS เข้าเครื่อง
+      if (friendId && (isDemoMode || friendId.startsWith("user_mock_"))) {
+        setTimeout(async () => {
+          const replyText = "ได้รับข้อความแล้วครับ เดี๋ยวสักครู่ตอบกลับนะครับ";
+          const replyNow = new Date();
+          const replyTimeStr = `${String(replyNow.getHours()).padStart(2, "0")}:${String(replyNow.getMinutes()).padStart(2, "0")}`;
+
+          const replyMsg = {
+            id: `msg_rep_${Date.now()}`,
+            senderId: friendId,
+            text: replyText,
+            createdAt: replyTimeStr,
+          };
+
+          setChats((prev) => {
+            const nextMsgs = [...(prev[friendId] || []), replyMsg];
+            const next = { ...prev, [friendId]: nextMsgs };
+            AsyncStorage.setItem(chatsKey, JSON.stringify(next)).catch(() => {});
+            return next;
+          });
+
+          let senderName = "เพื่อน Mindclick";
+          setFriends((prevFriends) => {
+            const updated = prevFriends.map((f) => {
+              if (f.id === friendId) {
+                senderName = f.name;
+                return {
+                  ...f,
+                  lastMessage: replyText,
+                  lastTime: replyTimeStr,
+                  unread: (f.unread || 0) + 1,
+                };
+              }
+              return f;
+            });
+            AsyncStorage.setItem(friendsKey, JSON.stringify(updated)).catch(() => {});
+            return updated;
+          });
+
+          // ส่ง Notification เข้าสู่เครื่องจริง (หากไม่ได้อยู่ในโหมดห้ามรบกวน)
+          await sendChatNotification({
+            senderName,
+            messageText: replyText,
+            friendId,
+            isDndActive: userStatus === "busy",
+          });
+        }, 3500);
+      }
     },
-    [chats, userId, friendsKey, chatsKey]
+    [chats, userId, friendsKey, chatsKey, isDemoMode, userStatus]
   );
 
   // 7. มาร์กแชทว่าอ่านแล้ว
