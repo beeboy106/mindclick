@@ -7,6 +7,7 @@ import {
   ScrollView,
   StatusBar,
   Platform,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -72,9 +73,23 @@ export default function QuizScreen({ route, navigation }) {
         // ครบ 10 ข้อแล้ว บันทึกข้อมูล
         setIsSaving(true);
         const questionOrder = questions.map((q) => q.id);
-        await saveCategoryAnswers(selectedCategory.id, newAnswers, questionOrder);
+        const result = await saveCategoryAnswers(selectedCategory.id, newAnswers, questionOrder);
         setIsSaving(false);
         setIsTransitioning(false);
+        if (result && result.cloudError) {
+          Alert.alert(
+            "บันทึกสำเร็จ (ไม่มีอินเทอร์เน็ต)",
+            "คำตอบถูกบันทึกในเครื่องแล้ว แต่ยังไม่ได้ซิงค์ขึ้น Cloud กรุณาตรวจสอบการเชื่อมต่อและเปิดแอปอีกครั้ง",
+            [{ text: "ตกลง" }]
+          );
+        } else if (!result || !result.success) {
+          Alert.alert(
+            "เกิดข้อผิดพลาด",
+            "ไม่สามารถบันทึกคำตอบได้ กรุณาลองใหม่อีกครั้ง",
+            [{ text: "ตกลง" }]
+          );
+          return;
+        }
         setStep("complete");
       }
     }, 180);

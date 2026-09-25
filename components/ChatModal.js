@@ -169,7 +169,7 @@ export default function ChatModal({
       if (syncChatWithFriend) {
         syncChatWithFriend(activeFriend.id);
       }
-    }, 2500);
+    }, 3500);
 
     return () => clearInterval(timer);
   }, [visible, activeFriend?.id, syncChatWithFriend]);

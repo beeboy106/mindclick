@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -22,6 +22,19 @@ export default function ResultsScreen({ navigation }) {
 
   const completed = quizResponse.completedCategories || [];
   const matches = getMatchList();
+
+  const lastAutoFetchRef = useRef(0);
+
+  // ดึง Pool อัตโนมัติเมื่อเข้าหน้าจอและยังไม่มีคู่แมตช์ หรือข้อมูลเก่าเกิน 60 วินาที
+  useEffect(() => {
+    const now = Date.now();
+    const shouldFetch = matches.length === 0 || now - lastAutoFetchRef.current > 60000;
+    if (shouldFetch && refreshPool) {
+      lastAutoFetchRef.current = now;
+      refreshPool().catch(() => {});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

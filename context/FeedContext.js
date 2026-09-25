@@ -12,6 +12,9 @@ import {
   saveFirestorePost,
   getFirestorePosts,
   deleteFirestorePost,
+  saveFirestoreUser,
+  getFirestoreUser,
+  isFirebaseConfigured,
 } from "../lib/firebase";
 
 const POSTS_STORAGE_KEY = "@mindclick_feed_posts";
@@ -354,7 +357,7 @@ export function FeedProvider({ children }) {
           setUserStatusState("offline");
         }
 
-        // 3. โหลดรายชื่อเพื่อน
+        // 3. โหลดรายชื่อเพื่อน (local ก่อน, fallback Cloud เมื่อเปิดเครื่องใหม่)
         const storedFriends = await AsyncStorage.getItem(friendsKey);
         if (storedFriends) {
           const parsed = JSON.parse(storedFriends);
@@ -362,6 +365,24 @@ export function FeedProvider({ children }) {
             ? parsed
             : parsed.filter((f) => !f.id?.startsWith("user_mock_"));
           setFriends(cleanFriends);
+        } else if (!isDemoMode && isFirebaseConfigured() && userId && userId !== "guest") {
+          // เครื่องใหม่: ดึงรายชื่อเพื่อนจาก Firestore
+          try {
+            const cloudResult = await getFirestoreUser(userId);
+            if (cloudResult.success && !cloudResult.notFound && cloudResult.data?.friends) {
+              const cloudFriends = cloudResult.data.friends.filter(
+                (f) => f.id && !f.id.startsWith("user_mock_")
+              );
+              setFriends(cloudFriends);
+              await AsyncStorage.setItem(friendsKey, JSON.stringify(cloudFriends));
+            } else {
+              setFriends([]);
+              await AsyncStorage.setItem(friendsKey, JSON.stringify([]));
+            }
+          } catch (_err) {
+            setFriends([]);
+            await AsyncStorage.setItem(friendsKey, JSON.stringify([]));
+          }
         } else {
           const initialFriendsData = isDemoMode ? DEFAULT_FRIENDS : [];
           setFriends(initialFriendsData);
@@ -925,9 +946,24 @@ export function FeedProvider({ children }) {
         console.error("Error saving startChatWithUser:", err);
       }
 
+      // ซิงค์รายชื่อเพื่อนขึ้น Firestore เพื่อให้ข้ามเครื่องได้
+      if (!isDemoMode && userId) {
+        const friendsForCloud = nextFriends.map((f) => ({
+          id: f.id,
+          name: f.name,
+          avatar: f.avatar || null,
+        }));
+        saveFirestoreUser(userId, {
+          friends: friendsForCloud,
+          updatedAt: new Date().toISOString(),
+        }).catch((err) => {
+          console.warn("Failed to sync friends to Firestore:", err);
+        });
+      }
+
       return targetFriend;
     },
-    [friends, chats, userId, friendsKey, chatsKey]
+    [friends, chats, userId, friendsKey, chatsKey, isDemoMode]
   );
 
   // คำนวณจำนวนแจ้งเตือนแชทที่ยังไม่ได้อ่าน

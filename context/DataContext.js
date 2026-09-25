@@ -188,9 +188,11 @@ export function DataProvider({ children }) {
 
         // ข. โหลดข้อมูลจริงล่าสุดจาก Cloud Firestore ของ User นี้ (เฉพาะโหมดผู้ใช้จริง)
         if (isFirebaseConfigured() && !isDemoMode) {
-          const cloudUser = await getFirestoreUser(user.id);
+          const cloudResult = await getFirestoreUser(user.id);
 
-          if (cloudUser && isMounted) {
+          if (cloudResult.success && !cloudResult.notFound && cloudResult.data && isMounted) {
+            // พบข้อมูลบัญชีเดิมบน Cloud — โหลดและ merge กับค่า default
+            const cloudUser = cloudResult.data;
             const mergedProfile = {
               ...defaultProfile,
               name: cloudUser.name || user.name || "",
@@ -231,8 +233,8 @@ export function DataProvider({ children }) {
               setHasAcceptedPolicy(true);
               await AsyncStorage.setItem(polKey, "true");
             }
-          } else if (isMounted) {
-            // บัญชีใหม่ในระบบ Cloud ให้บันทึกข้อมูลเริ่มต้นขึ้น Firestore
+          } else if (cloudResult.success && cloudResult.notFound && isMounted) {
+            // บัญชีใหม่แท้จริง (404 จาก Firestore) — สร้างข้อมูลเริ่มต้นขึ้น Cloud
             const initialData = {
               id: user.id,
               name: user.name || "Google User",
@@ -250,6 +252,9 @@ export function DataProvider({ children }) {
               updatedAt: new Date().toISOString(),
             };
             await saveFirestoreUser(user.id, initialData);
+          } else if (!cloudResult.success && isMounted) {
+            // เครือข่ายขัดข้อง หรือโควตาเต็ม — คงข้อมูลใน AsyncStorage ไว้ตามเดิม
+            console.warn("Cannot reach Firestore, keeping local data:", cloudResult.error);
           }
         }
       } catch (err) {
@@ -265,18 +270,14 @@ export function DataProvider({ children }) {
 
     loadUserData();
 
-    // ดึงข้อมูล Pool ทุก 15 วินาที
-    const interval = setInterval(fetchCloudPool, 15000);
-
     return () => {
       isMounted = false;
-      clearInterval(interval);
     };
   }, [user, fetchCloudPool]);
 
   // บันทึกคำตอบ Quiz ทีละหมวดหมู่
   const saveCategoryAnswers = async (categoryId, answers, questionOrder) => {
-    if (!user) return false;
+    if (!user) return { success: false };
     try {
       const currentCompleted = [...quizResponse.completedCategories];
       if (!currentCompleted.includes(categoryId)) {
@@ -306,19 +307,23 @@ export function DataProvider({ children }) {
 
       // บันทึกขึ้น Cloud Firestore (เฉพาะโหมดผู้ใช้จริง)
       if (isFirebaseConfigured() && !isDemoMode) {
-        await saveFirestoreUser(user.id, {
+        const saveResult = await saveFirestoreUser(user.id, {
           completedCategories: currentCompleted,
           categoryAnswers: updatedCategoryAnswers,
           hasCompletedQuiz: currentCompleted.length === 4,
           updatedAt: new Date().toISOString(),
         });
+        if (!saveResult.success) {
+          console.warn("saveCategoryAnswers: cloud save failed:", saveResult.error);
+          return { success: true, cloudError: true };
+        }
         fetchCloudPool();
       }
 
-      return true;
+      return { success: true };
     } catch (err) {
       console.error("Error saving category answers:", err);
-      return false;
+      return { success: false };
     }
   };
 
