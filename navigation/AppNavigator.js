@@ -164,13 +164,13 @@ export default function AppNavigator() {
               <Stack.Screen
                 name="CrossBubbleMain"
                 component={CrossBubbleTabNavigator}
-                options={{ animation: "fade" }}
+                options={{ animation: "fade_from_bottom", animationDuration: 260 }}
               />
             ) : (
               <Stack.Screen
                 name="Main"
                 component={MainTabNavigator}
-                options={{ animation: "fade" }}
+                options={{ animation: "fade_from_bottom", animationDuration: 220 }}
               />
             )}
             <Stack.Screen

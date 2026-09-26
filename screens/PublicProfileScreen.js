@@ -211,7 +211,7 @@ export default function PublicProfileScreen({ route, navigation }) {
             <Image
               source={{ uri: targetUser.image }}
               style={styles.heroImage}
-              resizeMode="cover"
+              resizeMode="contain"
               onError={() => setAvatarError(true)}
             />
           ) : (

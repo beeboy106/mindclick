@@ -3,6 +3,7 @@ import { View, StyleSheet } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useCrossBubble } from "../context/CrossBubbleContext";
 
 import BlindLoungeScreen from "../screens/crossbubble/BlindLoungeScreen";
 import OneOnOneScreen from "../screens/crossbubble/OneOnOneScreen";
@@ -13,17 +14,18 @@ const Tab = createBottomTabNavigator();
 
 export default function CrossBubbleTabNavigator() {
   const insets = useSafeAreaInsets();
+  const { crossBubbleTheme: theme } = useCrossBubble();
 
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: "#17171c",
-        tabBarInactiveTintColor: "#94a3b8",
+        tabBarActiveTintColor: theme.ink,
+        tabBarInactiveTintColor: theme.muted,
         tabBarStyle: {
-          backgroundColor: "#ffffff",
+          backgroundColor: theme.surface,
           borderTopWidth: 1.5,
-          borderTopColor: "#e2e8f0",
+          borderTopColor: theme.border,
           height: 60 + insets.bottom,
           paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
           paddingTop: 6,
@@ -49,7 +51,7 @@ export default function CrossBubbleTabNavigator() {
           return (
             <View style={styles.iconContainer}>
               <Ionicons name={iconName} size={20} color={color} />
-              {focused && <View style={styles.activeDot} />}
+              {focused && <View style={[styles.activeDot, { backgroundColor: theme.accent }]} />}
             </View>
           );
         },

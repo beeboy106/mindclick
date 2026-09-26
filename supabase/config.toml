@@ -1,0 +1,4 @@
+[functions.mindclick-api]
+# Authentication is performed inside the function by verifying the Firebase ID token.
+# Supabase JWT verification must be disabled because Firebase is the identity provider.
+verify_jwt = false

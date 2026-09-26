@@ -29,6 +29,10 @@ export default function MyAliasScreen() {
     isFlameActive,
     bubblePoints,
     toggleCrossBubbleMode,
+    crossBubbleTheme: theme,
+    crossBubbleThemeId,
+    crossBubbleThemes,
+    setCrossBubbleTheme,
   } = useCrossBubble();
 
   const { user } = useAuth();
@@ -56,13 +60,13 @@ export default function MyAliasScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={true} />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.canvas }]} edges={["top", "left", "right"]}>
+      <StatusBar barStyle={theme.statusBar} backgroundColor={theme.surface} translucent={true} />
 
       {/* Header */}
-      <View style={styles.topHeader}>
+      <View style={[styles.topHeader, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <View style={styles.headerLeft}>
-          <Text style={styles.headerTitle}>โปรไฟล์ & นามแฝง</Text>
+          <Text style={[styles.headerTitle, { color: theme.ink }]}>โปรไฟล์ & นามแฝง</Text>
         </View>
         <TouchableOpacity
           style={styles.exitBtn}
@@ -75,7 +79,7 @@ export default function MyAliasScreen() {
       </View>
 
       <ScrollView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: theme.canvas }]}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
@@ -168,6 +172,37 @@ export default function MyAliasScreen() {
               <Text style={styles.statValue}>{bubblePoints} PTS</Text>
             </View>
             <Text style={styles.statLabel}>Bubble Points</Text>
+          </View>
+        </View>
+
+        <View style={[styles.themeCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={styles.themeHeadingRow}>
+            <View>
+              <Text style={[styles.themeTitle, { color: theme.ink }]}>โทนสี Cross Bubble</Text>
+              <Text style={[styles.themeSubtitle, { color: theme.muted }]}>ตั้งค่าเฉพาะโหมดนี้ ไม่ตาม Dark Mode ของเครื่อง</Text>
+            </View>
+            <Ionicons name="color-palette-outline" size={20} color={theme.accent} />
+          </View>
+          <View style={styles.themeGrid}>
+            {Object.values(crossBubbleThemes).map((option) => {
+              const selected = option.id === crossBubbleThemeId;
+              return (
+                <TouchableOpacity
+                  key={option.id}
+                  style={[
+                    styles.themeOption,
+                    { backgroundColor: option.canvas, borderColor: selected ? option.accent : option.border },
+                    selected && { borderWidth: 2 },
+                  ]}
+                  activeOpacity={0.8}
+                  onPress={() => setCrossBubbleTheme(option.id)}
+                >
+                  <View style={[styles.themeSwatch, { backgroundColor: option.accent }]} />
+                  <Text style={[styles.themeOptionName, { color: option.ink }]}>{option.label}</Text>
+                  {selected && <Ionicons name="checkmark-circle" size={16} color={option.accent} />}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
@@ -429,6 +464,52 @@ const styles = StyleSheet.create({
     borderColor: "#e2e8f0",
     paddingVertical: 14,
     marginBottom: 20,
+  },
+  themeCard: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 22,
+  },
+  themeHeadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  themeTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  themeSubtitle: {
+    fontSize: 12,
+    marginTop: 3,
+    fontWeight: "500",
+  },
+  themeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  themeOption: {
+    width: "48%",
+    minHeight: 46,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  themeSwatch: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+  },
+  themeOptionName: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "800",
   },
   statCol: {
     flex: 1,

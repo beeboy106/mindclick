@@ -1,7 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as WebBrowser from "expo-web-browser";
-import { Platform, NativeModules } from "react-native";
+import { AppState, Platform, NativeModules } from "react-native";
+import {
+  refreshFirebaseSession,
+  setFirebaseAuthToken,
+  signInWithFirebaseGoogle,
+} from "../lib/firebase";
 
 let GoogleSignin = null;
 if (Platform.OS !== "web") {
@@ -47,9 +52,17 @@ export function AuthProvider({ children }) {
         const storedUser = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
         if (storedUser) {
           const parsed = JSON.parse(storedUser);
-          setUser(parsed);
-          if (parsed?.id) {
-            const blockedRaw = await AsyncStorage.getItem(`${BLOCKED_USERS_STORAGE_PREFIX}${parsed.id}`);
+          const refreshedSession = await refreshFirebaseSession(parsed.firebaseRefreshToken);
+          const restoredUser = refreshedSession ? { ...parsed, ...refreshedSession } : parsed;
+          if (!refreshedSession && parsed.firebaseIdToken) {
+            setFirebaseAuthToken(parsed.firebaseIdToken);
+          }
+          setUser(restoredUser);
+          if (refreshedSession) {
+            await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(restoredUser));
+          }
+          if (restoredUser?.id) {
+            const blockedRaw = await AsyncStorage.getItem(`${BLOCKED_USERS_STORAGE_PREFIX}${restoredUser.id}`);
             if (blockedRaw) {
               setBlockedUserIds(JSON.parse(blockedRaw));
             }
@@ -63,6 +76,35 @@ export function AuthProvider({ children }) {
     }
     loadStoredSession();
   }, []);
+
+  // Firebase ID tokens expire after about one hour. Refresh while the session is in use
+  // so Firestore chat and the Supabase Edge Function continue working across long sessions.
+  useEffect(() => {
+    if (!user?.firebaseRefreshToken) return;
+    let isMounted = true;
+
+    const refreshSessionIfNeeded = async (force = false) => {
+      const expiresSoon = !user.firebaseTokenExpiresAt || user.firebaseTokenExpiresAt - Date.now() < 5 * 60 * 1000;
+      if (!force && !expiresSoon) return;
+      const refreshed = await refreshFirebaseSession(user.firebaseRefreshToken);
+      if (!refreshed || !isMounted) return;
+      const updated = { ...user, ...refreshed };
+      setFirebaseAuthToken(updated.firebaseIdToken);
+      setUser(updated);
+      await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
+    };
+
+    const appStateSubscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") refreshSessionIfNeeded();
+    });
+    const timer = setInterval(() => refreshSessionIfNeeded(true), 50 * 60 * 1000);
+
+    return () => {
+      isMounted = false;
+      appStateSubscription.remove();
+      clearInterval(timer);
+    };
+  }, [user?.firebaseRefreshToken, user?.firebaseTokenExpiresAt]);
 
   // กำหนดค่า GoogleSignin บน Native เมื่อเริ่มต้นแอป
   useEffect(() => {
@@ -81,6 +123,7 @@ export function AuthProvider({ children }) {
   const saveUserSession = async (userData) => {
     try {
       await AsyncStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(userData));
+      setFirebaseAuthToken(userData?.firebaseIdToken);
       setUser(userData);
       setAuthError(null);
       if (userData?.id) {
@@ -273,6 +316,12 @@ export function AuthProvider({ children }) {
       const response = await GoogleSignin.signIn();
       const gUser = response.data?.user || response.user || response;
       if (gUser && (gUser.email || gUser.name)) {
+        const googleIdToken = response.data?.idToken || response.idToken;
+        const firebaseSession = await signInWithFirebaseGoogle(googleIdToken);
+        if (!firebaseSession) {
+          setAuthError("ไม่สามารถยืนยันตัวตนกับ Firebase ได้ กรุณาลองเข้าสู่ระบบใหม่");
+          return;
+        }
         const gEmail = (gUser.email || "").trim().toLowerCase();
         const rawId = gUser.id || gUser.sub || gEmail.replace(/[^a-zA-Z0-9]/g, "_");
         const consistentId = `google_${rawId}`;
@@ -285,6 +334,10 @@ export function AuthProvider({ children }) {
           isStudentVerified: true,
           image: gUser.photo || gUser.photoUrl || gUser.picture || null,
           provider: "google",
+          firebaseIdToken: firebaseSession.idToken,
+          firebaseRefreshToken: firebaseSession.refreshToken,
+          firebaseUid: firebaseSession.localId,
+          firebaseTokenExpiresAt: Date.now() + Number(firebaseSession.expiresIn || 0) * 1000,
         };
         await saveUserSession(loggedInUser);
         return;
@@ -336,6 +389,7 @@ export function AuthProvider({ children }) {
         }
       }
       await AsyncStorage.removeItem(AUTH_STORAGE_KEY);
+      setFirebaseAuthToken(null);
       setUser(null);
     } catch (e) {
       console.error("Error signing out:", e);

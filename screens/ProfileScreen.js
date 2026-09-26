@@ -77,7 +77,7 @@ export default function ProfileScreen({ navigation }) {
   const {
     profile,
     updateProfile,
-    addGalleryImage,
+    addGalleryImages,
     removeGalleryImage,
     resetQuizData,
   } = useData();
@@ -174,7 +174,10 @@ export default function ProfileScreen({ navigation }) {
       const mediaTypesOption = ImagePicker.MediaTypeOptions?.Images || ["images"];
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: mediaTypesOption,
-        allowsEditing: false,
+        // The avatar is circular throughout the app, so crop to a square once
+        // at selection time instead of relying on a later visual crop.
+        allowsEditing: true,
+        aspect: [1, 1],
         quality: 0.8,
         base64: false,
       });
@@ -230,26 +233,44 @@ export default function ProfileScreen({ navigation }) {
       }
 
       const mediaTypesOption = ImagePicker.MediaTypeOptions?.Images || ["images"];
+      const availableSlots = 9 - profile.galleryImages.length;
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: mediaTypesOption,
         allowsEditing: false,
+        allowsMultipleSelection: true,
+        selectionLimit: availableSlots,
         quality: 0.8,
         base64: false,
       });
 
       if (!result.canceled && result.assets?.length > 0) {
-        const asset = result.assets[0];
         try {
           setIsUploadingGallery(true);
-          // อัปโหลดขึ้น Cloudinary รับ HTTPS CDN URL
-          const cdnUrl = await uploadImageToCloudinary(asset.uri, { folder: "mindclick/gallery" });
-          // บันทึกรูปภาพแกลเลอรีพร้อมรักษาสิ่งที่กำลังพิมพ์อยู่ไว้ด้วย
-          await addGalleryImage(cdnUrl, {
+          const uploadedUrls = [];
+          let failedCount = 0;
+
+          // Upload one at a time to avoid exhausting mobile memory/network;
+          // save successful uploads together in a single profile update.
+          for (const asset of result.assets.slice(0, availableSlots)) {
+            try {
+              const cdnUrl = await uploadImageToCloudinary(asset.uri, { folder: "mindclick/gallery" });
+              uploadedUrls.push(cdnUrl);
+            } catch (uploadErr) {
+              failedCount += 1;
+              console.error("gallery image upload error:", uploadErr);
+            }
+          }
+
+          const saveResult = await addGalleryImages(uploadedUrls, {
             name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
             gender,
             bio,
             socialLinks,
           });
+          if (!saveResult.success) throw new Error(saveResult.error);
+          if (failedCount) {
+            Alert.alert("อัปโหลดเสร็จบางส่วน", `เพิ่มรูปแล้ว ${saveResult.added} รูป ไม่สำเร็จ ${failedCount} รูป`);
+          }
         } catch (uploadErr) {
           console.error("handleAddGalleryPhoto upload error:", uploadErr);
           Alert.alert("อัปโหลดไม่สำเร็จ", uploadErr.message || "ไม่สามารถอัปโหลดรูปภาพขึ้น Cloud ได้ กรุณาลองใหม่อีกครั้ง");

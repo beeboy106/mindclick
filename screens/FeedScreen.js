@@ -69,96 +69,79 @@ export default function FeedScreen({ navigation }) {
   const { toggleCrossBubbleMode } = useCrossBubble();
   const scrollOffsetRef = useRef(0);
   const pullAnim = useRef(new Animated.Value(0)).current;
-  const [pullDistanceState, setPullDistanceState] = useState(0);
   const [isReadyToRelease, setIsReadyToRelease] = useState(false);
+  const readyRef = useRef(false);
+  const entryRequestRef = useRef(null);
+  const resetPullRef = useRef(null);
+  const PULL_THRESHOLD = 52;
+  const PULL_MAX = 96;
 
-  const PULL_THRESHOLD = 45;
+  const resetPull = (after) => {
+    Animated.spring(pullAnim, {
+      toValue: 0,
+      speed: 20,
+      bounciness: 5,
+      useNativeDriver: false,
+    }).start(() => {
+      readyRef.current = false;
+      setIsReadyToRelease(false);
+      after?.();
+    });
+  };
+  resetPullRef.current = resetPull;
+
+  // Both the button and pull gesture use this gate so premium checks and
+  // warning states never diverge depending on how the user enters the mode.
+  const requestCrossBubbleEntry = async () => {
+    if (!isBubbleUser) {
+      setUpgradeReason("crossbubble");
+      setUpgradeModalMode("paywall");
+      setUpgradeModalVisible(true);
+      return;
+    }
+    const warning = await checkAndTriggerWarning("crossbubble");
+    if (warning?.shouldWarn) {
+      setUpgradeModalMode("warning");
+      setUpgradeModalVisible(true);
+      return;
+    }
+    toggleCrossBubbleMode(true);
+  };
+  entryRequestRef.current = requestCrossBubbleEntry;
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
       onStartShouldSetPanResponderCapture: () => false,
-      onMoveShouldSetPanResponder: (evt, gestureState) => {
-        const isPullDown = gestureState.dy > 12;
-        const isStrictlyVertical = Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.8;
-        return scrollOffsetRef.current <= 0 && isPullDown && isStrictlyVertical;
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return scrollOffsetRef.current <= 1 && gestureState.dy > 8 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.2;
       },
-      onMoveShouldSetPanResponderCapture: () => false,
-      onPanResponderTerminationRequest: () => true,
+      // Capture only a deliberate downward pull at the top. This prevents the
+      // ScrollView from intermittently winning the responder race.
+      onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+        return scrollOffsetRef.current <= 1 && gestureState.dy > 8 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.2;
+      },
+      onPanResponderTerminationRequest: () => false,
       onPanResponderMove: (evt, gestureState) => {
         if (gestureState.dy > 0) {
-          const distance = Math.min(85, Math.max(0, gestureState.dy * 0.6));
+          const distance = Math.min(PULL_MAX, PULL_MAX * (1 - Math.exp(-gestureState.dy / 110)));
           pullAnim.setValue(distance);
-          setPullDistanceState(distance);
-          setIsReadyToRelease(distance >= PULL_THRESHOLD);
+          const nextReady = distance >= PULL_THRESHOLD;
+          if (nextReady !== readyRef.current) {
+            readyRef.current = nextReady;
+            setIsReadyToRelease(nextReady);
+          }
         }
       },
       onPanResponderRelease: (evt, gestureState) => {
-        const distance = gestureState.dy * 0.6;
-        if (distance >= PULL_THRESHOLD || gestureState.dy >= 60) {
-          // หากไม่ใช่ผู้ใช้ฟองสบู่ จะไม่สามารถเข้าสู่โหมด Cross-Bubble ได้
-          if (!isBubbleUser) {
-            Animated.timing(pullAnim, {
-              toValue: 0,
-              duration: 180,
-              useNativeDriver: false,
-            }).start(() => {
-              setPullDistanceState(0);
-              setIsReadyToRelease(false);
-              setUpgradeReason("crossbubble");
-              setUpgradeModalMode("paywall");
-              setUpgradeModalVisible(true);
-            });
-            return;
-          }
-
-          // ตรวจสอบการแจ้งเตือนสิทธิ์ช่วง 3 วันสุดท้าย
-          checkAndTriggerWarning("crossbubble").then((warnRes) => {
-            if (warnRes?.shouldWarn) {
-              Animated.timing(pullAnim, {
-                toValue: 0,
-                duration: 180,
-                useNativeDriver: false,
-              }).start(() => {
-                setPullDistanceState(0);
-                setIsReadyToRelease(false);
-                setUpgradeModalMode("warning");
-                setUpgradeModalVisible(true);
-              });
-              return;
-            }
-
-            // ดีดหน้าขึ้น แล้วเปลี่ยนเข้าสู่โหมด Cross-Bubble ทันที
-            Animated.timing(pullAnim, {
-              toValue: 0,
-              duration: 180,
-              useNativeDriver: false,
-            }).start(() => {
-              setPullDistanceState(0);
-              setIsReadyToRelease(false);
-              toggleCrossBubbleMode(true);
-            });
-          });
+        if (readyRef.current || gestureState.dy >= 88) {
+          resetPullRef.current?.(() => entryRequestRef.current?.());
         } else {
-          // ดีดกลับขึ้นไป
-          Animated.spring(pullAnim, {
-            toValue: 0,
-            bounciness: 4,
-            useNativeDriver: false,
-          }).start(() => {
-            setPullDistanceState(0);
-            setIsReadyToRelease(false);
-          });
+          resetPullRef.current?.();
         }
       },
       onPanResponderTerminate: () => {
-        Animated.spring(pullAnim, {
-          toValue: 0,
-          useNativeDriver: false,
-        }).start(() => {
-          setPullDistanceState(0);
-          setIsReadyToRelease(false);
-        });
+        resetPullRef.current?.();
       },
     })
   ).current;
@@ -216,7 +199,8 @@ export default function FeedScreen({ navigation }) {
       const mediaTypesOption = ImagePicker.MediaTypeOptions?.Images || ["images"];
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: mediaTypesOption,
-        allowsEditing: false,
+        // Post photos may use any crop; do not force a portrait/square ratio.
+        allowsEditing: true,
         quality: 0.8,
         base64: false,
       });
@@ -349,14 +333,21 @@ export default function FeedScreen({ navigation }) {
 
         {/* Right Header Controls */}
         <View style={styles.headerRightControls}>
-          {/* Cross Bubble Switch Button: กรอบสี่เหลี่ยมเขียวมะนาว ชื่อสีขาว */}
+          {/* Clear primary entry point; the same permission gate is used by pull-to-enter. */}
           <TouchableOpacity
             style={styles.crossBubbleHeaderBtn}
             activeOpacity={0.8}
-            onPress={() => toggleCrossBubbleMode(true)}
+            accessibilityRole="button"
+            accessibilityLabel="เข้าสู่โหมด Cross Bubble"
+            onPress={requestCrossBubbleEntry}
           >
-            <Ionicons name="moon" size={13} color="#a3e635" />
-            <Text style={styles.crossBubbleHeaderBtnText}>Cross Bubble</Text>
+            <View style={styles.crossBubbleHeaderBtnIcon}>
+              <Ionicons name="moon" size={14} color={colors.ink} />
+            </View>
+            <View>
+              <Text style={styles.crossBubbleHeaderBtnText}>Cross Bubble</Text>
+              <Text style={styles.crossBubbleHeaderBtnHint}>โหมดพบคนใหม่</Text>
+            </View>
           </TouchableOpacity>
 
           {/* Chat Notification Button */}
@@ -382,7 +373,7 @@ export default function FeedScreen({ navigation }) {
 
       {/* PanResponder Touch Receiver Area */}
       <View {...panResponder.panHandlers} style={{ flex: 1 }}>
-        {/* Pull-down Vanish Drawer (Lime to Black Gradient) */}
+        {/* Pull-to-enter: a restrained status panel, not a decorative full-screen effect. */}
         <Animated.View
           style={[
             styles.pullDrawerContainer,
@@ -391,25 +382,6 @@ export default function FeedScreen({ navigation }) {
             },
           ]}
         >
-          {/* Vertical Lime Green to Deep Black Gradient */}
-          <View style={StyleSheet.absoluteFill} pointerEvents="none">
-            {[
-              "#a3e635",
-              "#84cc16",
-              "#65a30d",
-              "#4d7c0f",
-              "#365314",
-              "#1e3110",
-              "#142211",
-              "#0e1919",
-              "#090f19",
-              "#090d16",
-            ].map((c, i) => (
-              <View key={i} style={{ flex: 1, backgroundColor: c }} />
-            ))}
-          </View>
-
-          {/* Drawer Content with Instructions */}
           <View style={styles.pullDrawerContent}>
             <View
               style={[
@@ -583,7 +555,7 @@ export default function FeedScreen({ navigation }) {
           {/* Attached Image Preview */}
           {Boolean(postImage) && (
             <View style={styles.imagePreviewWrapper}>
-              <Image source={{ uri: postImage }} style={styles.imagePreview} />
+              <Image source={{ uri: postImage }} style={styles.imagePreview} resizeMode="contain" />
               <TouchableOpacity
                 style={styles.removeImageBtn}
                 onPress={() => setPostImage(null)}
@@ -829,27 +801,40 @@ const styles = StyleSheet.create({
   crossBubbleHeaderBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "#090d16",
-    borderWidth: 1.5,
-    borderColor: "#a3e635",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    gap: 7,
+    backgroundColor: "#f4fde8",
+    borderWidth: 1,
+    borderColor: "#b9df78",
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 12,
     marginRight: 4,
   },
+  crossBubbleHeaderBtnIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#bbf44a",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   crossBubbleHeaderBtnText: {
-    color: "#ffffff",
-    fontSize: 12,
+    color: colors.ink,
+    fontSize: 11,
     fontWeight: "800",
-    letterSpacing: 0.2,
+  },
+  crossBubbleHeaderBtnHint: {
+    color: "#55723b",
+    fontSize: 9,
+    fontWeight: "600",
+    marginTop: 1,
   },
   pullDrawerContainer: {
     width: "100%",
-    backgroundColor: "#090d16",
+    backgroundColor: "#f4fde8",
     justifyContent: "center",
-    borderBottomWidth: 1.5,
-    borderBottomColor: "#1e293b",
+    borderBottomWidth: 1,
+    borderBottomColor: "#cfe5a4",
     overflow: "hidden",
   },
   pullDrawerContent: {
@@ -868,22 +853,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   pullDrawerBadgeReady: {
-    backgroundColor: "#090d16",
-    borderWidth: 1.5,
-    borderColor: "#a3e635",
+    backgroundColor: "#365314",
+    borderWidth: 1,
+    borderColor: "#365314",
   },
   pullDrawerTextCol: {
     flex: 1,
   },
   pullDrawerTitle: {
-    color: "#ffffff",
+    color: colors.ink,
     fontSize: 13,
     fontWeight: "900",
     marginBottom: 2,
     letterSpacing: 0.2,
   },
   pullDrawerDesc: {
-    color: "#cbd5e1",
+    color: "#55723b",
     fontSize: 11,
     fontWeight: "600",
     lineHeight: 15,
@@ -1213,6 +1198,7 @@ const styles = StyleSheet.create({
   imagePreview: {
     width: "100%",
     height: 180,
+    backgroundColor: "#f3f4f6",
   },
   removeImageBtn: {
     position: "absolute",

@@ -6,15 +6,22 @@ import { useAuth } from "./AuthContext";
 import {
   isFirebaseConfigured,
   getFirestoreUser,
-  saveFirestoreUser,
-  getAllFirestoreUsers,
 } from "../lib/firebase";
+import {
+  isSupabaseConfigured,
+  getSupabaseAccount,
+  upsertSupabaseProfile,
+  upsertSupabaseQuiz,
+  getSupabaseDirectory,
+  setSupabaseFavorite,
+} from "../lib/supabaseApi";
 
 const USERS_POOL_KEY = "@friendq_users_pool";
 
 // ฟังก์ชันสร้างคีย์แยกเฉพาะแต่ละ User เพื่อไม่ให้ข้อมูลปนกันตอนสลับบัญชี
 const getProfileKey = (userId) => `@friendq_profile_${userId || "guest"}`;
 const getQuizKey = (userId) => `@friendq_quiz_${userId || "guest"}`;
+const getQuizPendingKey = (userId) => `@friendq_quiz_pending_${userId || "guest"}`;
 const getFavoritesKey = (userId) => `@friendq_favorites_${userId || "guest"}`;
 const getPolicyKey = (userId) => `@friendq_policy_${userId || "guest"}`;
 
@@ -38,6 +45,35 @@ const defaultProfile = {
 const defaultQuizResponse = {
   completedCategories: [],
   categoryAnswers: [],
+};
+
+const profileFromSupabase = (row, user) => ({
+  ...defaultProfile,
+  name: row?.display_name || user?.name || "",
+  email: user?.email || "",
+  image: row?.avatar_url || user?.image || null,
+  gender: row?.gender || "prefer_not_to_say",
+  faculty: row?.faculty || "",
+  bio: row?.bio || "",
+  socialLinks: { ...defaultProfile.socialLinks, ...(row?.social_links || {}) },
+  galleryImages: row?.gallery_images || [],
+});
+
+const directoryUserFromSupabase = (row) => {
+  const quiz = Array.isArray(row?.quiz) ? row.quiz[0] : row?.quiz;
+  return {
+    id: row.legacy_user_id,
+    name: row.display_name,
+    image: row.avatar_url,
+    gender: row.gender,
+    faculty: row.faculty,
+    bio: row.bio,
+    socialLinks: row.social_links || {},
+    galleryImages: row.gallery_images || [],
+    completedCategories: quiz?.completed_categories || [],
+    categoryAnswers: quiz?.category_answers || [],
+    isRealUser: true,
+  };
 };
 
 // ฟังก์ชันตรวจสอบความสมบูรณ์ของโปรไฟล์ (ต้องกรอกให้ครบถ้วนก่อนตอบคำถามแมตช์)
@@ -88,29 +124,25 @@ export function DataProvider({ children }) {
   const [hasAcceptedPolicy, setHasAcceptedPolicy] = useState(true); // เริ่มต้น true ระหว่างโหลด
   const [isLoadingData, setIsLoadingData] = useState(true);
 
-  // ดึงรายชื่อผู้ใช้จาก Cloud Firestore สำหรับคำนวณ Match (ข้ามเมื่ออยู่ในโหมดสาธิต)
+  // ดึงรายชื่อผู้ใช้จาก Supabase สำหรับคำนวณ Match (ข้ามเมื่ออยู่ในโหมดสาธิต)
   const fetchCloudPool = useCallback(async () => {
-    if (isDemoMode || !isFirebaseConfigured()) {
+    if (isDemoMode) {
       setUsersPool(mockUsers);
       return;
     }
+    if (!isSupabaseConfigured() || !user?.firebaseIdToken) return;
     try {
-      const allCloudUsers = await getAllFirestoreUsers();
-      if (allCloudUsers && allCloudUsers.length > 0) {
-        const realUsers = allCloudUsers.filter(
-          (u) =>
-            u.id !== user?.id &&
-            u.categoryAnswers &&
-            u.categoryAnswers.length > 0
-        );
+      const result = await getSupabaseDirectory(user.firebaseIdToken);
+      const realUsers = (result?.profiles || [])
+        .map(directoryUserFromSupabase)
+        .filter((u) => u.id !== user?.id && u.categoryAnswers.length > 0);
 
-        setUsersPool(realUsers);
-        AsyncStorage.setItem(USERS_POOL_KEY, JSON.stringify(realUsers));
-      }
+      setUsersPool(realUsers);
+      await AsyncStorage.setItem(USERS_POOL_KEY, JSON.stringify(realUsers));
     } catch (err) {
-      console.warn("Error fetching cloud users pool:", err);
+      console.warn("Error fetching Supabase users pool; keeping cached pool:", err);
     }
-  }, [user?.id, isDemoMode]);
+  }, [user?.id, user?.firebaseIdToken, isDemoMode]);
 
   // ซิงค์ข้อมูลเมื่อผู้ใช้ล็อกอิน สลับบัญชี หรือออกจากระบบ
   useEffect(() => {
@@ -135,12 +167,13 @@ export function DataProvider({ children }) {
 
       try {
         // ก. โหลดข้อมูลแคชเฉพาะของ User นี้ในเครื่องก่อน
-        const [localProfile, localQuiz, localFavs, localPolicy, localPool] = await Promise.all([
+        const [localProfile, localQuiz, localFavs, localPolicy, localPool, localQuizPending] = await Promise.all([
           AsyncStorage.getItem(pKey),
           AsyncStorage.getItem(qKey),
           AsyncStorage.getItem(fKey),
           AsyncStorage.getItem(polKey),
           AsyncStorage.getItem(USERS_POOL_KEY),
+          AsyncStorage.getItem(getQuizPendingKey(user.id)),
         ]);
 
         if (isMounted) {
@@ -186,75 +219,74 @@ export function DataProvider({ children }) {
           }
         }
 
-        // ข. โหลดข้อมูลจริงล่าสุดจาก Cloud Firestore ของ User นี้ (เฉพาะโหมดผู้ใช้จริง)
-        if (isFirebaseConfigured() && !isDemoMode) {
-          const cloudResult = await getFirestoreUser(user.id);
+        // ข. Supabase เป็น source of truth สำหรับโปรไฟล์ แบบทดสอบ และรายการโปรด
+        if (isSupabaseConfigured() && user.firebaseIdToken && !isDemoMode) {
+          try {
+            let account = await getSupabaseAccount(user.firebaseIdToken);
 
-          if (cloudResult.success && !cloudResult.notFound && cloudResult.data && isMounted) {
-            // พบข้อมูลบัญชีเดิมบน Cloud — โหลดและ merge กับค่า default
-            const cloudUser = cloudResult.data;
-            const mergedProfile = {
-              ...defaultProfile,
-              name: cloudUser.name || user.name || "",
-              email: cloudUser.email || user.email || "",
-              image: cloudUser.image || user.image || null,
-              gender: cloudUser.gender || "prefer_not_to_say",
-              faculty: cloudUser.faculty || "",
-              bio: cloudUser.bio || "",
-              socialLinks: {
-                ...defaultProfile.socialLinks,
-                ...(cloudUser.socialLinks || {}),
-              },
-              galleryImages: cloudUser.galleryImages || [],
-            };
+            // ย้ายบัญชีเดิมแบบ lazy migration ครั้งแรก โดยใช้ local cache ก่อน และอ่าน Firestore เพียงครั้งเดียวถ้าจำเป็น
+            if (!account?.profile) {
+              let legacy = null;
+              if (isFirebaseConfigured()) {
+                const legacyResult = await getFirestoreUser(user.id);
+                if (legacyResult.success && !legacyResult.notFound) legacy = legacyResult.data;
+              }
+              const cachedProfile = localProfile ? JSON.parse(localProfile) : null;
+              const cachedQuiz = localQuiz ? JSON.parse(localQuiz) : null;
+              const seedProfile = legacy || cachedProfile || {};
+              const seedQuiz = legacy
+                ? { completedCategories: legacy.completedCategories || [], categoryAnswers: legacy.categoryAnswers || [] }
+                : cachedQuiz || defaultQuizResponse;
 
-            setProfile(mergedProfile);
-            await AsyncStorage.setItem(pKey, JSON.stringify(mergedProfile));
-            if (updateUserSession && (mergedProfile.name || mergedProfile.image)) {
-              updateUserSession({
-                name: mergedProfile.name || user.name,
-                image: mergedProfile.image || user.image,
+              await upsertSupabaseProfile(user.firebaseIdToken, {
+                legacyUserId: user.id,
+                name: seedProfile.name || user.name || "Google User",
+                image: seedProfile.image || user.image || null,
+                gender: seedProfile.gender || "prefer_not_to_say",
+                faculty: seedProfile.faculty || "",
+                bio: seedProfile.bio || "",
+                socialLinks: seedProfile.socialLinks || {},
+                galleryImages: seedProfile.galleryImages || [],
+                hasAcceptedPolicy: Boolean(legacy?.hasAcceptedPolicy || localPolicy === "true"),
+                policyAcceptedAt: legacy?.policyAcceptedAt || null,
               });
+              if (seedQuiz.categoryAnswers.length || seedQuiz.completedCategories.length) {
+                await upsertSupabaseQuiz(user.firebaseIdToken, seedQuiz);
+              }
+              account = await getSupabaseAccount(user.firebaseIdToken);
             }
 
-            const cloudQuiz = {
-              completedCategories: cloudUser.completedCategories || [],
-              categoryAnswers: cloudUser.categoryAnswers || [],
-            };
-            setQuizResponse(cloudQuiz);
-            await AsyncStorage.setItem(qKey, JSON.stringify(cloudQuiz));
-
-            if (cloudUser.favorites) {
-              setFavorites(cloudUser.favorites);
-              await AsyncStorage.setItem(fKey, JSON.stringify(cloudUser.favorites));
+            if (account?.profile && localQuizPending === "true" && localQuiz) {
+              await upsertSupabaseQuiz(user.firebaseIdToken, JSON.parse(localQuiz));
+              await AsyncStorage.removeItem(getQuizPendingKey(user.id));
+              account = await getSupabaseAccount(user.firebaseIdToken);
             }
 
-            if (cloudUser.hasAcceptedPolicy) {
-              setHasAcceptedPolicy(true);
-              await AsyncStorage.setItem(polKey, "true");
+            if (account?.profile && isMounted) {
+              const cloudProfile = profileFromSupabase(account.profile, user);
+              const cloudQuiz = {
+                completedCategories: account.quiz?.completed_categories || [],
+                categoryAnswers: account.quiz?.category_answers || [],
+              };
+              const cloudFavorites = account.favorites || [];
+              setProfile(cloudProfile);
+              setQuizResponse(cloudQuiz);
+              setFavorites(cloudFavorites);
+              await Promise.all([
+                AsyncStorage.setItem(pKey, JSON.stringify(cloudProfile)),
+                AsyncStorage.setItem(qKey, JSON.stringify(cloudQuiz)),
+                AsyncStorage.setItem(fKey, JSON.stringify(cloudFavorites)),
+              ]);
+              if (account.profile.has_accepted_policy) {
+                setHasAcceptedPolicy(true);
+                await AsyncStorage.setItem(polKey, "true");
+              }
+              if (updateUserSession && (cloudProfile.name || cloudProfile.image)) {
+                await updateUserSession({ name: cloudProfile.name, image: cloudProfile.image });
+              }
             }
-          } else if (cloudResult.success && cloudResult.notFound && isMounted) {
-            // บัญชีใหม่แท้จริง (404 จาก Firestore) — สร้างข้อมูลเริ่มต้นขึ้น Cloud
-            const initialData = {
-              id: user.id,
-              name: user.name || "Google User",
-              email: user.email || "",
-              image: user.image || null,
-              gender: "prefer_not_to_say",
-              bio: "",
-              socialLinks: {},
-              galleryImages: [],
-              completedCategories: [],
-              categoryAnswers: [],
-              hasCompletedQuiz: false,
-              favorites: [],
-              isRealUser: true,
-              updatedAt: new Date().toISOString(),
-            };
-            await saveFirestoreUser(user.id, initialData);
-          } else if (!cloudResult.success && isMounted) {
-            // เครือข่ายขัดข้อง หรือโควตาเต็ม — คงข้อมูลใน AsyncStorage ไว้ตามเดิม
-            console.warn("Cannot reach Firestore, keeping local data:", cloudResult.error);
+          } catch (cloudError) {
+            console.warn("Cannot reach Supabase, keeping local data:", cloudError);
           }
         }
       } catch (err) {
@@ -273,7 +305,7 @@ export function DataProvider({ children }) {
     return () => {
       isMounted = false;
     };
-  }, [user, fetchCloudPool]);
+  }, [user?.id, user?.firebaseIdToken, isDemoMode, fetchCloudPool]);
 
   // บันทึกคำตอบ Quiz ทีละหมวดหมู่
   const saveCategoryAnswers = async (categoryId, answers, questionOrder) => {
@@ -305,16 +337,16 @@ export function DataProvider({ children }) {
       await AsyncStorage.setItem(getQuizKey(user.id), JSON.stringify(newQuizData));
       setQuizResponse(newQuizData);
 
-      // บันทึกขึ้น Cloud Firestore (เฉพาะโหมดผู้ใช้จริง)
-      if (isFirebaseConfigured() && !isDemoMode) {
-        const saveResult = await saveFirestoreUser(user.id, {
-          completedCategories: currentCompleted,
-          categoryAnswers: updatedCategoryAnswers,
-          hasCompletedQuiz: currentCompleted.length === 4,
-          updatedAt: new Date().toISOString(),
-        });
-        if (!saveResult.success) {
-          console.warn("saveCategoryAnswers: cloud save failed:", saveResult.error);
+      if (isSupabaseConfigured() && user.firebaseIdToken && !isDemoMode) {
+        try {
+          await upsertSupabaseQuiz(user.firebaseIdToken, {
+            completedCategories: currentCompleted,
+            categoryAnswers: updatedCategoryAnswers,
+          });
+          await AsyncStorage.removeItem(getQuizPendingKey(user.id));
+        } catch (cloudError) {
+          await AsyncStorage.setItem(getQuizPendingKey(user.id), "true");
+          console.warn("saveCategoryAnswers: Supabase save failed:", cloudError);
           return { success: true, cloudError: true };
         }
         fetchCloudPool();
@@ -342,6 +374,20 @@ export function DataProvider({ children }) {
         },
       };
 
+      if (isSupabaseConfigured() && user.firebaseIdToken && !isDemoMode) {
+        await upsertSupabaseProfile(user.firebaseIdToken, {
+          legacyUserId: user.id,
+          name: updated.name,
+          image: updated.image || user.image || null,
+          gender: updated.gender,
+          faculty: updated.faculty || "",
+          bio: updated.bio,
+          socialLinks: updated.socialLinks,
+          galleryImages: updated.galleryImages,
+          hasAcceptedPolicy,
+        });
+      }
+
       await AsyncStorage.setItem(getProfileKey(user.id), JSON.stringify(updated));
       setProfile(updated);
 
@@ -349,21 +395,6 @@ export function DataProvider({ children }) {
         await updateUserSession({
           name: updated.name,
           image: updated.image || user.image || null,
-        });
-      }
-
-      // บันทึกขึ้น Cloud Firestore (เฉพาะโหมดผู้ใช้จริง)
-      if (isFirebaseConfigured() && !isDemoMode) {
-        await saveFirestoreUser(user.id, {
-          name: updated.name,
-          email: updated.email,
-          image: updated.image || user.image || null,
-          gender: updated.gender,
-          faculty: updated.faculty || "",
-          bio: updated.bio,
-          socialLinks: updated.socialLinks,
-          galleryImages: updated.galleryImages,
-          updatedAt: new Date().toISOString(),
         });
       }
 
@@ -394,6 +425,28 @@ export function DataProvider({ children }) {
     return { success: true };
   };
 
+  // Save a multi-select gallery upload in one profile update. Updating once
+  // prevents a later upload from overwriting an earlier one with stale state.
+  const addGalleryImages = async (uris, additionalProfileData = {}) => {
+    const availableSlots = Math.max(0, 9 - profile.galleryImages.length);
+    const acceptedUris = (uris || []).filter(Boolean).slice(0, availableSlots);
+    if (!acceptedUris.length) {
+      return { success: false, error: "อัลบั้มรูปภาพสามารถใส่ได้สูงสุด 9 รูป" };
+    }
+
+    const timestamp = Date.now();
+    const newImages = acceptedUris.map((uri, index) => ({
+      id: `gallery_${timestamp}_${index}`,
+      url: uri,
+      order: profile.galleryImages.length + index,
+    }));
+    await updateProfile({
+      galleryImages: [...profile.galleryImages, ...newImages],
+      ...additionalProfileData,
+    });
+    return { success: true, added: newImages.length };
+  };
+
   // ลบรูปภาพออกจาก Gallery
   const removeGalleryImage = async (imageId, additionalProfileData = {}) => {
     const updatedGallery = profile.galleryImages
@@ -422,15 +475,12 @@ export function DataProvider({ children }) {
         isNowFavorited = true;
       }
 
+      if (isSupabaseConfigured() && user.firebaseIdToken && !isDemoMode) {
+        await setSupabaseFavorite(user.firebaseIdToken, targetUserId, isNowFavorited);
+      }
+
       await AsyncStorage.setItem(getFavoritesKey(user.id), JSON.stringify(updatedFavorites));
       setFavorites(updatedFavorites);
-
-      if (isFirebaseConfigured() && !isDemoMode) {
-        await saveFirestoreUser(user.id, {
-          favorites: updatedFavorites,
-          updatedAt: new Date().toISOString(),
-        });
-      }
 
       return isNowFavorited;
     } catch (err) {
@@ -448,17 +498,15 @@ export function DataProvider({ children }) {
   const resetQuizData = async () => {
     if (!user) return;
     try {
-      await AsyncStorage.setItem(getQuizKey(user.id), JSON.stringify(defaultQuizResponse));
-      setQuizResponse(defaultQuizResponse);
-
-      if (isFirebaseConfigured() && !isDemoMode) {
-        await saveFirestoreUser(user.id, {
+      if (isSupabaseConfigured() && user.firebaseIdToken && !isDemoMode) {
+        await upsertSupabaseQuiz(user.firebaseIdToken, {
           completedCategories: [],
           categoryAnswers: [],
-          hasCompletedQuiz: false,
-          updatedAt: new Date().toISOString(),
         });
       }
+      await AsyncStorage.setItem(getQuizKey(user.id), JSON.stringify(defaultQuizResponse));
+      await AsyncStorage.removeItem(getQuizPendingKey(user.id));
+      setQuizResponse(defaultQuizResponse);
     } catch (err) {
       console.error("Error resetting quiz data:", err);
     }
@@ -468,17 +516,23 @@ export function DataProvider({ children }) {
   const acceptPolicy = async () => {
     if (!user) return;
     try {
+      if (isSupabaseConfigured() && user.firebaseIdToken && !isDemoMode) {
+        await upsertSupabaseProfile(user.firebaseIdToken, {
+          legacyUserId: user.id,
+          name: profile.name || user.name || "Google User",
+          image: profile.image || user.image || null,
+          gender: profile.gender,
+          faculty: profile.faculty,
+          bio: profile.bio,
+          socialLinks: profile.socialLinks,
+          galleryImages: profile.galleryImages,
+          hasAcceptedPolicy: true,
+          policyAcceptedAt: new Date().toISOString(),
+        });
+      }
       setHasAcceptedPolicy(true);
       const polKey = getPolicyKey(user.id);
       await AsyncStorage.setItem(polKey, "true");
-
-      if (isFirebaseConfigured() && !isDemoMode) {
-        await saveFirestoreUser(user.id, {
-          hasAcceptedPolicy: true,
-          policyAcceptedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-      }
     } catch (err) {
       console.warn("Error accepting policy:", err);
     }
@@ -490,6 +544,7 @@ export function DataProvider({ children }) {
       await AsyncStorage.multiRemove([
         getProfileKey(user.id),
         getQuizKey(user.id),
+        getQuizPendingKey(user.id),
         getFavoritesKey(user.id),
         getPolicyKey(user.id),
       ]);
@@ -519,6 +574,7 @@ export function DataProvider({ children }) {
         saveCategoryAnswers,
         updateProfile,
         addGalleryImage,
+        addGalleryImages,
         removeGalleryImage,
         toggleFavorite,
         isFavorite,

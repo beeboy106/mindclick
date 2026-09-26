@@ -9,13 +9,16 @@ import { sendChatNotification } from "../lib/notificationService";
 import {
   sendFirestoreChatMessage,
   getFirestoreChatMessages,
-  saveFirestorePost,
-  getFirestorePosts,
-  deleteFirestorePost,
-  saveFirestoreUser,
-  getFirestoreUser,
-  isFirebaseConfigured,
+  getFirestoreChatRooms,
 } from "../lib/firebase";
+import {
+  isSupabaseConfigured,
+  getSupabaseFeed,
+  createSupabasePost,
+  deleteSupabasePost,
+  setSupabaseReaction,
+  createSupabaseComment,
+} from "../lib/supabaseApi";
 
 const POSTS_STORAGE_KEY = "@mindclick_feed_posts";
 const STATUS_STORAGE_PREFIX = "@mindclick_user_status_";
@@ -224,9 +227,48 @@ const DEFAULT_FRIENDS = [
 
 const FeedContext = createContext();
 
+const formatSupabaseDate = (isoDate, includeYear = true) => {
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = includeYear ? ` ${date.getFullYear() + 543}` : "";
+  return `${date.getDate()} ${date.toLocaleString("th-TH", { month: "short" })}${year} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+};
+
+const postFromSupabase = (row) => {
+  const comments = (row.comments || []).map((comment) => {
+    const parent = (row.comments || []).find((item) => item.id === comment.parent_comment_id);
+    return {
+      id: comment.id,
+      userId: comment.author?.legacy_user_id,
+      userName: comment.author?.display_name || "ผู้ใช้งาน",
+      userAvatar: comment.author?.avatar_url || null,
+      content: comment.content,
+      createdAt: formatSupabaseDate(comment.created_at, false),
+      parentId: comment.parent_comment_id || null,
+      replyTo: parent
+        ? { commentId: parent.id, userName: parent.author?.display_name || "ผู้ใช้งาน" }
+        : null,
+    };
+  });
+  comments.sort((a, b) => String(a.id).localeCompare(String(b.id)));
+  return {
+    id: row.id,
+    authorId: row.author?.legacy_user_id,
+    authorName: row.author?.display_name || "ผู้ใช้งาน",
+    authorAvatar: row.author?.avatar_url || null,
+    topicId: row.topic_id || null,
+    content: row.content || "",
+    image: row.image_url || null,
+    createdAt: formatSupabaseDate(row.created_at),
+    timestamp: new Date(row.created_at).getTime(),
+    likes: (row.reactions || []).map((reaction) => reaction.profile?.legacy_user_id).filter(Boolean),
+    comments,
+  };
+};
+
 export function FeedProvider({ children }) {
   const { user, isDemoMode = false, blockedUserIds = [] } = useAuth();
-  const { profile, usersPool } = useData();
+  const { profile, usersPool, isLoadingData } = useData();
   const { isBubbleUser } = usePremium();
   const userId = user?.id || "guest";
 
@@ -243,38 +285,41 @@ export function FeedProvider({ children }) {
   const [friends, setFriends] = useState([]);
   const [chats, setChats] = useState({}); // { [friendId]: [ { id, senderId, text, createdAt } ] }
   const [isLoading, setIsLoading] = useState(true);
+  const friendsRef = useRef([]);
 
   const isSyncingPostsRef = useRef(false);
   const syncCooldownUntilRef = useRef(0);
+  const knownChatMessageIdsRef = useRef({});
+  const hasCompletedInitialChatSyncRef = useRef({});
+  const isSyncingChatRef = useRef({});
 
-  // ดึงโพสต์ล่าสุดจาก Cloud Firestore และผสานกับข้อมูลในเครื่อง
-  const syncPostsFromFirestore = useCallback(async (force = false) => {
-    if (isDemoMode || isSyncingPostsRef.current) return;
+  useEffect(() => {
+    friendsRef.current = friends;
+  }, [friends]);
+
+  // ดึงโพสต์ล่าสุดจาก Supabase และผสานกับข้อมูลในเครื่อง
+  const syncPostsFromSupabase = useCallback(async (force = false) => {
+    if (isDemoMode || isLoadingData || isSyncingPostsRef.current) return;
+    if (!isSupabaseConfigured() || !user?.firebaseIdToken) return;
     if (!force && Date.now() < syncCooldownUntilRef.current) return;
 
     isSyncingPostsRef.current = true;
     try {
-      const cloudPosts = await getFirestorePosts();
-      if (cloudPosts === null) {
-        // กรณีโควตาจำกัด (429) หรือปัญหาเครือข่าย ให้หน่วงเวลาก่อนลองใหม่ 45 วินาที
-        syncCooldownUntilRef.current = Date.now() + 45000;
-        return;
-      }
+      const result = await getSupabaseFeed(user.firebaseIdToken);
+      const cloudPosts = (result?.posts || []).map(postFromSupabase);
 
       // ป้องกันการเรียกซ้ำซ้อนภายใน 30 วินาทีเพื่อประหยัดโควตา
       syncCooldownUntilRef.current = Date.now() + 30000;
 
       // กรองโพสต์ตัวอย่างออกสำหรับโหมดผู้ใช้จริง
-      const realCloudPosts = cloudPosts.filter(
-        (p) => !p.id.startsWith("post_init_") && !p.authorId?.startsWith("user_mock_")
-      );
+      const realCloudPosts = cloudPosts.filter((p) => !p.authorId?.startsWith("user_mock_"));
 
       setPosts((prevPosts) => {
         const now = Date.now();
-        // เก็บโพสต์ล่าสุดที่ตนเองเพิ่งโพสต์ไปไม่เกิน 20 วินาที เพื่อป้องกันโพสต์หายชั่วคราวก่อน Firestore อัปเดตเสร็จ
+        // เก็บโพสต์ล่าสุดที่เพิ่งสร้างไว้ชั่วคราว ระหว่างรอผลจาก Supabase ปรากฏใน feed
         const pendingLocalPosts = (prevPosts || []).filter((p) => {
           const isMine = p.authorId === userId;
-          const postTime = p.timestamp || (p.id?.startsWith("post_") ? parseInt(p.id.replace("post_", ""), 10) : 0);
+          const postTime = p.timestamp || 0;
           const isRecent = now - postTime < 20000;
           const existsInCloud = realCloudPosts.some((cp) => cp.id === p.id);
           return isMine && isRecent && !existsInCloud;
@@ -282,8 +327,8 @@ export function FeedProvider({ children }) {
 
         const merged = [...pendingLocalPosts, ...realCloudPosts];
         merged.sort((a, b) => {
-          const timeA = a.timestamp || (a.id?.startsWith("post_") ? parseInt(a.id.replace("post_", ""), 10) : 0);
-          const timeB = b.timestamp || (b.id?.startsWith("post_") ? parseInt(b.id.replace("post_", ""), 10) : 0);
+          const timeA = a.timestamp || 0;
+          const timeB = b.timestamp || 0;
           return timeB - timeA;
         });
 
@@ -300,25 +345,26 @@ export function FeedProvider({ children }) {
         return merged;
       });
     } catch (err) {
-      console.warn("syncPostsFromFirestore error:", err);
+      syncCooldownUntilRef.current = Date.now() + 45000;
+      console.warn("syncPostsFromSupabase error:", err);
     } finally {
       isSyncingPostsRef.current = false;
     }
-  }, [isDemoMode, postsKey, userId]);
+  }, [isDemoMode, isLoadingData, postsKey, userId, user?.firebaseIdToken]);
 
-  // ซิงค์โพสต์เมื่อผู้ใช้เปิดแอป หรือสลับกลับมาที่แอป (มี Cooldown 60 วินาทีเพื่อประหยัดโควตา Firestore)
+  // ซิงค์โพสต์เมื่อผู้ใช้เปิดแอป หรือสลับกลับมาที่แอป โดยมี cooldown เพื่อลด request ซ้ำ
   useEffect(() => {
     if (isDemoMode) return;
     const handleAppStateChange = (nextAppState) => {
       if (nextAppState === "active") {
-        syncPostsFromFirestore();
+        syncPostsFromSupabase();
       }
     };
     const sub = AppState.addEventListener("change", handleAppStateChange);
     return () => {
       sub.remove();
     };
-  }, [isDemoMode, syncPostsFromFirestore]);
+  }, [isDemoMode, syncPostsFromSupabase]);
 
   // โหลดโพสต์ สถานะ และประวัติแชทจาก AsyncStorage ตามโหมด (Real / Demo)
   useEffect(() => {
@@ -342,9 +388,9 @@ export function FeedProvider({ children }) {
           await AsyncStorage.setItem(postsKey, JSON.stringify(initialPostsData));
         }
 
-        // หากเป็นโหมดผู้ใช้จริง ซิงค์โพสต์จาก Cloud Firestore
+        // หากเป็นโหมดผู้ใช้จริง ซิงค์โพสต์จาก Supabase
         if (!isDemoMode) {
-          syncPostsFromFirestore();
+          syncPostsFromSupabase();
         }
 
         // 2. โหลดสถานะของผู้ใช้
@@ -357,7 +403,7 @@ export function FeedProvider({ children }) {
           setUserStatusState("offline");
         }
 
-        // 3. โหลดรายชื่อเพื่อน (local ก่อน, fallback Cloud เมื่อเปิดเครื่องใหม่)
+        // 3. โหลดรายชื่อเพื่อนจาก local ก่อน; ห้องแชทจริงจะถูกค้นจาก Firestore inbox ภายหลัง
         const storedFriends = await AsyncStorage.getItem(friendsKey);
         if (storedFriends) {
           const parsed = JSON.parse(storedFriends);
@@ -365,24 +411,6 @@ export function FeedProvider({ children }) {
             ? parsed
             : parsed.filter((f) => !f.id?.startsWith("user_mock_"));
           setFriends(cleanFriends);
-        } else if (!isDemoMode && isFirebaseConfigured() && userId && userId !== "guest") {
-          // เครื่องใหม่: ดึงรายชื่อเพื่อนจาก Firestore
-          try {
-            const cloudResult = await getFirestoreUser(userId);
-            if (cloudResult.success && !cloudResult.notFound && cloudResult.data?.friends) {
-              const cloudFriends = cloudResult.data.friends.filter(
-                (f) => f.id && !f.id.startsWith("user_mock_")
-              );
-              setFriends(cloudFriends);
-              await AsyncStorage.setItem(friendsKey, JSON.stringify(cloudFriends));
-            } else {
-              setFriends([]);
-              await AsyncStorage.setItem(friendsKey, JSON.stringify([]));
-            }
-          } catch (_err) {
-            setFriends([]);
-            await AsyncStorage.setItem(friendsKey, JSON.stringify([]));
-          }
         } else {
           const initialFriendsData = isDemoMode ? DEFAULT_FRIENDS : [];
           setFriends(initialFriendsData);
@@ -402,6 +430,12 @@ export function FeedProvider({ children }) {
               }
             }
             setChats(cleanChats);
+            knownChatMessageIdsRef.current = Object.fromEntries(
+              Object.entries(cleanChats).map(([friendId, messages]) => [
+                friendId,
+                new Set(messages.map((message) => message.id)),
+              ])
+            );
           } else {
             setChats(parsed);
           }
@@ -433,6 +467,7 @@ export function FeedProvider({ children }) {
               }
             : {};
           setChats(initialChatMap);
+          knownChatMessageIdsRef.current = {};
           await AsyncStorage.setItem(chatsKey, JSON.stringify(initialChatMap));
         }
 
@@ -524,15 +559,17 @@ export function FeedProvider({ children }) {
         authorIsBubbleUser: Boolean(isBubbleUser),
       };
 
-      const updated = [newPost, ...posts];
-      await savePosts(updated);
-
-      // บันทึกขึ้น Cloud Firestore เมื่ออยู่ในโหมดผู้ใช้จริง
-      if (!isDemoMode) {
-        saveFirestorePost(newPost).catch((err) => {
-          console.warn("Failed to save post to Cloud Firestore:", err);
+      if (!isDemoMode && user?.firebaseIdToken) {
+        const result = await createSupabasePost(user.firebaseIdToken, {
+          topicId: newPost.topicId,
+          content: newPost.content,
+          image: newPost.image,
         });
+        if (result?.post?.id) {
+          newPost.id = result.post.id;
+        }
       }
+      await savePosts([newPost, ...posts]);
 
       // บันทึกและปรับปรุงสถิติจำนวนโพสต์วันนี้
       const nextCount = dailyPostCount + 1;
@@ -552,15 +589,13 @@ export function FeedProvider({ children }) {
   // 2. ลบโพสต์ (เฉพาะโพสต์ของตนเอง)
   const deletePost = useCallback(
     async (postId) => {
+      if (!isDemoMode && postId && user?.firebaseIdToken) {
+        await deleteSupabasePost(user.firebaseIdToken, postId);
+      }
       const updated = posts.filter((p) => p.id !== postId);
       await savePosts(updated);
-      if (!isDemoMode && postId) {
-        deleteFirestorePost(postId).catch((err) => {
-          console.warn("Failed to delete post from Cloud Firestore:", err);
-        });
-      }
     },
-    [posts, isDemoMode]
+    [posts, isDemoMode, user?.firebaseIdToken]
   );
 
   // 3. กดถูกใจ / ยกเลิกถูกใจ (Toggle Like)
@@ -577,14 +612,13 @@ export function FeedProvider({ children }) {
         targetPost = nextP;
         return nextP;
       });
-      await savePosts(updated);
-      if (!isDemoMode && targetPost) {
-        saveFirestorePost(targetPost).catch((err) => {
-          console.warn("Failed to sync like to Cloud Firestore:", err);
-        });
+      if (!isDemoMode && targetPost && user?.firebaseIdToken) {
+        const active = (targetPost.likes || []).includes(userId);
+        await setSupabaseReaction(user.firebaseIdToken, postId, active);
       }
+      await savePosts(updated);
     },
-    [posts, userId, isDemoMode]
+    [posts, userId, isDemoMode, user?.firebaseIdToken]
   );
 
   // 4. เพิ่มความคิดเห็น (Comment) และตอบกลับความคิดเห็น (Reply แบบซ้อน)
@@ -619,23 +653,20 @@ export function FeedProvider({ children }) {
           : null,
       };
 
-      let targetPost = null;
-      const updated = posts.map((p) => {
-        if (p.id !== postId) return p;
-        const nextP = {
-          ...p,
-          comments: [...(p.comments || []), newComment],
-        };
-        targetPost = nextP;
-        return nextP;
-      });
-
-      await savePosts(updated);
-      if (!isDemoMode && targetPost) {
-        saveFirestorePost(targetPost).catch((err) => {
-          console.warn("Failed to sync comment to Cloud Firestore:", err);
+      if (!isDemoMode && user?.firebaseIdToken) {
+        const result = await createSupabaseComment(user.firebaseIdToken, {
+          postId,
+          parentCommentId: parentId,
+          content: newComment.content,
         });
+        if (result?.comment?.id) {
+          newComment.id = result.comment.id;
+        }
       }
+      const updated = posts.map((p) =>
+        p.id === postId ? { ...p, comments: [...(p.comments || []), newComment] } : p
+      );
+      await savePosts(updated);
     },
     [posts, user, userId, profile, isBubbleUser, isDemoMode]
   );
@@ -681,14 +712,16 @@ export function FeedProvider({ children }) {
         }
       }
 
-      if (postChanged) hasChanged = true;
+      if (postChanged) {
+        hasChanged = true;
+      }
       return updatedPost;
     });
 
     if (hasChanged) {
       savePosts(syncedPosts);
     }
-  }, [profile?.name, profile?.image, userId, user?.name, user?.image]);
+  }, [profile?.name, profile?.image, userId, user?.name, user?.image, isDemoMode]);
 
   // 5. เปลี่ยนสถานะผู้ใช้ (ออนไลน์ / ห้ามรบกวน) - ออฟไลน์จะตรวจจับอัตโนมัติตาม AppState
   const setUserStatus = useCallback(
@@ -755,9 +788,22 @@ export function FeedProvider({ children }) {
 
       // ส่งข้อความขึ้น Cloud Firestore ทันทีเมื่อคุยกับผู้ใช้จริง (ไม่อยู่ในโหมดสาธิต)
       if (friendId && !friendId.startsWith("user_mock_") && !isDemoMode) {
-        sendFirestoreChatMessage(userId, friendId, text.trim()).catch((err) => {
-          console.warn("Failed to sync message to Cloud Firestore:", err);
-        });
+        const recipient = friendsRef.current.find((friend) => friend.id === friendId);
+        const sentMessage = await sendFirestoreChatMessage(userId, friendId, text.trim(), [
+          {
+            id: userId,
+            name: profile?.name || user?.name || "ผู้ใช้งาน",
+            avatar: profile?.image || user?.image || null,
+          },
+          {
+            id: friendId,
+            name: recipient?.name || "เพื่อน Mindclick",
+            avatar: recipient?.avatar || null,
+          },
+        ]);
+        if (!sentMessage) {
+          console.warn("Message is stored locally but could not be delivered to Cloud Firestore.");
+        }
       } else if (friendId && (isDemoMode || friendId.startsWith("user_mock_"))) {
         // จำลองการตอบกลับของเพื่อน (เฉพาะโหมดสาธิตพรีเซนต์อาจารย์หรือเพื่อน mock เท่านั้น)
         setTimeout(async () => {
@@ -807,16 +853,30 @@ export function FeedProvider({ children }) {
         }, 3500);
       }
     },
-    [chats, userId, friendsKey, chatsKey, isDemoMode, userStatus]
+    [chats, userId, friendsKey, chatsKey, isDemoMode, userStatus, profile, user]
   );
 
   // ดึงข้อความแชทล่าสุดจาก Cloud Firestore เพื่อให้ได้รับข้อความจากอีกเครื่อง
   const syncChatWithFriend = useCallback(
     async (friendId) => {
       if (!friendId || friendId.startsWith("user_mock_") || !userId || isDemoMode) return;
+      if (isSyncingChatRef.current[friendId]) return;
+      isSyncingChatRef.current[friendId] = true;
       try {
         const cloudMessages = await getFirestoreChatMessages(userId, friendId);
         if (cloudMessages && cloudMessages.length > 0) {
+          const knownIds = knownChatMessageIdsRef.current[friendId] || new Set();
+          const hasInitialSync = hasCompletedInitialChatSyncRef.current[friendId];
+          const newIncomingMessages = hasInitialSync
+            ? cloudMessages.filter(
+                (message) => message.senderId === friendId && !knownIds.has(message.id)
+              )
+            : [];
+          knownChatMessageIdsRef.current[friendId] = new Set(
+            cloudMessages.map((message) => message.id)
+          );
+          hasCompletedInitialChatSyncRef.current[friendId] = true;
+
           setChats((prev) => {
             const currentMsgs = prev[friendId] || [];
             if (currentMsgs.length === cloudMessages.length && currentMsgs.length > 0) {
@@ -832,26 +892,104 @@ export function FeedProvider({ children }) {
           const lastMsg = cloudMessages[cloudMessages.length - 1];
           if (lastMsg) {
             setFriends((prevFriends) => {
-              const updated = prevFriends.map((f) =>
-                f.id === friendId
-                  ? {
-                      ...f,
-                      lastMessage: lastMsg.text,
-                      lastTime: lastMsg.createdAt || f.lastTime,
-                    }
-                  : f
+              let hasChanged = false;
+              const updated = prevFriends.map((f) => {
+                if (f.id !== friendId) return f;
+                const nextTime = lastMsg.createdAt || f.lastTime;
+                if (f.lastMessage === lastMsg.text && f.lastTime === nextTime) return f;
+                hasChanged = true;
+                return { ...f, lastMessage: lastMsg.text, lastTime: nextTime };
+              });
+              if (!hasChanged) return prevFriends;
+              AsyncStorage.setItem(friendsKey, JSON.stringify(updated)).catch(() => {});
+              return updated;
+            });
+          }
+
+          const latestIncoming = newIncomingMessages[newIncomingMessages.length - 1];
+          if (latestIncoming) {
+            setFriends((prevFriends) => {
+              const updated = prevFriends.map((friend) =>
+                friend.id === friendId
+                  ? { ...friend, unread: (friend.unread || 0) + newIncomingMessages.length }
+                  : friend
               );
               AsyncStorage.setItem(friendsKey, JSON.stringify(updated)).catch(() => {});
               return updated;
+            });
+            await sendChatNotification({
+              senderName: friendsRef.current.find((friend) => friend.id === friendId)?.name,
+              messageText: latestIncoming.text,
+              friendId,
+              isDndActive: userStatus === "busy",
             });
           }
         }
       } catch (err) {
         console.warn("syncChatWithFriend error:", err);
+      } finally {
+        isSyncingChatRef.current[friendId] = false;
       }
     },
-    [userId, chatsKey, friendsKey]
+    [userId, chatsKey, friendsKey, userStatus, isDemoMode]
   );
+
+  // ดึง inbox จาก Cloud ก่อน เพื่อให้ผู้รับพบห้องใหม่ที่อีกฝ่ายเป็นคนเริ่มแชต
+  const syncChatInbox = useCallback(async () => {
+    if (!userId || userId === "guest" || isDemoMode) return;
+    const rooms = await getFirestoreChatRooms(userId);
+    if (!rooms.length) return;
+
+    const roomFriends = rooms
+      .map((room) => {
+        const otherId = (room.participants || []).find((id) => id !== userId);
+        if (!otherId) return null;
+        const otherInfo = (room.participantInfo || []).find((person) => person.id === otherId);
+        return {
+          id: otherId,
+          name: otherInfo?.name || "เพื่อน Mindclick",
+          avatar: otherInfo?.avatar || null,
+          status: "online",
+          lastMessage: room.lastMessage || "เริ่มบทสนทนาใหม่",
+          lastTime: room.lastTime || "",
+          unread: 0,
+        };
+      })
+      .filter(Boolean);
+
+    setFriends((previousFriends) => {
+      let hasChanged = false;
+      const nextFriends = [...previousFriends];
+      roomFriends.forEach((roomFriend) => {
+        if (!nextFriends.some((friend) => friend.id === roomFriend.id)) {
+          nextFriends.push(roomFriend);
+          hasChanged = true;
+        }
+      });
+      if (!hasChanged) return previousFriends;
+      AsyncStorage.setItem(friendsKey, JSON.stringify(nextFriends)).catch(() => {});
+      return nextFriends;
+    });
+
+    roomFriends.forEach((friend) => syncChatWithFriend(friend.id));
+  }, [userId, isDemoMode, friendsKey, syncChatWithFriend]);
+
+  // ตรวจรับข้อความของทุกคนที่เคยคุยด้วยขณะเปิดแอปเท่านั้น. ใช้รอบที่ยาวกว่า
+  // การเปิดห้องแชต เพื่อลด Firestore reads และไม่ทำให้โควตาหมดจากการ polling ถี่ ๆ.
+  useEffect(() => {
+    if (isDemoMode || userStatus === "offline") return;
+
+    const realFriendIds = friends
+      .map((friend) => friend.id)
+      .filter((friendId) => friendId && !friendId.startsWith("user_mock_"));
+    const syncAllChats = () => {
+      syncChatInbox();
+      realFriendIds.forEach((friendId) => syncChatWithFriend(friendId));
+    };
+    syncAllChats();
+    const timer = setInterval(syncAllChats, 45000);
+    return () => clearInterval(timer);
+  }, [friends, isDemoMode, syncChatInbox, syncChatWithFriend, userStatus]);
 
   // 7. มาร์กแชทว่าอ่านแล้ว
   const markAsRead = useCallback((friendId) => {
@@ -946,24 +1084,20 @@ export function FeedProvider({ children }) {
         console.error("Error saving startChatWithUser:", err);
       }
 
-      // ซิงค์รายชื่อเพื่อนขึ้น Firestore เพื่อให้ข้ามเครื่องได้
-      if (!isDemoMode && userId) {
-        const friendsForCloud = nextFriends.map((f) => ({
-          id: f.id,
-          name: f.name,
-          avatar: f.avatar || null,
-        }));
-        saveFirestoreUser(userId, {
-          friends: friendsForCloud,
-          updatedAt: new Date().toISOString(),
-        }).catch((err) => {
-          console.warn("Failed to sync friends to Firestore:", err);
-        });
+      if (!isDemoMode && initialMessage && initialMessage.trim()) {
+        await sendFirestoreChatMessage(userId, targetId, initialMessage.trim(), [
+          {
+            id: userId,
+            name: profile?.name || user?.name || "ผู้ใช้งาน",
+            avatar: profile?.image || user?.image || null,
+          },
+          { id: targetId, name: displayName, avatar: displayAvatar },
+        ]);
       }
 
       return targetFriend;
     },
-    [friends, chats, userId, friendsKey, chatsKey, isDemoMode]
+    [friends, chats, userId, friendsKey, chatsKey, isDemoMode, profile, user]
   );
 
   // คำนวณจำนวนแจ้งเตือนแชทที่ยังไม่ได้อ่าน
@@ -1014,8 +1148,8 @@ export function FeedProvider({ children }) {
         remainingPostsToday,
         resetDailyPostQuota,
         isDemoMode,
-        refreshPosts: syncPostsFromFirestore,
-        syncPostsFromFirestore,
+        refreshPosts: syncPostsFromSupabase,
+        syncPostsFromFirestore: syncPostsFromSupabase,
       }}
     >
       {children}

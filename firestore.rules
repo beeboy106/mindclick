@@ -1,0 +1,47 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // เอกสารที่สร้างก่อน Firebase Auth ใช้ Google subject เป็น document id รูปแบบ google_<subject>.
+    function legacyUserId() {
+      return 'google_' + request.auth.token.firebase.identities['google.com'][0];
+    }
+
+    function roomParticipant() {
+      return signedIn() && resource.data.participants.hasAny([legacyUserId()]);
+    }
+
+    match /users/{userId} {
+      // ชั่วคราว: client ปัจจุบันใช้ users ทั้งชุดเพื่อคำนวณ match.
+      // ต้องย้าย profile สาธารณะไป /publicProfiles ก่อนลดสิทธิ์ read ของ collection นี้.
+      allow read: if signedIn();
+      allow create, update, delete: if signedIn() && userId == legacyUserId();
+    }
+
+    match /chats/{roomId} {
+      allow read: if roomParticipant();
+      allow create: if signedIn() && request.resource.data.participants.hasAny([legacyUserId()]);
+      allow update: if roomParticipant()
+        && request.resource.data.participants == resource.data.participants;
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if roomParticipant();
+        allow create: if roomParticipant()
+          && request.resource.data.senderId == legacyUserId();
+        allow update, delete: if false;
+      }
+    }
+
+    match /posts/{postId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.authorId == legacyUserId();
+      // Like/comment ยังถูกเขียนทับทั้ง document โดย client เดิม จึงต้องย้ายไป
+      // subcollections หรือ Cloud Function ก่อนเปิด rule update ที่ปลอดภัย.
+      allow update, delete: if signedIn() && resource.data.authorId == legacyUserId();
+    }
+  }
+}

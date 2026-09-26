@@ -9,16 +9,18 @@ import {
   DEFAULT_AVATARS,
   DEFAULT_AVATAR_IDS,
 } from "../components/crossbubble/CrossBubbleAvatar";
+import { CROSS_BUBBLE_THEMES, DEFAULT_CROSS_BUBBLE_THEME_ID } from "../lib/crossBubbleTheme";
 
 export { DEFAULT_AVATARS, DEFAULT_AVATAR_IDS };
 
-const CROSS_BUBBLE_STORAGE_KEY = "@mindclick_cross_bubble_active";
-const CROSS_BUBBLE_ALIAS_KEY = "@mindclick_cross_bubble_alias";
-const CROSS_BUBBLE_DARK_ROOMS_KEY = "@mindclick_cross_bubble_dark_rooms";
-const CROSS_BUBBLE_MISSIONS_KEY = "@mindclick_cross_bubble_missions";
-const CROSS_BUBBLE_POINTS_KEY = "@mindclick_cross_bubble_points";
-const CROSS_BUBBLE_STREAK_KEY = "@mindclick_cross_bubble_streak";
-const CROSS_BUBBLE_UNLOCKED_AVATARS_KEY = "@mindclick_cross_bubble_unlocked_avatars";
+const CROSS_BUBBLE_STORAGE_KEY_PREFIX = "@mindclick_cross_bubble_active";
+const CROSS_BUBBLE_ALIAS_KEY_PREFIX = "@mindclick_cross_bubble_alias";
+const CROSS_BUBBLE_DARK_ROOMS_KEY_PREFIX = "@mindclick_cross_bubble_dark_rooms";
+const CROSS_BUBBLE_MISSIONS_KEY_PREFIX = "@mindclick_cross_bubble_missions";
+const CROSS_BUBBLE_POINTS_KEY_PREFIX = "@mindclick_cross_bubble_points";
+const CROSS_BUBBLE_STREAK_KEY_PREFIX = "@mindclick_cross_bubble_streak";
+const CROSS_BUBBLE_UNLOCKED_AVATARS_KEY_PREFIX = "@mindclick_cross_bubble_unlocked_avatars";
+const CROSS_BUBBLE_THEME_KEY_PREFIX = "@mindclick_cross_bubble_theme";
 
 // รายการไอคอนมาสคอตพื้นฐาน (Ionicons)
 export const MASCOT_ICONS = [
@@ -374,12 +376,23 @@ const CrossBubbleContext = createContext();
 
 export function CrossBubbleProvider({ children }) {
   const { user } = useAuth();
+  const storageUserId = user?.id || "guest";
+  const CROSS_BUBBLE_STORAGE_KEY = `${CROSS_BUBBLE_STORAGE_KEY_PREFIX}_${storageUserId}`;
+  const CROSS_BUBBLE_ALIAS_KEY = `${CROSS_BUBBLE_ALIAS_KEY_PREFIX}_${storageUserId}`;
+  const CROSS_BUBBLE_DARK_ROOMS_KEY = `${CROSS_BUBBLE_DARK_ROOMS_KEY_PREFIX}_${storageUserId}`;
+  const CROSS_BUBBLE_MISSIONS_KEY = `${CROSS_BUBBLE_MISSIONS_KEY_PREFIX}_${storageUserId}`;
+  const CROSS_BUBBLE_POINTS_KEY = `${CROSS_BUBBLE_POINTS_KEY_PREFIX}_${storageUserId}`;
+  const CROSS_BUBBLE_STREAK_KEY = `${CROSS_BUBBLE_STREAK_KEY_PREFIX}_${storageUserId}`;
+  const CROSS_BUBBLE_UNLOCKED_AVATARS_KEY = `${CROSS_BUBBLE_UNLOCKED_AVATARS_KEY_PREFIX}_${storageUserId}`;
+  const CROSS_BUBBLE_THEME_KEY = `${CROSS_BUBBLE_THEME_KEY_PREFIX}_${storageUserId}`;
   const { profile } = useData();
   const { startChatWithUser, posts: feedPosts } = useFeed();
   const { addPeekPasses, extendTrial, peekPasses } = usePremium();
 
   // โหมดเปิดใช้งาน Cross-Bubble
   const [isCrossBubbleMode, setIsCrossBubbleMode] = useState(false);
+  const [crossBubbleThemeId, setCrossBubbleThemeId] = useState(DEFAULT_CROSS_BUBBLE_THEME_ID);
+  const crossBubbleTheme = CROSS_BUBBLE_THEMES[crossBubbleThemeId] || CROSS_BUBBLE_THEMES[DEFAULT_CROSS_BUBBLE_THEME_ID];
 
   // แท็บปลายทางในหน้าหลักเมื่อกลับจากโหมด Cross-Bubble (ค่าเริ่มต้นเปิดแอปเป็น HomeTab)
   const [targetMainTab, setTargetMainTab] = useState("HomeTab");
@@ -470,6 +483,9 @@ export function CrossBubbleProvider({ children }) {
         const storedActive = await AsyncStorage.getItem(CROSS_BUBBLE_STORAGE_KEY);
         if (storedActive === "true") setIsCrossBubbleMode(true);
 
+        const storedTheme = await AsyncStorage.getItem(CROSS_BUBBLE_THEME_KEY);
+        if (storedTheme && CROSS_BUBBLE_THEMES[storedTheme]) setCrossBubbleThemeId(storedTheme);
+
         const storedAlias = await AsyncStorage.getItem(CROSS_BUBBLE_ALIAS_KEY);
         if (storedAlias) {
           const parsed = JSON.parse(storedAlias);
@@ -544,7 +560,7 @@ export function CrossBubbleProvider({ children }) {
       }
     }
     loadStorage();
-  }, [generateRandomAlias]);
+  }, [generateRandomAlias, storageUserId]);
 
   // อัปเดตความคืบหน้าของภารกิจรายวันอัตโนมัติ
   const updateMissionProgress = useCallback((missionId, amount = 1) => {
@@ -657,6 +673,12 @@ export function CrossBubbleProvider({ children }) {
     setIsCrossBubbleMode(active);
     await AsyncStorage.setItem(CROSS_BUBBLE_STORAGE_KEY, active ? "true" : "false");
   }, []);
+
+  const setCrossBubbleTheme = useCallback(async (themeId) => {
+    if (!CROSS_BUBBLE_THEMES[themeId]) return;
+    setCrossBubbleThemeId(themeId);
+    await AsyncStorage.setItem(CROSS_BUBBLE_THEME_KEY, themeId);
+  }, [CROSS_BUBBLE_THEME_KEY]);
 
   // เปลี่ยนชื่อนามแฝง (Alias)
   const updateUserAliasName = useCallback(async (newName) => {
@@ -1206,6 +1228,10 @@ export function CrossBubbleProvider({ children }) {
       value={{
         isCrossBubbleMode,
         toggleCrossBubbleMode,
+        crossBubbleTheme,
+        crossBubbleThemeId,
+        crossBubbleThemes: CROSS_BUBBLE_THEMES,
+        setCrossBubbleTheme,
         targetMainTab,
         setTargetMainTab,
         userAlias,

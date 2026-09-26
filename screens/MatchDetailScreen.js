@@ -18,6 +18,7 @@ import { useAuth } from "../context/AuthContext";
 import { useData } from "../context/DataContext";
 import { usePremium } from "../context/PremiumContext";
 import FavoriteButton from "../components/FavoriteButton";
+import ResponsiveMedia from "../components/ResponsiveMedia";
 
 export default function MatchDetailScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
@@ -141,10 +142,12 @@ export default function MatchDetailScreen({ route, navigation }) {
           {/* Hero Profile Photo / Fallback */}
           <View style={styles.heroBox}>
             {!avatarError && targetUser.image ? (
-              <Image
-                source={{ uri: targetUser.image }}
+              <ResponsiveMedia
+                uri={targetUser.image}
                 style={styles.heroImage}
-                resizeMode="cover"
+                fallbackAspectRatio={4 / 5}
+                maxHeightRatio={0.58}
+                maxHeight={520}
                 onError={() => setAvatarError(true)}
               />
             ) : (
@@ -299,7 +302,6 @@ const styles = StyleSheet.create({
     ...shadows.neo,
   },
   heroBox: {
-    height: 380,
     width: "100%",
     backgroundColor: colors.muted,
     position: "relative",
@@ -308,11 +310,10 @@ const styles = StyleSheet.create({
   },
   heroImage: {
     width: "100%",
-    height: "100%",
   },
   heroFallback: {
     width: "100%",
-    height: "100%",
+    height: 360,
     backgroundColor: colors.primary,
     justifyContent: "center",
     alignItems: "center",

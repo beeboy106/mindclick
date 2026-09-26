@@ -12,6 +12,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { colors, shadows } from "../lib/theme";
 import { useAuth } from "../context/AuthContext";
 import ReportBlockModal from "./ReportBlockModal";
+import ResponsiveMedia from "./ResponsiveMedia";
 
 // ข้อมูลสีสำหรับแต่ละกระทู้ (ไม่มีไอคอน/อิโมจิ)
 const TOPIC_CONFIG = {
@@ -240,10 +241,9 @@ export default function PostCard({
             onPress={() => onPressImage && onPressImage(post.image)}
             disabled={!onPressImage}
           >
-            <Image
-              source={{ uri: post.image }}
+            <ResponsiveMedia
+              uri={post.image}
               style={styles.postImage}
-              resizeMode="cover"
             />
           </TouchableOpacity>
         )}
@@ -683,7 +683,6 @@ const styles = StyleSheet.create({
   },
   postImage: {
     width: "100%",
-    height: 220,
     backgroundColor: "#f3f4f6",
   },
   interactionRow: {
