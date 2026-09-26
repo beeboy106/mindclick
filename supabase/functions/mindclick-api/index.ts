@@ -26,17 +26,55 @@ async function firebaseUser(request: Request) {
     audience: firebaseProjectId,
   });
   if (!payload.sub) throw new Error("Invalid Firebase ID token");
-  return { firebaseUid: payload.sub, email: payload.email as string | undefined };
+  // Firebase puts the provider subjects inside this signed claim.  Do not use
+  // a client-supplied Google id here: that would allow somebody to claim a
+  // legacy profile that is not theirs.
+  const firebaseClaims = payload.firebase as {
+    identities?: Record<string, unknown>;
+  } | undefined;
+  const googleSubjects = firebaseClaims?.identities?.["google.com"];
+  const googleSubject = Array.isArray(googleSubjects)
+    ? googleSubjects.find((value): value is string => typeof value === "string" && value.length > 0)
+    : undefined;
+
+  return {
+    firebaseUid: payload.sub,
+    email: payload.email as string | undefined,
+    legacyUserId: googleSubject ? `google_${googleSubject}` : undefined,
+  };
 }
 
-async function ownProfile(firebaseUid: string) {
+type FirebaseUser = Awaited<ReturnType<typeof firebaseUser>>;
+
+async function ownProfile(user: FirebaseUser) {
   const { data, error } = await supabase
     .from("profiles")
     .select("*")
-    .eq("firebase_uid", firebaseUid)
+    .eq("firebase_uid", user.firebaseUid)
     .maybeSingle();
   if (error) throw error;
-  return data;
+  if (data || !user.legacyUserId) return data;
+
+  // A Firebase UID is the primary key for new sessions.  The verified Google
+  // subject is a durable fallback for profiles created before a Firebase
+  // account was re-linked.  Rebind only after proving ownership from the
+  // signed token, never from request JSON.
+  const { data: legacyProfile, error: legacyError } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("legacy_user_id", user.legacyUserId)
+    .maybeSingle();
+  if (legacyError) throw legacyError;
+  if (!legacyProfile || legacyProfile.firebase_uid === user.firebaseUid) return legacyProfile;
+
+  const { data: restoredProfile, error: restoreError } = await supabase
+    .from("profiles")
+    .update({ firebase_uid: user.firebaseUid, updated_at: new Date().toISOString() })
+    .eq("id", legacyProfile.id)
+    .select()
+    .single();
+  if (restoreError) throw restoreError;
+  return restoredProfile;
 }
 
 Deno.serve(async (request) => {
@@ -46,7 +84,7 @@ Deno.serve(async (request) => {
     const payload = request.method === "GET" ? {} : await request.json();
 
     if (path === "profile/me" && request.method === "GET") {
-      const profile = await ownProfile(user.firebaseUid);
+      const profile = await ownProfile(user);
       if (!profile) return json({ profile: null });
       const [{ data: quiz, error: quizError }, { data: favorites, error: favoritesError }] = await Promise.all([
         supabase.from("quiz_responses").select("*").eq("profile_id", profile.id).maybeSingle(),
@@ -62,12 +100,12 @@ Deno.serve(async (request) => {
     }
 
     if (path === "profile/upsert") {
-      if (!payload.legacyUserId) return json({ error: "legacyUserId is required" }, 400);
-      const { data: profile, error } = await supabase
-        .from("profiles")
-        .upsert({
+      if (!user.legacyUserId) {
+        return json({ error: "Google identity is required to create a profile" }, 400);
+      }
+      const profileData = {
           firebase_uid: user.firebaseUid,
-          legacy_user_id: payload.legacyUserId,
+          legacy_user_id: user.legacyUserId,
           display_name: payload.name ?? "",
           avatar_url: payload.image ?? null,
           faculty: payload.faculty ?? "",
@@ -78,14 +116,28 @@ Deno.serve(async (request) => {
           has_accepted_policy: Boolean(payload.hasAcceptedPolicy),
           policy_accepted_at: payload.policyAcceptedAt ?? null,
           updated_at: new Date().toISOString(),
-        }, { onConflict: "firebase_uid" })
+      };
+      const existingProfile = await ownProfile(user);
+      const profileRequest = existingProfile
+        ? supabase
+          .from("profiles")
+          .update(profileData)
+          .eq("id", existingProfile.id)
+        : supabase
+          .from("profiles")
+          .insert({
+          firebase_uid: user.firebaseUid,
+          legacy_user_id: user.legacyUserId,
+          ...profileData,
+        });
+      const { data: profile, error } = await profileRequest
         .select()
         .single();
       if (error) throw error;
       return json({ profile });
     }
 
-    const profile = await ownProfile(user.firebaseUid);
+    const profile = await ownProfile(user);
     if (!profile) return json({ error: "Create profile first" }, 409);
 
     if (path === "quiz/upsert") {
