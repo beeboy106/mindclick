@@ -18,6 +18,14 @@ function json(body: unknown, status = 200) {
   });
 }
 
+function effectivePresence(profile: { presence_status?: string | null; last_seen_at?: string | null }) {
+  const lastSeen = profile.last_seen_at ? Date.parse(profile.last_seen_at) : 0;
+  // Presence is intentionally pull-based.  A recent explicit update is the
+  // only signal that can make a user appear online; stale sessions are offline.
+  if (!lastSeen || Date.now() - lastSeen > 2 * 60 * 1000) return "offline";
+  return profile.presence_status === "busy" ? "busy" : "online";
+}
+
 async function firebaseUser(request: Request) {
   const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   if (!token) throw new Error("Missing Firebase ID token");
@@ -135,6 +143,41 @@ Deno.serve(async (request) => {
         .single();
       if (error) throw error;
       return json({ profile });
+    }
+
+    if (path === "presence/update") {
+      const requestedStatus = payload.status === "busy" || payload.status === "offline"
+        ? payload.status
+        : "online";
+      const profile = await ownProfile(user);
+      if (!profile) return json({ error: "Create profile first" }, 409);
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          presence_status: requestedStatus,
+          last_seen_at: new Date().toISOString(),
+        })
+        .eq("id", profile.id);
+      if (error) throw error;
+      return json({ status: requestedStatus });
+    }
+
+    if (path === "presence/list") {
+      const legacyUserIds = Array.isArray(payload.legacyUserIds)
+        ? payload.legacyUserIds.filter((id): id is string => typeof id === "string").slice(0, 100)
+        : [];
+      if (!legacyUserIds.length) return json({ statuses: [] });
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("legacy_user_id, presence_status, last_seen_at")
+        .in("legacy_user_id", legacyUserIds);
+      if (error) throw error;
+      return json({
+        statuses: (data ?? []).map((item) => ({
+          legacyUserId: item.legacy_user_id,
+          status: effectivePresence(item),
+        })),
+      });
     }
 
     const profile = await ownProfile(user);

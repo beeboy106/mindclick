@@ -49,6 +49,7 @@ export default function BlindLoungeScreen() {
     matchWithMember,
     resetLoungeSession,
     toggleCrossBubbleMode,
+    crossBubbleTheme: theme,
   } = useCrossBubble();
 
   // Local state for Pre-Input
@@ -150,11 +151,11 @@ export default function BlindLoungeScreen() {
   // ====================================================
   if (loungeStage === "countdown") {
     return (
-      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={true} />
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.canvas }]} edges={["top", "left", "right"]}>
+        <StatusBar barStyle={theme.statusBar} backgroundColor={theme.surface} translucent={true} />
 
         {/* Header */}
-        <View style={styles.topHeader}>
+        <View style={[styles.topHeader, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
           <View style={styles.headerLeft}>
             <Text style={styles.headerTitle}>ห้องสังสรรค์</Text>
           </View>
@@ -169,7 +170,7 @@ export default function BlindLoungeScreen() {
         </View>
 
         <ScrollView
-          style={styles.container}
+          style={[styles.container, { backgroundColor: theme.canvas }]}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >

@@ -32,6 +32,7 @@ export default function MissionsScreen() {
     exchangeTrialExtension,
     exchangeFlameShield,
     peekPasses,
+    crossBubbleTheme: theme,
   } = useCrossBubble();
 
   const handleClaim = (mission) => {
@@ -164,11 +165,11 @@ export default function MissionsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={true} />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.canvas }]} edges={["top", "left", "right"]}>
+      <StatusBar barStyle={theme.statusBar} backgroundColor={theme.surface} translucent={true} />
 
       {/* Header */}
-      <View style={styles.topHeader}>
+      <View style={[styles.topHeader, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <View style={styles.headerLeft}>
           <Text style={styles.headerTitle}>ภารกิจ & สถานะไฟ</Text>
         </View>
@@ -183,7 +184,7 @@ export default function MissionsScreen() {
       </View>
 
       <ScrollView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: theme.canvas }]}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >

@@ -51,6 +51,7 @@ export default function FeedScreen({ navigation }) {
     dailyPostCount,
     dailyPostLimit,
     remainingPostsToday,
+    refreshPosts,
   } = useFeed();
 
   const [selectedTopic, setSelectedTopic] = useState("all");
@@ -342,11 +343,10 @@ export default function FeedScreen({ navigation }) {
             onPress={requestCrossBubbleEntry}
           >
             <View style={styles.crossBubbleHeaderBtnIcon}>
-              <Ionicons name="moon" size={14} color={colors.ink} />
+              <Ionicons name="chatbubbles" size={14} color={colors.ink} />
             </View>
             <View>
               <Text style={styles.crossBubbleHeaderBtnText}>Cross Bubble</Text>
-              <Text style={styles.crossBubbleHeaderBtnHint}>โหมดพบคนใหม่</Text>
             </View>
           </TouchableOpacity>
 
@@ -679,9 +679,7 @@ export default function FeedScreen({ navigation }) {
             <TouchableOpacity
               style={styles.refreshBtn}
               activeOpacity={0.8}
-              onPress={() => {
-                Alert.alert("รีเฟรช", "อัปเดตข้อมูลโพสต์ล่าสุดแล้ว");
-              }}
+              onPress={() => refreshPosts?.()}
             >
               <Ionicons name="refresh" size={14} color={colors.ink} />
               <Text style={styles.refreshText}>Refresh</Text>
@@ -822,12 +820,6 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontSize: 11,
     fontWeight: "800",
-  },
-  crossBubbleHeaderBtnHint: {
-    color: "#55723b",
-    fontSize: 9,
-    fontWeight: "600",
-    marginTop: 1,
   },
   pullDrawerContainer: {
     width: "100%",

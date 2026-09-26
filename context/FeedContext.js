@@ -18,6 +18,8 @@ import {
   deleteSupabasePost,
   setSupabaseReaction,
   createSupabaseComment,
+  getSupabasePresence,
+  updateSupabasePresence,
 } from "../lib/supabaseApi";
 
 const POSTS_STORAGE_KEY = "@mindclick_feed_posts";
@@ -297,6 +299,35 @@ export function FeedProvider({ children }) {
     friendsRef.current = friends;
   }, [friends]);
 
+  const publishPresence = useCallback(async (status, token = user?.firebaseIdToken) => {
+    if (isDemoMode || !token || !isSupabaseConfigured()) return;
+    try {
+      await updateSupabasePresence(token, status);
+    } catch (err) {
+      // Presence is best-effort.  The visible profile/feed data must still work
+      // if a connection drops while the app moves to the background.
+      console.warn("publishPresence error:", err);
+    }
+  }, [isDemoMode, user?.firebaseIdToken]);
+
+  const refreshPresence = useCallback(async () => {
+    if (isDemoMode || !user?.firebaseIdToken || !isSupabaseConfigured()) return;
+    const friendIds = friendsRef.current
+      .map((friend) => friend.id)
+      .filter((id) => id && !id.startsWith("user_mock_"));
+    if (!friendIds.length) return;
+    try {
+      const result = await getSupabasePresence(user.firebaseIdToken, friendIds);
+      const statusById = new Map((result?.statuses || []).map((item) => [item.legacyUserId, item.status]));
+      setFriends((currentFriends) => currentFriends.map((friend) => ({
+        ...friend,
+        status: statusById.get(friend.id) || "offline",
+      })));
+    } catch (err) {
+      console.warn("refreshPresence error:", err);
+    }
+  }, [isDemoMode, user?.firebaseIdToken]);
+
   // ดึงโพสต์ล่าสุดจาก Supabase และผสานกับข้อมูลในเครื่อง
   const syncPostsFromSupabase = useCallback(async (force = false) => {
     if (isDemoMode || isLoadingData || isSyncingPostsRef.current) return;
@@ -351,6 +382,17 @@ export function FeedProvider({ children }) {
       isSyncingPostsRef.current = false;
     }
   }, [isDemoMode, isLoadingData, postsKey, userId, user?.firebaseIdToken]);
+
+  const refreshFeed = useCallback(async () => {
+    const activeStatus = AppState.currentState === "active"
+      ? userPreferenceRef.current || "online"
+      : "offline";
+    await Promise.all([
+      publishPresence(activeStatus),
+      syncPostsFromSupabase(true),
+      refreshPresence(),
+    ]);
+  }, [publishPresence, refreshPresence, syncPostsFromSupabase]);
 
   // ซิงค์โพสต์เมื่อผู้ใช้เปิดแอป หรือสลับกลับมาที่แอป โดยมี cooldown เพื่อลด request ซ้ำ
   useEffect(() => {
@@ -492,18 +534,36 @@ export function FeedProvider({ children }) {
   // ติดตามการสลับเข้า-ออกจากแอป (AppState) เพื่อปรับสถานะ 'ออฟไลน์' อัตโนมัติเมื่อออกจากแอป
   useEffect(() => {
     const handleAppStateChange = (nextAppState) => {
+      const nextStatus = nextAppState === "active"
+        ? userPreferenceRef.current || "online"
+        : "offline";
       if (nextAppState === "active") {
-        setUserStatusState(userPreferenceRef.current || "online");
+        setUserStatusState(nextStatus);
       } else {
-        setUserStatusState("offline");
+        setUserStatusState(nextStatus);
       }
+      publishPresence(nextStatus);
     };
 
     const sub = AppState.addEventListener("change", handleAppStateChange);
     return () => {
       sub.remove();
     };
-  }, []);
+  }, [publishPresence]);
+
+  // Publish the account currently in use, and mark that account offline when
+  // it is replaced or signed out.  Other devices only observe it on refresh.
+  useEffect(() => {
+    const token = user?.firebaseIdToken;
+    if (isDemoMode || !token) return undefined;
+    const status = AppState.currentState === "active"
+      ? userPreferenceRef.current || "online"
+      : "offline";
+    publishPresence(status, token);
+    return () => {
+      updateSupabasePresence(token, "offline").catch(() => {});
+    };
+  }, [userId, user?.firebaseIdToken, isDemoMode, publishPresence]);
 
   // ฟังก์ชันจัดเก็บโพสต์ลง AsyncStorage
   const savePosts = async (newPosts) => {
@@ -730,6 +790,7 @@ export function FeedProvider({ children }) {
       userPreferenceRef.current = validStatus;
       if (AppState.currentState === "active") {
         setUserStatusState(validStatus);
+        publishPresence(validStatus);
       }
       try {
         await AsyncStorage.setItem(`${STATUS_STORAGE_PREFIX}${userId}`, validStatus);
@@ -737,7 +798,7 @@ export function FeedProvider({ children }) {
         console.error("Error saving status:", err);
       }
     },
-    [userId]
+    [userId, publishPresence]
   );
 
   // 6. ส่งข้อความแชท 1-on-1
@@ -974,6 +1035,18 @@ export function FeedProvider({ children }) {
     roomFriends.forEach((friend) => syncChatWithFriend(friend.id));
   }, [userId, isDemoMode, friendsKey, syncChatWithFriend]);
 
+  const refreshChat = useCallback(async () => {
+    const activeStatus = AppState.currentState === "active"
+      ? userPreferenceRef.current || "online"
+      : "offline";
+    await publishPresence(activeStatus);
+    await Promise.all([syncChatInbox(), refreshPresence()]);
+    friendsRef.current
+      .map((friend) => friend.id)
+      .filter((id) => id && !id.startsWith("user_mock_"))
+      .forEach((id) => syncChatWithFriend(id));
+  }, [publishPresence, refreshPresence, syncChatInbox, syncChatWithFriend]);
+
   // ตรวจรับข้อความของทุกคนที่เคยคุยด้วยขณะเปิดแอปเท่านั้น. ใช้รอบที่ยาวกว่า
   // การเปิดห้องแชต เพื่อลด Firestore reads และไม่ทำให้โควตาหมดจากการ polling ถี่ ๆ.
   useEffect(() => {
@@ -1148,7 +1221,8 @@ export function FeedProvider({ children }) {
         remainingPostsToday,
         resetDailyPostQuota,
         isDemoMode,
-        refreshPosts: syncPostsFromSupabase,
+        refreshPosts: refreshFeed,
+        refreshChat,
         syncPostsFromFirestore: syncPostsFromSupabase,
       }}
     >

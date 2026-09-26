@@ -33,7 +33,7 @@ export default function ChatModal({
   initialFriendData = null,
   suggestedIcebreakers = [],
 }) {
-  const { friends, chats, sendMessage, syncChatWithFriend, markAsRead, startChatWithUser, userStatus } = useFeed();
+  const { friends, chats, sendMessage, syncChatWithFriend, markAsRead, startChatWithUser, userStatus, refreshChat } = useFeed();
   const { blockedUserIds = [], blockUser, submitReport } = useAuth();
   const insets = useSafeAreaInsets();
 
@@ -179,6 +179,14 @@ export default function ChatModal({
     markAsRead(friend.id);
   };
 
+  useEffect(() => {
+    if (!activeFriend?.id) return;
+    const latestFriend = friends.find((friend) => friend.id === activeFriend.id);
+    if (latestFriend && latestFriend.status !== activeFriend.status) {
+      setActiveFriend(latestFriend);
+    }
+  }, [friends, activeFriend?.id, activeFriend?.status]);
+
   const handleSend = () => {
     if (!inputText.trim() || !activeFriend) return;
     sendMessage(activeFriend.id, inputText);
@@ -301,6 +309,14 @@ export default function ChatModal({
                   </View>
 
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <TouchableOpacity
+                      style={styles.headerActionBtn}
+                      onPress={() => refreshChat?.()}
+                      activeOpacity={0.8}
+                      accessibilityLabel="รีเฟรชข้อความและสถานะ"
+                    >
+                      <Ionicons name="refresh" size={18} color={colors.ink} />
+                    </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.headerActionBtn}
                       onPress={() => setReportModalVisible(true)}
@@ -439,13 +455,23 @@ export default function ChatModal({
                     <Ionicons name="chatbubbles" size={22} color={colors.primary} />
                     <Text style={styles.listHeaderTitle}>ข้อความแชท</Text>
                   </View>
-                  <TouchableOpacity
-                    style={styles.closeBtn}
-                    onPress={handleClose}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="close" size={22} color={colors.ink} />
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <TouchableOpacity
+                      style={styles.headerActionBtn}
+                      onPress={() => refreshChat?.()}
+                      activeOpacity={0.8}
+                      accessibilityLabel="รีเฟรชแชทและสถานะ"
+                    >
+                      <Ionicons name="refresh" size={18} color={colors.ink} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.closeBtn}
+                      onPress={handleClose}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="close" size={22} color={colors.ink} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 {/* DND Banner if user has Do Not Disturb active */}

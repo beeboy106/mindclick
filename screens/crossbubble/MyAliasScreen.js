@@ -179,7 +179,7 @@ export default function MyAliasScreen() {
           <View style={styles.themeHeadingRow}>
             <View>
               <Text style={[styles.themeTitle, { color: theme.ink }]}>โทนสี Cross Bubble</Text>
-              <Text style={[styles.themeSubtitle, { color: theme.muted }]}>ตั้งค่าเฉพาะโหมดนี้ ไม่ตาม Dark Mode ของเครื่อง</Text>
+              <Text style={[styles.themeSubtitle, { color: theme.muted }]}>เลือกโทนสีที่ใช้ทั่วทั้งโหมด Cross Bubble</Text>
             </View>
             <Ionicons name="color-palette-outline" size={20} color={theme.accent} />
           </View>

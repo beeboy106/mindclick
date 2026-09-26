@@ -28,6 +28,7 @@ export default function OneOnOneScreen() {
     sendFriendRequest,
     getFriendPosts,
     toggleCrossBubbleMode,
+    crossBubbleTheme: theme,
   } = useCrossBubble();
 
   const [inputMsg, setInputMsg] = useState("");
@@ -66,11 +67,11 @@ export default function OneOnOneScreen() {
   // ==========================================
   if (!currentRoom) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={true} />
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.canvas }]} edges={["top", "left", "right"]}>
+        <StatusBar barStyle={theme.statusBar} backgroundColor={theme.surface} translucent={true} />
 
         {/* Lobby Header */}
-        <View style={styles.topHeader}>
+        <View style={[styles.topHeader, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
           <View style={styles.headerLeft}>
             <Text style={styles.headerTitle}>ห้องมืด</Text>
           </View>
@@ -85,7 +86,7 @@ export default function OneOnOneScreen() {
         </View>
 
         <ScrollView
-          style={styles.container}
+          style={[styles.container, { backgroundColor: theme.canvas }]}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
@@ -180,11 +181,11 @@ export default function OneOnOneScreen() {
   const isPending = currentRoom.friendStatus === "pending";
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" translucent={true} />
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.canvas }]} edges={["top", "left", "right"]}>
+      <StatusBar barStyle={theme.statusBar} backgroundColor={theme.surface} translucent={true} />
 
       {/* Chat Top Bar with 3-bar Hamburger Menu at Top Right */}
-      <View style={styles.chatTopBar}>
+      <View style={[styles.chatTopBar, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => setActiveDarkRoomId(null)}
