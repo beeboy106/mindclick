@@ -85,6 +85,49 @@ async function ownProfile(user: FirebaseUser) {
   return restoredProfile;
 }
 
+async function realLoungeState(roomId: string, viewerProfileId: string) {
+  const { data: ownMembership, error: ownMembershipError } = await supabase
+    .from("real_lounge_members")
+    .select("room_id")
+    .eq("room_id", roomId)
+    .eq("profile_id", viewerProfileId)
+    .maybeSingle();
+  if (ownMembershipError) throw ownMembershipError;
+  if (!ownMembership) return null;
+
+  const [{ data: room, error: roomError }, { data: members, error: membersError }, { data: messages, error: messagesError }] = await Promise.all([
+    supabase.from("real_lounge_rooms").select("*").eq("id", roomId).maybeSingle(),
+    supabase.from("real_lounge_members").select("*").eq("room_id", roomId).order("joined_at"),
+    supabase.from("real_lounge_messages").select("*").eq("room_id", roomId).order("created_at").limit(250),
+  ]);
+  if (roomError) throw roomError;
+  if (membersError) throw membersError;
+  if (messagesError) throw messagesError;
+  if (!room) return null;
+
+  const isMutualConnection = (members ?? []).length === 2 && (members ?? []).every((member) => member.wants_connection);
+  let connectedProfiles = new Map<string, Record<string, unknown>>();
+  if (isMutualConnection && members?.length) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, legacy_user_id, display_name, avatar_url, faculty")
+      .in("id", members.map((member) => member.profile_id));
+    if (profilesError) throw profilesError;
+    connectedProfiles = new Map((profiles ?? []).map((item) => [item.id, item]));
+  }
+
+  return {
+    room,
+    viewerProfileId,
+    members: (members ?? []).map((member) => ({
+      ...member,
+      connectionProfile: isMutualConnection ? connectedProfiles.get(member.profile_id) ?? null : null,
+    })),
+    messages: messages ?? [],
+    isMutualConnection,
+  };
+}
+
 Deno.serve(async (request) => {
   try {
     const user = await firebaseUser(request);
@@ -182,6 +225,106 @@ Deno.serve(async (request) => {
 
     const profile = await ownProfile(user);
     if (!profile) return json({ error: "Create profile first" }, 409);
+
+    if (path === "real-lounge/join") {
+      const { data: roomId, error } = await supabase.rpc("join_real_lounge", {
+        p_profile_id: profile.id,
+        p_alias: typeof payload.alias === "string" ? payload.alias.trim() : "",
+        p_faculty: typeof payload.faculty === "string" ? payload.faculty.trim() : "",
+        p_avatar_id: typeof payload.avatarId === "string" ? payload.avatarId.trim() : "avatar_1",
+      });
+      if (error) throw error;
+      const state = await realLoungeState(roomId, profile.id);
+      return json({ state });
+    }
+
+    if (path === "real-lounge/state" && request.method === "GET") {
+      const roomId = new URL(request.url).searchParams.get("roomId");
+      if (!roomId) return json({ error: "roomId is required" }, 400);
+      const state = await realLoungeState(roomId, profile.id);
+      if (!state) return json({ error: "Room not found" }, 404);
+      return json({ state });
+    }
+
+    if (path === "real-lounge/message") {
+      const roomId = typeof payload.roomId === "string" ? payload.roomId : "";
+      const content = typeof payload.content === "string" ? payload.content.trim() : "";
+      if (!roomId || !content) return json({ error: "roomId and content are required" }, 400);
+      if (content.length > 1000) return json({ error: "Message is too long" }, 400);
+      const state = await realLoungeState(roomId, profile.id);
+      if (!state || state.room.status === "waiting") return json({ error: "Room is not ready" }, 409);
+      const me = state.members.find((member) => member.profile_id === profile.id);
+      const { error } = await supabase.from("real_lounge_messages").insert({
+        room_id: roomId,
+        profile_id: profile.id,
+        sender_alias: me?.alias ?? "ผู้ไม่ประสงค์ออกนาม",
+        sender_avatar_id: me?.avatar_id ?? "avatar_1",
+        content,
+      });
+      if (error) throw error;
+      return json({ state: await realLoungeState(roomId, profile.id) });
+    }
+
+    if (path === "real-lounge/preanswers") {
+      const roomId = typeof payload.roomId === "string" ? payload.roomId : "";
+      const q1 = typeof payload.q1 === "string" ? payload.q1.trim() : "";
+      const q2 = typeof payload.q2 === "string" ? payload.q2.trim() : "";
+      if (!roomId || !q1 || !q2) return json({ error: "Answer both questions" }, 400);
+      const state = await realLoungeState(roomId, profile.id);
+      if (!state || state.room.status === "waiting") return json({ error: "Room is not ready" }, 409);
+      const { error } = await supabase.from("real_lounge_members")
+        .update({ pre_answers: { q1: q1.slice(0, 300), q2: q2.slice(0, 300) } })
+        .eq("room_id", roomId).eq("profile_id", profile.id);
+      if (error) throw error;
+      return json({ state: await realLoungeState(roomId, profile.id) });
+    }
+
+    if (path === "real-lounge/quiz-result") {
+      const roomId = typeof payload.roomId === "string" ? payload.roomId : "";
+      if (!roomId || typeof payload.score !== "number") return json({ error: "roomId and score are required" }, 400);
+      const state = await realLoungeState(roomId, profile.id);
+      if (!state || state.room.status === "waiting") return json({ error: "Room is not ready" }, 409);
+      const { error } = await supabase.from("real_lounge_members")
+        .update({
+          quiz_answers: payload.answers ?? {},
+          quiz_score: Math.max(0, Math.min(100, Math.round(payload.score))),
+          quiz_details: payload.details ?? {},
+          evaluated_with_ai: Boolean(payload.evaluatedWithAi),
+        })
+        .eq("room_id", roomId).eq("profile_id", profile.id);
+      if (error) throw error;
+      return json({ state: await realLoungeState(roomId, profile.id) });
+    }
+
+    if (path === "real-lounge/connection") {
+      const roomId = typeof payload.roomId === "string" ? payload.roomId : "";
+      if (!roomId) return json({ error: "roomId is required" }, 400);
+      const state = await realLoungeState(roomId, profile.id);
+      if (!state || state.members.length !== 2) return json({ error: "A paired room is required" }, 409);
+      const { error } = await supabase.from("real_lounge_members")
+        .update({ wants_connection: true })
+        .eq("room_id", roomId).eq("profile_id", profile.id);
+      if (error) throw error;
+      return json({ state: await realLoungeState(roomId, profile.id) });
+    }
+
+    if (path === "real-lounge/leave") {
+      const roomId = typeof payload.roomId === "string" ? payload.roomId : "";
+      if (!roomId) return json({ error: "roomId is required" }, 400);
+      const state = await realLoungeState(roomId, profile.id);
+      if (!state) return json({ ok: true });
+      const { error } = await supabase.from("real_lounge_members")
+        .delete().eq("room_id", roomId).eq("profile_id", profile.id);
+      if (error) throw error;
+      if (state.members.length <= 1) {
+        await supabase.from("real_lounge_rooms").delete().eq("id", roomId);
+      } else {
+        await supabase.from("real_lounge_rooms")
+          .update({ status: "completed", updated_at: new Date().toISOString() })
+          .eq("id", roomId);
+      }
+      return json({ ok: true });
+    }
 
     if (path === "quiz/upsert") {
       const { data, error } = await supabase

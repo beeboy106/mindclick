@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useCrossBubble } from "../context/CrossBubbleContext";
 
 import BlindLoungeScreen from "../screens/crossbubble/BlindLoungeScreen";
+import RealLoungeScreen from "../screens/crossbubble/RealLoungeScreen";
 import OneOnOneScreen from "../screens/crossbubble/OneOnOneScreen";
 import MissionsScreen from "../screens/crossbubble/MissionsScreen";
 import MyAliasScreen from "../screens/crossbubble/MyAliasScreen";
@@ -40,6 +41,8 @@ export default function CrossBubbleTabNavigator() {
 
           if (route.name === "BlindLoungeTab") {
             iconName = focused ? "chatbubbles" : "chatbubbles-outline";
+          } else if (route.name === "RealLoungeTab") {
+            iconName = focused ? "people" : "people-outline";
           } else if (route.name === "DarkRoomTab") {
             iconName = focused ? "moon" : "moon-outline";
           } else if (route.name === "MissionsTab") {
@@ -60,7 +63,12 @@ export default function CrossBubbleTabNavigator() {
       <Tab.Screen
         name="BlindLoungeTab"
         component={BlindLoungeScreen}
-        options={{ tabBarLabel: "ห้องสังสรรค์" }}
+        options={{ tabBarLabel: "ห้องจำลอง" }}
+      />
+      <Tab.Screen
+        name="RealLoungeTab"
+        component={RealLoungeScreen}
+        options={{ tabBarLabel: "ห้องจริง" }}
       />
       <Tab.Screen
         name="DarkRoomTab"
