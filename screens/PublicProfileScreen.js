@@ -17,9 +17,17 @@ import { useAuth } from "../context/AuthContext";
 import { useData } from "../context/DataContext";
 import { useFeed } from "../context/FeedContext";
 import { getSharedInsights, getIcebreakerList } from "../lib/mindInsight";
+
 import FavoriteButton from "../components/FavoriteButton";
 import GalleryViewer from "../components/GalleryViewer";
 import ChatModal from "../components/ChatModal";
+
+const socialUrl = (value, domain, profilePrefix) => {
+  const trimmed = value.trim();
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.replace(/^www\./i, "").toLowerCase().startsWith(domain)) return `https://${trimmed}`;
+  return `${profilePrefix}${trimmed.replace(/^@/, "")}`;
+};
 
 const genderMeta = {
   male: {
@@ -115,7 +123,7 @@ export default function PublicProfileScreen({ route, navigation }) {
       value: targetUser.socialLinks?.instagram,
       brandBg: "#E1306C",
       icon: "logo-instagram",
-      getUrl: (v) => (v.startsWith("http") ? v : `https://instagram.com/${v.replace("@", "")}`),
+      getUrl: (v) => socialUrl(v, "instagram.com", "https://www.instagram.com/"),
     },
     {
       key: "facebook",
@@ -123,7 +131,7 @@ export default function PublicProfileScreen({ route, navigation }) {
       value: targetUser.socialLinks?.facebook,
       brandBg: "#1877F2",
       icon: "logo-facebook",
-      getUrl: (v) => (v.startsWith("http") ? v : `https://facebook.com/${v}`),
+      getUrl: (v) => socialUrl(v, "facebook.com", "https://www.facebook.com/"),
     },
     {
       key: "tiktok",
@@ -131,7 +139,7 @@ export default function PublicProfileScreen({ route, navigation }) {
       value: targetUser.socialLinks?.tiktok,
       brandBg: "#111111",
       icon: "logo-tiktok",
-      getUrl: (v) => (v.startsWith("http") ? v : `https://tiktok.com/@${v.replace("@", "")}`),
+      getUrl: (v) => socialUrl(v, "tiktok.com", "https://www.tiktok.com/@"),
     },
     {
       key: "line",
@@ -139,7 +147,7 @@ export default function PublicProfileScreen({ route, navigation }) {
       value: targetUser.socialLinks?.line,
       brandBg: "#06C755",
       icon: "chatbubble-ellipses",
-      getUrl: (v) => (v.startsWith("http") ? v : `https://line.me/ti/p/~${v}`),
+      getUrl: (v) => socialUrl(v, "line.me", "https://line.me/ti/p/~"),
     },
   ].filter((item) => Boolean(item.value && item.value.trim()));
 
@@ -147,12 +155,9 @@ export default function PublicProfileScreen({ route, navigation }) {
     if (!item.value) return;
     const url = item.getUrl(item.value.trim());
     try {
-      const canOpen = await Linking.canOpenURL(url);
-      if (canOpen) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert("ไม่สามารถเปิดลิงก์ได้", `ไม่พบแอปพลิเคชันที่รองรับ: ${url}`);
-      }
+      // Android can report false for a normal HTTPS URL when package visibility
+      // is restricted, even though a browser can open it. Try the web URL first.
+      await Linking.openURL(url);
     } catch (err) {
       console.warn("Cannot open social url:", err);
       Alert.alert("ไม่สามารถเปิดลิงก์", `เกิดข้อผิดพลาดในการเปิด ${item.label}`);
@@ -399,18 +404,13 @@ export default function PublicProfileScreen({ route, navigation }) {
           <TouchableOpacity
             style={styles.startChatBtn}
             activeOpacity={0.88}
-            onPress={() => handleStartChat(icebreakerPrompts[0] || null)}
+            onPress={() => handleStartChat("สวัสดี")}
           >
             <Ionicons name="chatbubbles" size={20} color={colors.white} style={{ marginRight: 8 }} />
             <View style={{ alignItems: "center" }}>
               <Text style={styles.startChatBtnText}>
-                {icebreakerPrompts.length > 0
-                  ? "เริ่มแชทด้วยจุดร่วม (Spark Chat)"
-                  : `เริ่มแชทกับ ${targetUser.name}`}
+                {`เริ่มแชทกับ ${targetUser.name}`}
               </Text>
-              {icebreakerPrompts.length > 0 && (
-                <Text style={styles.startChatBtnSub}>เปิดห้องแชทพร้อมหัวข้อคุยแนะนำ</Text>
-              )}
             </View>
           </TouchableOpacity>
         </View>

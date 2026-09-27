@@ -136,7 +136,7 @@ export default function MyAliasScreen() {
             </View>
             <View style={styles.facultyBadge}>
               <Text style={styles.facultyBadgeText}>
-                {userAlias?.faculty || profile?.faculty || "คณะทั่วไป"}
+                {profile?.faculty || userAlias?.faculty || "คณะทั่วไป"}
               </Text>
             </View>
           </View>

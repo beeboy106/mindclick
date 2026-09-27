@@ -461,7 +461,7 @@ export function CrossBubbleProvider({ children }) {
 
   // สร้างนามแฝงสุ่ม
   const generateRandomAlias = useCallback((customFaculty = null) => {
-    const facultyName = customFaculty || profile?.faculty || "วิศวกรรมศาสตร์";
+    const facultyName = customFaculty || profile?.faculty || "ไม่ระบุคณะ";
     const shortFaculty = facultyName.replace("คณะ", "").split(" ")[0].trim() || "นิรนาม";
     const prefix = ALIAS_PREFIXES[Math.floor(Math.random() * ALIAS_PREFIXES.length)];
     const icon = DEFAULT_AVATAR_IDS[Math.floor(Math.random() * DEFAULT_AVATAR_IDS.length)];

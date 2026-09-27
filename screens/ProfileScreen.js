@@ -195,6 +195,7 @@ export default function ProfileScreen({ navigation }) {
             image: cdnUrl,
             name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
             gender,
+            faculty,
             bio,
             socialLinks,
           });
@@ -264,6 +265,7 @@ export default function ProfileScreen({ navigation }) {
           const saveResult = await addGalleryImages(uploadedUrls, {
             name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
             gender,
+            faculty,
             bio,
             socialLinks,
           });
@@ -292,6 +294,7 @@ export default function ProfileScreen({ navigation }) {
     await updateProfile({
       name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
       gender,
+      faculty,
       bio,
       socialLinks,
       image: avatarUri || profile?.image || user?.image || null,
@@ -555,6 +558,30 @@ export default function ProfileScreen({ navigation }) {
         {/* Form: Bio (Matching Image 3) */}
         <View style={styles.formCard}>
           <View style={styles.sectionHeaderRow}>
+            <Ionicons name="school-outline" size={18} color="#2563eb" />
+            <Text style={styles.sectionTitle}>คณะ</Text>
+          </View>
+          <Text style={styles.fieldHelperText}>เลือกคณะที่กำลังศึกษาเพื่อใช้แสดงบนโปรไฟล์และสร้างนามแฝงใน Cross Bubble</Text>
+          <View style={styles.facultyChipsContainer}>
+            {CAMPUS_FACULTIES.map((option) => {
+              const selected = faculty === option;
+              return (
+                <TouchableOpacity
+                  key={option}
+                  style={[styles.facultyChip, selected && styles.facultyChipSelected]}
+                  activeOpacity={0.8}
+                  onPress={() => setFaculty(option)}
+                >
+                  <Text style={[styles.facultyChipText, selected && styles.facultyChipTextSelected]}>{option}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Form: Bio (Matching Image 3) */}
+        <View style={styles.formCard}>
+          <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>แนะนำตัว ({bio.length}/200)</Text>
           </View>
 
@@ -647,9 +674,10 @@ export default function ProfileScreen({ navigation }) {
                 onSelect={() => setSelectedPhoto(img.url)}
                 onRemove={() =>
                   removeGalleryImage(img.id, {
-                    name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
-                    gender,
-                    bio,
+                  name: displayName || profile?.name || user?.name || "ผู้ใช้งาน",
+                  gender,
+                  faculty,
+                  bio,
                     socialLinks,
                   })
                 }

@@ -115,12 +115,12 @@ export default function FeedScreen({ navigation }) {
       onStartShouldSetPanResponder: () => false,
       onStartShouldSetPanResponderCapture: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        return scrollOffsetRef.current <= 1 && gestureState.dy > 8 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.2;
+        return scrollOffsetRef.current <= 1 && gestureState.dy > 4 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.1;
       },
       // Capture only a deliberate downward pull at the top. This prevents the
       // ScrollView from intermittently winning the responder race.
       onMoveShouldSetPanResponderCapture: (_, gestureState) => {
-        return scrollOffsetRef.current <= 1 && gestureState.dy > 8 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.2;
+        return scrollOffsetRef.current <= 1 && gestureState.dy > 4 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.1;
       },
       onPanResponderTerminationRequest: () => false,
       onPanResponderMove: (evt, gestureState) => {
@@ -200,8 +200,10 @@ export default function FeedScreen({ navigation }) {
       const mediaTypesOption = ImagePicker.MediaTypeOptions?.Images || ["images"];
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: mediaTypesOption,
-        // Post photos may use any crop; do not force a portrait/square ratio.
+        // A bounded portrait crop keeps Android's native crop frame usable on
+        // tablets instead of expanding into the system-bar area.
         allowsEditing: true,
+        aspect: [4, 5],
         quality: 0.8,
         base64: false,
       });
@@ -417,8 +419,8 @@ export default function FeedScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
           onScroll={handleScroll}
           scrollEventThrottle={16}
-          overScrollMode="never"
-          bounces={false}
+          overScrollMode="always"
+          bounces
         >
           {/* SECTION 1: Friends Online / Chat Quick Access Bar */}
         <View style={styles.friendsSection}>
