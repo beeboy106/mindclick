@@ -42,11 +42,11 @@
       ],
       "expo-notifications"
     ],
+    "owner": "bdevv",
     "extra": {
       "eas": {
-        "projectId": "ddcc5c40-bcee-42d5-bedf-341e99623dc7"
+        "projectId": "49cd5c8f-626c-431c-8a46-bf6d52b91479"
       }
-    },
-    "owner": "ibuff"
+    }
   }
 }
