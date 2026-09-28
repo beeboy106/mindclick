@@ -314,6 +314,16 @@ export default function ProfileScreen({ navigation }) {
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        // Android tablets may otherwise let nested touch targets consume the
+        // beginning of a downward swipe. Keep the page's vertical scroll as
+        // the gesture owner and dismiss the keyboard as soon as scrolling
+        // starts.
+        nestedScrollEnabled
+        directionalLockEnabled
+        keyboardDismissMode="on-drag"
+        keyboardShouldPersistTaps="handled"
+        overScrollMode="always"
+        scrollEventThrottle={16}
       >
         {/* Title Section (Matching Image 3) */}
         <View style={styles.titleSection}>
