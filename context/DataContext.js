@@ -115,7 +115,7 @@ export function checkProfileCompletion(profile, user) {
 const DataContext = createContext();
 
 export function DataProvider({ children }) {
-  const { user, updateUserSession, isDemoMode = false } = useAuth();
+  const { user, updateUserSession, signOut, isDemoMode = false } = useAuth();
 
   const [profile, setProfile] = useState(defaultProfile);
   const [quizResponse, setQuizResponse] = useState(defaultQuizResponse);
@@ -260,6 +260,14 @@ export function DataProvider({ children }) {
               await upsertSupabaseQuiz(user.firebaseIdToken, JSON.parse(localQuiz));
               await AsyncStorage.removeItem(getQuizPendingKey(user.id));
               account = await getSupabaseAccount(user.firebaseIdToken);
+            }
+
+            // A dashboard moderator can suspend or ban an account.  End this
+            // device session as soon as its authoritative account record is
+            // read, rather than leaving an old local profile usable.
+            if (account?.profile?.account_status && account.profile.account_status !== "active") {
+              if (isMounted) await signOut();
+              return;
             }
 
             if (account?.profile && isMounted) {

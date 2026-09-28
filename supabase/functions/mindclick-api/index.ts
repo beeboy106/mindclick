@@ -54,6 +54,14 @@ async function firebaseUser(request: Request) {
 
 type FirebaseUser = Awaited<ReturnType<typeof firebaseUser>>;
 
+function assertActiveProfile(profile: { account_status?: string | null }) {
+  if (profile.account_status === "suspended" || profile.account_status === "banned") {
+    const error = new Error("This account has been restricted by a moderator");
+    (error as Error & { code?: string }).code = "ACCOUNT_RESTRICTED";
+    throw error;
+  }
+}
+
 async function ownProfile(user: FirebaseUser) {
   const { data, error } = await supabase
     .from("profiles")
@@ -169,6 +177,7 @@ Deno.serve(async (request) => {
           updated_at: new Date().toISOString(),
       };
       const existingProfile = await ownProfile(user);
+      if (existingProfile) assertActiveProfile(existingProfile);
       const profileRequest = existingProfile
         ? supabase
           .from("profiles")
@@ -194,6 +203,7 @@ Deno.serve(async (request) => {
         : "online";
       const profile = await ownProfile(user);
       if (!profile) return json({ error: "Create profile first" }, 409);
+      assertActiveProfile(profile);
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -225,6 +235,7 @@ Deno.serve(async (request) => {
 
     const profile = await ownProfile(user);
     if (!profile) return json({ error: "Create profile first" }, 409);
+    assertActiveProfile(profile);
 
     if (path === "reports/create") {
       const allowedTargetTypes = ["user", "post", "comment", "message"];
@@ -449,6 +460,7 @@ Deno.serve(async (request) => {
       ? String(error.code)
       : "";
     const isAuthError = errorCode.startsWith("ERR_J") || /token|jwt|jws|issuer|audience|signature/i.test(message);
-    return json({ error: message }, isAuthError ? 401 : 500);
+    const isRestricted = errorCode === "ACCOUNT_RESTRICTED";
+    return json({ error: message }, isRestricted ? 403 : isAuthError ? 401 : 500);
   }
 });
