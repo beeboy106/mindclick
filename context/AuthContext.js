@@ -7,6 +7,7 @@ import {
   setFirebaseAuthToken,
   signInWithFirebaseGoogle,
 } from "../lib/firebase";
+import { createSupabaseReport, isSupabaseConfigured } from "../lib/supabaseApi";
 
 let GoogleSignin = null;
 if (Platform.OS !== "web") {
@@ -193,6 +194,13 @@ export function AuthProvider({ children }) {
   // ส่งรายงานพฤติกรรมหรือเนื้อหา (Report Content/User)
   const submitReport = async (reportData) => {
     try {
+      // Reports from real accounts must reach the central moderation queue.
+      // Demo mode keeps its local-only behavior for presentations.
+      if (!user?.isDemoMode && user?.firebaseIdToken && isSupabaseConfigured()) {
+        await createSupabaseReport(user.firebaseIdToken, reportData);
+        return true;
+      }
+
       const raw = await AsyncStorage.getItem(REPORTS_STORAGE_KEY);
       const list = raw ? JSON.parse(raw) : [];
       const newReport = {

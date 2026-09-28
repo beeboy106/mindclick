@@ -71,7 +71,7 @@ export default function ReportBlockModal({
     setIsSubmitting(true);
     try {
       if (onReportSubmitted) {
-        await onReportSubmitted({
+        const submitted = await onReportSubmitted({
           targetType,
           targetId,
           targetName,
@@ -79,6 +79,7 @@ export default function ReportBlockModal({
           details: detailText.trim(),
           reportedAt: new Date().toISOString(),
         });
+        if (submitted === false) throw new Error("Report was not saved");
       }
       Alert.alert(
         "ส่งรายงานสำเร็จ",

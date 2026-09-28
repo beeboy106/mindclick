@@ -525,12 +525,13 @@ export default function PostCard({
         }}
         onReportSubmitted={async (reportData) => {
           if (submitReport) {
-            await submitReport({
+            return submitReport({
               ...reportData,
               postId: post.id,
               postContent: post.content,
             });
           }
+          return false;
         }}
       />
     </View>

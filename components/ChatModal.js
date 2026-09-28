@@ -567,11 +567,12 @@ export default function ChatModal({
         }}
         onReportSubmitted={async (reportData) => {
           if (submitReport) {
-            await submitReport({
+            return submitReport({
               ...reportData,
               context: "1-on-1 chat",
             });
           }
+          return false;
         }}
       />
     </Modal>

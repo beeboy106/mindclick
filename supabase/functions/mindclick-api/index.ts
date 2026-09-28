@@ -226,6 +226,30 @@ Deno.serve(async (request) => {
     const profile = await ownProfile(user);
     if (!profile) return json({ error: "Create profile first" }, 409);
 
+    if (path === "reports/create") {
+      const allowedTargetTypes = ["user", "post", "comment", "message"];
+      const allowedReasons = ["harassment", "spam", "hate_speech", "impersonation", "other"];
+      const targetType = typeof payload.targetType === "string" ? payload.targetType : "";
+      const reason = typeof payload.reason === "string" ? payload.reason : "";
+      const targetId = typeof payload.targetId === "string" ? payload.targetId.trim() : "";
+      if (!allowedTargetTypes.includes(targetType) || !allowedReasons.includes(reason) || !targetId) {
+        return json({ error: "Invalid report" }, 400);
+      }
+      const { error } = await supabase.from("moderation_reports").insert({
+        reporter_profile_id: profile.id,
+        target_type: targetType,
+        target_id: targetId.slice(0, 180),
+        target_name: typeof payload.targetName === "string" ? payload.targetName.trim().slice(0, 160) : "",
+        reason,
+        details: typeof payload.details === "string" ? payload.details.trim().slice(0, 300) : "",
+        context: typeof payload.context === "string" ? payload.context.trim().slice(0, 160) : "",
+        post_id: typeof payload.postId === "string" ? payload.postId.slice(0, 180) : null,
+        post_content: typeof payload.postContent === "string" ? payload.postContent.slice(0, 2000) : null,
+      });
+      if (error) throw error;
+      return json({ ok: true }, 201);
+    }
+
     if (path === "real-lounge/join") {
       const { data: roomId, error } = await supabase.rpc("join_real_lounge", {
         p_profile_id: profile.id,

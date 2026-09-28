@@ -76,6 +76,7 @@ export default function ProfileScreen({ navigation }) {
   const { user, signOut, isDemoMode, toggleDemoMode } = useAuth();
   const {
     profile,
+    isLoadingData,
     updateProfile,
     addGalleryImages,
     removeGalleryImage,
@@ -127,8 +128,10 @@ export default function ProfileScreen({ navigation }) {
       isInitialLoadedRef.current = false;
     }
 
-    // ทำงานเฉพาะเมื่อยังไม่เคยโหลดค่าเริ่มต้น หรือเมื่อสลับผู้ใช้
-    if (!isInitialLoadedRef.current && (profile?.name || profile?.bio || profile?.image || profile?.email || profile?.faculty || user?.name)) {
+    // Do not lock the form to the placeholder profile while DataContext is
+    // still fetching the account from Supabase.  Otherwise a newly installed
+    // app can display empty fields even after the cloud profile arrives.
+    if (!isInitialLoadedRef.current && !isLoadingData && (profile?.name || profile?.bio || profile?.image || profile?.email || profile?.faculty || user?.name)) {
       isInitialLoadedRef.current = true;
       setDisplayName(profile?.name || user?.name || "");
       setGender(profile?.gender || "prefer_not_to_say");
@@ -142,7 +145,7 @@ export default function ProfileScreen({ navigation }) {
         tiktok: profile?.socialLinks?.tiktok || "",
       });
     }
-  }, [profile, user]);
+  }, [profile, user, isLoadingData]);
 
   const [isSaving, setIsSaving] = useState(false);
   const [selectedPhoto, setSelectedPhoto] = useState(null);
