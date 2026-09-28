@@ -163,7 +163,9 @@ export default function ProfileScreen({ navigation }) {
     try {
       try {
         const permResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (permResult && permResult.status !== "granted") {
+        // Android 14 can grant a selected-photo (limited) library. `granted`
+        // is the capability flag, so this keeps that valid access working.
+        if (permResult && !permResult.granted) {
           Alert.alert("ต้องการสิทธิ์", "กรุณาอนุญาตให้เข้าถึงคลังรูปภาพในตั้งค่าของอุปกรณ์");
           return;
         }
@@ -225,7 +227,7 @@ export default function ProfileScreen({ navigation }) {
 
       try {
         const permResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (permResult && permResult.status !== "granted") {
+        if (permResult && !permResult.granted) {
           Alert.alert("ต้องการสิทธิ์", "กรุณาอนุญาตให้เข้าถึงคลังรูปภาพในตั้งค่าของอุปกรณ์");
           return;
         }
