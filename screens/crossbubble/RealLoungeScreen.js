@@ -235,7 +235,9 @@ export default function RealLoungeScreen() {
     </SafeAreaView>;
   }
 
-  const myQuiz = myMember?.quiz_details?.details?.[0];
+  const myQuiz = Array.isArray(myMember?.quiz_details)
+    ? myMember.quiz_details[0]
+    : myMember?.quiz_details?.details?.[0];
   const requestedConnection = Boolean(myMember?.wants_connection);
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.canvas }]} edges={["top", "left", "right"]}>
